@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>FixYa — Presentación</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{--bg:#0A0F1E;--card:#111827;--card2:#1C2333;--border:rgba(255,255,255,.08);--accent:#00E5A0;--accent2:#F4A429;--red:#FF4D6D;--blue:#4D9EFF;--text:#F0F4FF;--muted:rgba(240,244,255,.45);--r:16px;}
+html,body{min-height:100%;background:var(--bg);}
+body{font-family:'Outfit',sans-serif;color:var(--text);overflow-x:hidden;}
+.screen{display:none;flex-direction:column;min-height:100vh;animation:fu .28s ease;}
+.screen.active{display:flex;}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.prog{position:fixed;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,.07);z-index:100;}
+.prog-f{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .4s;}
+.wrap{padding:22px 18px 30px;flex:1;display:flex;flex-direction:column;max-width:420px;margin:0 auto;width:100%;}
+.spacer{flex:1;}
+.btn{width:100%;padding:15px;border-radius:13px;font-family:'Outfit';font-size:15px;font-weight:700;cursor:pointer;border:none;transition:all .15s;}
+.btn-g{background:var(--accent);color:#05120A;}.btn-g:active{filter:brightness(.9);}
+.btn-a{background:var(--accent2);color:#1A0F00;}.btn-a:active{filter:brightness(.9);}
+.btn-ghost{background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);color:rgba(240,244,255,.8);}
+.btn-sm{padding:10px 16px;width:auto;font-size:13px;border-radius:10px;}
+.card{background:var(--card);border:.5px solid var(--border);border-radius:var(--r);padding:16px;}
+.row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:.5px solid var(--border);}
+.row:last-child{border-bottom:none;}
+.rl{font-size:13px;color:var(--muted);}
+.rv{font-family:'JetBrains Mono';font-size:13px;font-weight:700;}
+.rg{color:var(--accent);}.ra{color:var(--accent2);}.rr{color:var(--red);}
+.row-total{border-top:1px solid rgba(255,255,255,.12);border-bottom:none!important;padding-top:12px;margin-top:4px;}
+.ttl{font-size:22px;font-weight:800;letter-spacing:-.5px;line-height:1.2;margin-bottom:7px;}
+.sub{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:18px;}
+.tag{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+.tg{background:rgba(0,229,160,.12);color:var(--accent);}
+.ta{background:rgba(244,164,41,.12);color:var(--accent2);}
+.tr{background:rgba(255,77,109,.12);color:var(--red);}
+.tb{background:rgba(77,158,255,.12);color:var(--blue);}
+.dots{display:flex;gap:5px;justify-content:center;padding:12px 0 5px;}
+.dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.18);transition:all .2s;}
+.dot.on{width:18px;border-radius:99px;background:var(--accent);}
+.hl{background:linear-gradient(135deg,rgba(0,229,160,.1),rgba(0,229,160,.03));border:.5px solid rgba(0,229,160,.28);border-radius:var(--r);padding:16px;}
+.hl-a{background:linear-gradient(135deg,rgba(244,164,41,.1),rgba(244,164,41,.03));border:.5px solid rgba(244,164,41,.28);}
+/* COVER */
+#s0{justify-content:center;}
+.cvr-bg{position:fixed;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(0,229,160,.07) 0%,transparent 55%),radial-gradient(ellipse at 80% 15%,rgba(244,164,41,.05) 0%,transparent 50%);pointer-events:none;}
+.logo{width:62px;height:62px;border-radius:18px;background:linear-gradient(135deg,var(--accent),#00B87A);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 18px;box-shadow:0 0 40px rgba(0,229,160,.3);}
+.app-nm{font-size:38px;font-weight:900;text-align:center;letter-spacing:-1.5px;margin-bottom:8px;}
+.app-nm span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.cov-btn{background:var(--card);border:.5px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:all .18s;}
+.cov-btn:active{border-color:rgba(0,229,160,.4);transform:scale(.98);}
+.ct-ic{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.ct-tx h3{font-size:15px;font-weight:700;color:#fff;margin-bottom:2px;}
+.ct-tx p{font-size:12px;color:rgba(240,244,255,.5);}
+.ct-ar{margin-left:auto;font-size:20px;color:rgba(240,244,255,.35);}
+/* DOLOR */
+.dolor{background:var(--card);border:.5px solid var(--border);border-radius:14px;padding:14px;margin-bottom:9px;display:flex;gap:12px;}
+.d-ic{font-size:22px;flex-shrink:0;margin-top:2px;}
+.d-ttl{font-size:14px;font-weight:700;margin-bottom:2px;}
+.d-tx{font-size:12px;color:var(--muted);line-height:1.5;}
+.d-fix{font-size:11px;font-weight:700;color:var(--accent);margin-top:5px;}
+/* URGENCIA */
+.urg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.urg-opt{border-radius:13px;padding:14px;cursor:pointer;border:2px solid var(--border);text-align:center;transition:all .18s;}
+.on-n{border-color:var(--accent);background:rgba(0,229,160,.07);}
+.on-u{border-color:var(--accent2);background:rgba(244,164,41,.07);}
+/* CHIPS */
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px;}
+.chip{padding:7px 14px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);color:var(--muted);background:transparent;transition:all .15s;}
+.chip.on{border-color:var(--accent);color:var(--accent);background:rgba(0,229,160,.08);}
+.chip.on-a{border-color:var(--accent2);color:var(--accent2);background:rgba(244,164,41,.08);}
+/* CALC */
+.cl{font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;}
+.cl .v{font-family:'JetBrains Mono';font-size:14px;font-weight:700;color:var(--text);}
+input[type=range]{width:100%;height:6px;border-radius:99px;outline:none;border:none;appearance:none;-webkit-appearance:none;cursor:pointer;background:rgba(255,255,255,.12);}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:22px;height:22px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 4px rgba(0,229,160,.2);}
+.big-n{font-family:'JetBrains Mono';font-size:46px;font-weight:700;background:linear-gradient(135deg,var(--accent),#00B87A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
+.desglose{background:rgba(255,255,255,.04);border-radius:10px;padding:12px;margin-top:10px;}
+.dr{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;}
+.dl{color:var(--muted);}
+.dv{font-family:'JetBrains Mono';font-weight:600;}
+/* BAR */
+.bar-wrap{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.bar-item{display:flex;flex-direction:column;gap:4px;}
+.bar-lbl{display:flex;justify-content:space-between;font-size:12px;}
+.bar-name{color:var(--muted);}
+.bar-val{font-family:'JetBrains Mono';font-weight:700;}
+.bar-track{height:10px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+/* PLAZO */
+.plazo-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border);}
+.plazo-item:last-child{border-bottom:none;}
+.plazo-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0;}
+/* GARANTÍA */
+.gr{display:flex;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border);}
+.gr:last-child{border-bottom:none;}
+.g-ic{font-size:18px;flex-shrink:0;width:26px;text-align:center;}
+.g-tx strong{font-size:13px;font-weight:700;display:block;margin-bottom:1px;color:#fff;}
+.g-tx span{font-size:12px;color:var(--muted);}
+/* PASO NUM */
+.paso-n{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(0,229,160,.15);color:var(--accent);font-size:13px;font-weight:800;margin-bottom:14px;}
+</style>
+</head>
+<body>
+<div class="prog"><div class="prog-f" id="pf" style="width:0%"></div></div>
+
+<!-- S0: COVER -->
+<div class="screen active" id="s0">
+<div class="cvr-bg"></div>
+<div class="wrap" style="justify-content:center;padding-top:44px;">
+  <div class="logo">🔧</div>
+  <div class="app-nm">Fix<span>Ya</span></div>
+  <p style="text-align:center;color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:36px;">La app que te trae trabajo, cobra por ti<br>y te paga al tiro. Sin jefes. Sin regateo.</p>
+  <div class="cov-btn" onclick="go(1)" style="border-color:rgba(0,229,160,.2);">
+    <div class="ct-ic" style="background:rgba(0,229,160,.12);">👷</div>
+    <div class="ct-tx"><h3>Soy técnico / maestro</h3><p>Ver cuánto puedo ganar</p></div>
+    <div class="ct-ar">›</div>
+  </div>
+  <div class="cov-btn" onclick="go(8)" style="border-color:rgba(244,164,41,.2);">
+    <div class="ct-ic" style="background:rgba(244,164,41,.12);">🏠</div>
+    <div class="ct-tx"><h3>Necesito una reparación</h3><p>Ver cómo funciona para clientes</p></div>
+    <div class="ct-ar">›</div>
+  </div>
+  <p style="text-align:center;font-size:11px;color:var(--muted);margin-top:20px;">FixYa · Santiago 2026 · 🛡️ Pagos protegidos · ⭐ Garantía 7 días</p>
+</div>
+</div>
+
+<!-- T1: DOLORES TÉCNICO -->
+<div class="screen" id="s1">
+<div class="wrap">
+  <div class="paso-n">1</div>
+  <div class="ttl">¿Te pasan estas cosas?</div>
+  <div class="sub">Los problemas más comunes trabajando solo en Chile.</div>
+  <div class="dolor"><div class="d-ic">😤</div><div><div class="d-ttl">El cliente regatea o no paga</div><div class="d-tx">Cotizas $80.000 y el cliente ofrece $50.000 o desaparece.</div><div class="d-fix">✓ Precio fijo — sin regateo posible. Pago en escrow antes de empezar.</div></div></div>
+  <div class="dolor"><div class="d-ic">🧾</div><div><div class="d-ttl">Tiempo perdido cotizando y cobrando</div><div class="d-tx">Visitas gratis, presupuestos rechazados, ir a cobrar 3 veces.</div><div class="d-fix">✓ Cotización automática. Tú solo ejecutas el trabajo.</div></div></div>
+  <div class="dolor"><div class="d-ic">📉</div><div><div class="d-ttl">Trabajos pequeños no valen el traslado</div><div class="d-tx">30 min de viaje por un trabajo de $8.000. No cierra la ecuación.</div><div class="d-fix">✓ Mínimo garantizado $31.250 por visita siempre.</div></div></div>
+  <div class="dolor"><div class="d-ic">😴</div><div><div class="d-ttl">Emergencias rentables pero nadie te llama</div><div class="d-tx">Una fuga a las 11 PM puede valer $75.000, pero sin red no llega el aviso.</div><div class="d-fix">✓ Alerta inmediata con precio garantizado. Tú decides si aceptas.</div></div></div>
+  <div class="spacer"></div>
+  <button class="btn btn-g" onclick="go(2)">Ver cómo funciona →</button>
+  <div class="dots" id="dt1"></div>
+</div>
+</div>
+
+<!-- T2: CÓMO FUNCIONA -->
+<div class="screen" id="s2">
+<div class="wrap">
+  <div class="paso-n">2</div>
+  <div class="ttl">Cómo funciona para ti</div>
+  <div class="sub">Precio fijo por trabajo — no por hora. El técnico eficiente gana más.</div>
+  <div style="display:flex;flex-direction:column;gap:0;margin-bottom:20px;">
+    <div style="display:flex;gap:10px;padding-bottom:14px;"><div style="display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0;"><div style="width:28px;height:28px;border-radius:50%;background:rgba(0,229,160,.15);color:var(--accent);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;">01</div><div style="width:2px;flex:1;min-height:12px;background:var(--border);margin-top:4px;"></div></div><div style="flex:1;padding-top:4px;"><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Activas disponibilidad</div><div style="font-size:12px;color:var(--muted);">Botón ON/OFF. Solo cuando quieres trabajar.</div></div></div>
+    <div style="display:flex;gap:10px;padding-bottom:14px;"><div style="display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0;"><div style="width:28px;height:28px;border-radius:50%;background:rgba(0,229,160,.15);color:var(--accent);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;">02</div><div style="width:2px;flex:1;min-height:12px;background:var(--border);margin-top:4px;"></div></div><div style="flex:1;padding-top:4px;"><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Alerta con precio fijo</div><div style="font-size:12px;color:var(--muted);">Ves el trabajo y <strong style="color:var(--accent);">cuánto recibes tú</strong> antes de aceptar.</div></div></div>
+    <div style="display:flex;gap:10px;padding-bottom:14px;"><div style="display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0;"><div style="width:28px;height:28px;border-radius:50%;background:rgba(0,229,160,.15);color:var(--accent);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;">03</div><div style="width:2px;flex:1;min-height:12px;background:var(--border);margin-top:4px;"></div></div><div style="flex:1;padding-top:4px;"><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Foto al llegar + cliente verifica materiales</div><div style="font-size:12px;color:var(--muted);">GPS + timestamp automático. 15 min para verificar, luego auto-aprobación.</div></div></div>
+    <div style="display:flex;gap:10px;padding-bottom:14px;"><div style="display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0;"><div style="width:28px;height:28px;border-radius:50%;background:rgba(244,164,41,.15);color:var(--accent2);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;">04</div><div style="width:2px;flex:1;min-height:12px;background:var(--border);margin-top:4px;"></div></div><div style="flex:1;padding-top:4px;"><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Ejecutas el trabajo</div><div style="font-size:12px;color:var(--muted);">El cliente ya pagó. Stock propio o materiales comprados. Fórmula de planchas por m².</div></div></div>
+    <div style="display:flex;gap:10px;"><div style="display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0;"><div style="width:28px;height:28px;border-radius:50%;background:rgba(0,229,160,.15);color:var(--accent);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;">05</div></div><div style="flex:1;padding-top:4px;"><div style="font-size:13px;font-weight:700;margin-bottom:2px;">Pago en tu cuenta</div><div style="font-size:12px;color:var(--muted);">Materiales: reembolso mismo día. M.O.: en 24 hrs. Sin ir a cobrar.</div></div></div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn btn-g" onclick="go(3)">¿Cuánto gano? →</button>
+  <div class="dots" id="dt2"></div>
+</div>
+</div>
+
+<!-- T3: CALCULADORA -->
+<div class="screen" id="s3">
+<div class="wrap">
+  <div class="paso-n">3</div>
+  <div class="ttl">Calcula tu ganancia</div>
+  <div class="sub">Precio fijo por trabajo — no depende de cuánto tardes.</div>
+  <div class="cl" style="margin-bottom:8px;">Tu especialidad</div>
+  <div class="chips">
+    <div class="chip on" id="cg" onclick="setR('g',20000)">🔧 Gasfitero</div>
+    <div class="chip" id="ce" onclick="setR('e',25000)">⚡ Electricista</div>
+    <div class="chip" id="cp" onclick="setR('p',12000)">🎨 Pintor</div>
+    <div class="chip" id="cc" onclick="setR('c',20000)">🔑 Cerrajero</div>
+  </div>
+  <div class="cl" style="margin-bottom:8px;">Tipo de trabajo</div>
+  <div class="chips">
+    <div class="chip on" id="u0" onclick="setU(0,1)">🟢 Normal</div>
+    <div class="chip" id="u1" onclick="setU(1,1.25)">🟡 Urgente</div>
+    <div class="chip" id="u2" onclick="setU(2,1.5)">🔴 Inmediato</div>
+  </div>
+  <div class="hl" style="margin-bottom:12px;">
+    <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:5px;">TÚ RECIBES (precio fijo)</div>
+    <div class="big-n" id="res-n">$37.500</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:4px;" id="res-d">M.O. fija $30.000 · Reparación fuga estándar</div>
+    <div class="desglose">
+      <div class="dr"><span class="dl">M.O. fija por trabajo</span><span class="dv rg" id="r-mo">$30.000</span></div>
+      <div class="dr"><span class="dl">+ Tu utilidad 25%</span><span class="dv ra" id="r-ut">$7.500</span></div>
+      <div class="dr" style="border-top:.5px solid rgba(255,255,255,.07);margin-top:4px;padding-top:4px;"><span class="dl" style="color:var(--text);font-weight:600;">Total que recibes</span><span class="dv rg" style="font-size:13px;" id="r-tot">$37.500</span></div>
+      <div class="dr"><span class="dl" style="font-size:10px;">Comisión FixYa 12% (la paga el cliente)</span><span class="dv" style="font-size:10px;color:var(--muted);" id="r-fix">$5.400</span></div>
+    </div>
+  </div>
+  <div style="padding:9px 12px;background:rgba(0,229,160,.05);border:.5px solid rgba(0,229,160,.18);border-radius:11px;font-size:12px;color:var(--muted);">
+    ⚡ <strong style="color:var(--text);">Precio fijo = más ganas si eres rápido.</strong> Este trabajo en 1 hr = $37.500/hr real.
+  </div>
+  <div class="spacer"></div>
+  <button class="btn btn-g" onclick="go(4)">Ver comparativa →</button>
+  <div class="dots" id="dt3"></div>
+</div>
+</div>
+
+<!-- T4: COMPARATIVA -->
+<div class="screen" id="s4">
+<div class="wrap">
+  <div class="paso-n">4</div>
+  <div class="ttl">FixYa vs trabajar solo</div>
+  <div class="sub" id="comp-d">Gasfitero · M.O. fija $30.000</div>
+  <div class="bar-wrap" style="margin-bottom:14px;">
+    <div class="bar-item"><div class="bar-lbl"><span class="bar-name">😤 Informal (sin garantía, sin mínimo)</span><span class="bar-val" style="color:var(--muted);" id="bi">$30.000</span></div><div class="bar-track"><div class="bar-fill" id="bfi" style="background:rgba(255,255,255,.2);"></div></div></div>
+    <div class="bar-item"><div class="bar-lbl"><span class="bar-name">🟢 FixYa Normal</span><span class="bar-val rg" id="bn">$37.500</span></div><div class="bar-track"><div class="bar-fill" id="bfn" style="background:var(--accent);"></div></div></div>
+    <div class="bar-item"><div class="bar-lbl"><span class="bar-name">🟡 FixYa Urgente ×1.25</span><span class="bar-val ra" id="bu">$46.875</span></div><div class="bar-track"><div class="bar-fill" id="bfu" style="background:var(--accent2);"></div></div></div>
+    <div class="bar-item"><div class="bar-lbl"><span class="bar-name">🔴 FixYa Inmediato ×1.5</span><span class="bar-val rr" id="bim">$56.250</span></div><div class="bar-track"><div class="bar-fill" id="bfim" style="background:var(--red);width:100%;"></div></div></div>
+  </div>
+  <div class="hl-a hl" style="margin-bottom:14px;">
+    <div style="font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:4px;">⚡ EN NÚMEROS</div>
+    <div style="font-size:13px;color:var(--text);line-height:1.7;">Normal vs informal: <strong class="rg" id="dn">$7.500 más</strong><br>Inmediato: <strong class="rr" id="dim">$26.250 más</strong> — mismo trabajo</div>
+  </div>
+  <div class="card">
+    <div class="row"><span class="rl">Cotizar</span><span class="rv rr">45–90 min perdidos</span></div>
+    <div class="row"><span class="rl">Riesgo impago</span><span class="rv rr">Siempre existe</span></div>
+    <div class="row"><span class="rl">Trabajo mínimo</span><span class="rv rr">Sin garantía</span></div>
+    <div style="height:.5px;background:var(--border);margin:5px 0;"></div>
+    <div class="row"><span class="rl rg">Con FixYa: cotizar</span><span class="rv rg">0 min</span></div>
+    <div class="row"><span class="rl rg">Impago</span><span class="rv rg">Imposible</span></div>
+    <div class="row"><span class="rl rg">Mínimo garantizado</span><span class="rv rg">$31.250/visita</span></div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn btn-g" onclick="go(5)">Ver plazos de pago →</button>
+  <div class="dots" id="dt4"></div>
+</div>
+</div>
+
+<!-- T5: PLAZOS -->
+<div class="screen" id="s5">
+<div class="wrap">
+  <div class="paso-n">5</div>
+  <div class="ttl">¿Cuándo recibes tu pago?</div>
+  <div class="sub">Según el tipo de trabajo. El plazo te protege a ti también.</div>
+  <div class="card" style="margin-bottom:12px;">
+    <div class="plazo-item"><div style="font-size:18px;">🔑</div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">Cerrajería emergencia</div><div style="font-size:11px;color:var(--muted);">Resultado verificable al instante</div></div><div class="plazo-badge" style="background:rgba(0,229,160,.12);color:var(--accent);">4 hrs</div></div>
+    <div class="plazo-item"><div style="font-size:18px;">⚡</div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">Electricidad simple</div><div style="font-size:11px;color:var(--muted);">Prueba funcional inmediata</div></div><div class="plazo-badge" style="background:rgba(0,229,160,.12);color:var(--accent);">8 hrs</div></div>
+    <div class="plazo-item"><div style="font-size:18px;">🔧</div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">Gasfitería / Saneamiento</div><div style="font-size:11px;color:var(--muted);">Sellante cura 24 hrs</div></div><div class="plazo-badge" style="background:rgba(244,164,41,.12);color:var(--accent2);">48 hrs</div></div>
+    <div class="plazo-item"><div style="font-size:18px;">🪵</div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">Cerámica / Piso flotante</div><div style="font-size:11px;color:var(--muted);">Mortero fragua 72 hrs</div></div><div class="plazo-badge" style="background:rgba(244,164,41,.12);color:var(--accent2);">4 días</div></div>
+    <div class="plazo-item"><div style="font-size:18px;">🎨</div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">Pintura / Tabiquería</div><div style="font-size:11px;color:var(--muted);">Látex: defectos aparecen 3-7 días</div></div><div class="plazo-badge" style="background:rgba(255,77,109,.12);color:var(--red);">5 días</div></div>
+  </div>
+  <div style="padding:10px 12px;background:rgba(244,164,41,.06);border:.5px solid rgba(244,164,41,.2);border-radius:11px;font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px;">
+    🤖 <strong style="color:var(--text);">Auto-liberación garantizada:</strong> si el cliente no responde en el plazo → pago liberado automáticamente. Recibirás 2 recordatorios antes del vencimiento.
+  </div>
+  <div style="padding:10px 12px;background:rgba(0,229,160,.05);border:.5px solid rgba(0,229,160,.18);border-radius:11px;font-size:12px;color:var(--accent);margin-bottom:14px;">
+    💸 <strong style="color:var(--text);">Materiales comprados:</strong> reembolso el mismo día hábil tras subir boleta. Independiente del plazo de revisión.
+  </div>
+  <div class="spacer"></div>
+  <button class="btn btn-g" onclick="go(7)">Ver beneficios y unirme →</button>
+  <div class="dots" id="dt5"></div>
+</div>
+</div>
+
+<!-- C1: CLIENTE INTRO -->
+<div class="screen" id="s8">
+<div class="wrap">
+  <div class="paso-n" style="background:rgba(244,164,41,.15);color:var(--accent2);">1</div>
+  <div class="ttl">Pides la reparación en 2 minutos</div>
+  <div class="sub">Sin llamar a nadie. Sin esperar el WhatsApp de vuelta.</div>
+  <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:20px;">
+    <div class="card" style="display:flex;gap:12px;padding:13px;"><div style="font-size:22px;">📸</div><div><div style="font-size:14px;font-weight:700;margin-bottom:2px;">Describes el problema</div><div style="font-size:12px;color:var(--muted);">Fuga, cortocircuito, cerradura rota — lo que sea.</div></div></div>
+    <div class="card" style="display:flex;gap:12px;padding:13px;"><div style="font-size:22px;">🧮</div><div><div style="font-size:14px;font-weight:700;margin-bottom:2px;">Recibes cotización al instante</div><div style="font-size:12px;color:var(--muted);">Precio fijo. Materiales al costo real. Sin letra chica.</div></div></div>
+    <div class="card" style="display:flex;gap:12px;padding:13px;"><div style="font-size:22px;">👷</div><div><div style="font-size:14px;font-weight:700;margin-bottom:2px;">Eliges el técnico verificado</div><div style="font-size:12px;color:var(--muted);">Rating, certificaciones y distancia.</div></div></div>
+    <div class="card" style="display:flex;gap:12px;padding:13px;"><div style="font-size:22px;">🔒</div><div><div style="font-size:14px;font-weight:700;margin-bottom:2px;">Pagas en escrow — no al técnico</div><div style="font-size:12px;color:var(--muted);">Tu dinero se libera cuando confirmas que quedó bien.</div></div></div>
+    <div class="card" style="display:flex;gap:12px;padding:13px;"><div style="font-size:22px;">📦</div><div><div style="font-size:14px;font-weight:700;margin-bottom:2px;">Verificas los materiales al inicio</div><div style="font-size:12px;color:var(--muted);">Confirmas que el técnico trajo todo antes de empezar.</div></div></div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn btn-a" onclick="go(9)">Ver cotización de ejemplo →</button>
+  <div class="dots" id="dt8"></div>
+</div>
+</div>
+
+<!-- C2: COTIZACIÓN + SEGURIDAD -->
+<div class="screen" id="s9">
+<div class="wrap">
+  <div class="paso-n" style="background:rgba(244,164,41,.15);color:var(--accent2);">2</div>
+  <div class="ttl">Cotización + protección</div>
+  <div class="sub">Ejemplo: fuga en cañería, Santiago. Precio fijo. Sin sorpresas.</div>
+  <div class="card" style="margin-bottom:10px;">
+    <div style="font-size:10px;color:var(--accent2);font-weight:700;margin-bottom:8px;">📦 MATERIALES — precio real de tienda</div>
+    <div class="row"><span class="rl">Cañería PVC, codos, sellante, teflón</span><span class="rv ra">$10.630</span></div>
+    <div style="margin-top:6px;padding:6px 9px;background:rgba(0,229,160,.05);border-radius:8px;font-size:10px;color:var(--accent);">🟢 Técnico financia · Reembolso mismo día con boleta verificada</div>
+  </div>
+  <div class="card" style="margin-bottom:10px;">
+    <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:8px;">🔨 M.O. — precio fijo por trabajo</div>
+    <div class="row"><span class="rl">Reparación fuga · nivel estándar</span><span class="rv rg">$30.000</span></div>
+    <div class="row"><span class="rl">Utilidad técnico (25%)</span><span class="rv rg">$7.500</span></div>
+    <div class="row" style="border-top:.5px solid var(--border);padding-top:9px;"><span style="font-weight:600;">Técnico recibe</span><span class="rv rg">$37.500</span></div>
+  </div>
+  <div class="card" style="background:rgba(244,164,41,.04);border-color:rgba(244,164,41,.18);margin-bottom:10px;">
+    <div class="row"><span class="rl ra">Comisión FixYa (12%)</span><span class="rv ra">$5.776</span></div>
+    <div class="row row-total"><span style="font-size:15px;font-weight:800;">TOTAL</span><span style="font-family:'JetBrains Mono';font-size:18px;font-weight:800;color:var(--accent2);">$53.906</span></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px;">
+    <div style="padding:8px;background:rgba(77,158,255,.07);border-radius:10px;text-align:center;"><div style="font-size:10px;color:var(--blue);">⏱️ Duración</div><div style="font-size:13px;font-weight:700;color:var(--blue);margin-top:2px;">1–2 hrs</div></div>
+    <div style="padding:8px;background:rgba(244,164,41,.07);border-radius:10px;text-align:center;"><div style="font-size:10px;color:var(--accent2);">🔓 Plazo revisión</div><div style="font-size:13px;font-weight:700;color:var(--accent2);margin-top:2px;">48 hrs</div></div>
+  </div>
+  <div style="padding:10px 12px;background:rgba(0,229,160,.05);border:.5px solid rgba(0,229,160,.18);border-radius:11px;font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px;">
+    🔒 <strong style="color:var(--text);">Escrow:</strong> tu pago retenido hasta confirmar. 🛡️ <strong style="color:var(--text);">Garantía 7 días</strong> incluida.
+  </div>
+  <button class="btn btn-a" onclick="go(7)">Conocer más →</button>
+  <div class="dots" id="dt9"></div>
+</div>
+</div>
+
+<!-- CIERRE -->
+<div class="screen" id="s7">
+<div class="wrap">
+  <div style="text-align:center;padding:14px 0 22px;">
+    <div style="font-size:46px;margin-bottom:10px;">🤝</div>
+    <div class="ttl" style="font-size:24px;">¿Te suma, <span style="color:var(--accent);">o no?</span></div>
+    <div class="sub">Primeros 50 técnicos fundadores — beneficios permanentes.</div>
+  </div>
+  <div class="card" style="margin-bottom:10px;">
+    <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:10px;letter-spacing:.3px;">⭐ BENEFICIOS TÉCNICOS FUNDADORES</div>
+    <div class="gr"><div class="g-ic">🥇</div><div class="g-tx"><strong>Badge "Técnico Fundador"</strong><span>Prioridad en resultados. Para siempre.</span></div></div>
+    <div class="gr"><div class="g-ic">💸</div><div class="g-tx"><strong>Comisión 10% primer año</strong><span>En vez del 12% estándar.</span></div></div>
+    <div class="gr"><div class="g-ic">📸</div><div class="g-tx"><strong>Fotos GPS te protegen</strong><span>Evidencia irrefutable ante reclamos injustos.</span></div></div>
+    <div class="gr"><div class="g-ic">💰</div><div class="g-tx"><strong>Mínimo $31.250 por visita</strong><span>Cada salida vale. Sin trabajos que no cubran el traslado.</span></div></div>
+    <div class="gr"><div class="g-ic">📦</div><div class="g-tx"><strong>Stock propio al precio tabla</strong><span>Usa tus materiales y gana el margen de mayorista.</span></div></div>
+  </div>
+  <div class="card" style="background:var(--card2);margin-bottom:12px;">
+    <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:9px;">LO QUE NECESITAMOS</div>
+    <div class="gr"><div class="g-ic">📱</div><div class="g-tx"><strong>Smartphone Android o iPhone</strong><span>Cualquier modelo reciente con datos.</span></div></div>
+    <div class="gr"><div class="g-ic">🪪</div><div class="g-tx"><strong>Cédula vigente</strong><span>Verificación en 5 minutos.</span></div></div>
+    <div class="gr" style="border-bottom:none;"><div class="g-ic">⏰</div><div class="g-tx"><strong>Al menos 10 hrs semanales</strong><span>Para comenzar.</span></div></div>
+  </div>
+  <button class="btn btn-g" style="margin-bottom:9px;" onclick="alert('¡Perfecto! 🎉\n\nEn el lanzamiento real aquí se abre el registro.\n\n¡Gracias!')">Quiero ser técnico fundador →</button>
+  <button class="btn btn-ghost" onclick="go(0)">Volver al inicio</button>
+  <div class="dots" id="dt7"></div>
+</div>
+</div>
+
+<script>
+const SCREENS=10, MO={g:30000,e:25000,p:25000,c:35000};
+const MO_MIN=25000;
+let rubro='g', urgM=1.0, urgI=0;
+
+function go(n){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=document.getElementById('s'+n);
+  if(el) el.classList.add('active');
+  document.getElementById('pf').style.width=Math.min(n/9*100,100)+'%';
+  window.scrollTo(0,0);
+}
+
+function setR(r,mo){
+  rubro=r;
+  ['g','e','p','c'].forEach(x=>{
+    const el=document.getElementById('c'+x);
+    if(el) el.className='chip'+(x===r?' on':'');
+  });
+  calc(); updComp();
+}
+
+function setU(i,m){
+  urgM=m; urgI=i;
+  [0,1,2].forEach(x=>{
+    const el=document.getElementById('u'+x);
+    if(el) el.className='chip'+(x===i?' on'+(i>0?' on-a':''):'');
+  });
+  calc(); updComp();
+}
+
+function calc(){
+  const mo=Math.max(MO[rubro]*urgM, MO_MIN);
+  const ut=mo*.25, tot=mo+ut, fix=tot*.12;
+  const el_n=document.getElementById('res-n');
+  if(el_n) el_n.textContent=fmt(tot);
+  const el_d=document.getElementById('res-d');
+  const rubros={g:'Gasfitería',e:'Electricidad',p:'Pintura',c:'Cerrajería'};
+  if(el_d) el_d.textContent='M.O. fija '+fmt(mo)+' · '+rubros[rubro];
+  setV('r-mo',fmt(mo)); setV('r-ut','+ '+fmt(ut)); setV('r-tot',fmt(tot)); setV('r-fix',fmt(fix));
+}
+
+function updComp(){
+  const mo=Math.max(MO[rubro], MO_MIN);
+  const inf=mo, n=mo*1.25, u=mo*1.25*1.25, im=mo*1.5*1.25;
+  setV('bi',fmt(inf)); setV('bn',fmt(n)); setV('bu',fmt(u)); setV('bim',fmt(im));
+  setBar('bfi',inf/im*80); setBar('bfn',n/im*92); setBar('bfu',u/im*96);
+  setV('dn',fmt(n-inf)+' más'); setV('dim',fmt(im-inf)+' más');
+  const rubros={g:'Gasfitero',e:'Electricista',p:'Pintor',c:'Cerrajero'};
+  setV('comp-d',rubros[rubro]+' · M.O. fija '+fmt(mo));
+}
+
+function setV(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+function setBar(id,pct){const el=document.getElementById(id);if(el)el.style.width=pct.toFixed(1)+'%';}
+function fmt(n){return'$'+Math.round(n).toLocaleString('es-CL');}
+
+calc(); updComp();
+</script>
+</body>
+</html>

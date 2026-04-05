@@ -1695,11 +1695,13 @@ textarea.inp{resize:none;}
 
   <!-- FOTO OBLIGATORIA -->
   <div class="lbl">Foto del problema <span style="color:var(--red);">*</span></div>
-  <label id="foto-preview" style="width:100%;height:160px;background:var(--card2);border:1.5px dashed rgba(255,255,255,.2);border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-bottom:12px;transition:all .2s;">
-    <input type="file" id="input-foto-sol-directo" accept="image/*" style="position:absolute;opacity:0;width:0;height:0;">
-    <div style="font-size:32px;">📷</div>
-    <div style="font-size:13px;font-weight:700;">Toca para sacar foto</div>
-    <div style="font-size:11px;color:var(--muted);">GPS automático · Obligatoria</div>
+  <label id="foto-preview" style="width:100%;height:160px;background:var(--card2);border:1.5px dashed rgba(255,255,255,.2);border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-bottom:12px;transition:all .2s;position:relative;overflow:hidden;">
+    <input type="file" id="input-foto-sol-directo" accept="image/*" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10;">
+    <div class="foto-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;">
+      <div style="font-size:32px;">📷</div>
+      <div style="font-size:13px;font-weight:700;">Toca para sacar foto</div>
+      <div style="font-size:11px;color:var(--muted);">GPS automático · Obligatoria</div>
+    </div>
   </label>
   <div id="foto-ok" style="display:none;margin-bottom:12px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -1707,10 +1709,11 @@ textarea.inp{resize:none;}
         <div style="font-size:22px;">🔧</div>
         <div style="font-size:10px;color:var(--accent);">Foto 1 · GPS ✓</div>
       </div>
-      <label style="height:90px;background:var(--card2);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-        <input type="file" id="input-foto-sol-2-directo" accept="image/*" style="position:absolute;opacity:0;width:0;height:0;">
-        <div style="font-size:22px;color:var(--muted);">➕</div>
-      </label>
+      <div style="height:90px;background:var(--card2);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;">
+        <input type="file" id="input-foto-sol-2-directo" accept="image/*" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10;">
+        <div style="font-size:22px;color:var(--muted);pointer-events:none;">➕</div>
+      </div>
+      <input type="file" id="input-foto-sol-2-directo" accept="image/*" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10;">
     </div>
     <div style="margin-top:8px;padding:7px 10px;background:rgba(0,229,160,.06);border-radius:8px;font-size:11px;color:var(--accent);">✓ Foto subida con GPS · Timestamp: 9:43 hrs</div>
   </div>
@@ -1738,11 +1741,13 @@ textarea.inp{resize:none;}
 
   <!-- FOTO DIFICULTADES OBLIGATORIA -->
   <div class="lbl">Foto de las dificultades <span style="color:var(--red);">*</span></div>
-  <label id="mod-foto-preview" style="width:100%;height:140px;background:var(--card2);border:1.5px dashed rgba(244,164,41,.3);border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-bottom:12px;transition:all .2s;">
-    <input type="file" id="input-foto-mod-directo" accept="image/*" style="position:absolute;opacity:0;width:0;height:0;">
-    <div style="font-size:28px;">📷</div>
-    <div style="font-size:13px;font-weight:700;color:var(--accent2);">Documenta el problema real</div>
-    <div style="font-size:11px;color:var(--muted);">Foto obligatoria antes de solicitar ajuste</div>
+  <label id="mod-foto-preview" style="width:100%;height:140px;background:var(--card2);border:1.5px dashed rgba(244,164,41,.3);border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-bottom:12px;transition:all .2s;position:relative;overflow:hidden;">
+    <input type="file" id="input-foto-mod-directo" accept="image/*" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10;">
+    <div class="mod-foto-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;">
+      <div style="font-size:28px;">📷</div>
+      <div style="font-size:13px;font-weight:700;color:var(--accent2);">Documenta el problema real</div>
+      <div style="font-size:11px;color:var(--muted);">Foto obligatoria antes de solicitar ajuste</div>
+    </div>
   </label>
   <div id="mod-foto-ok" style="display:none;padding:8px 11px;background:rgba(244,164,41,.06);border:.5px solid rgba(244,164,41,.25);border-radius:9px;font-size:11px;color:var(--accent2);margin-bottom:12px;">
     ✓ Foto subida · GPS verificado · 10:06 hrs
@@ -2129,22 +2134,6 @@ textarea.inp{resize:none;}
 </div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-// ── Listeners de cámara via addEventListener (más confiable que onchange) ──
-document.addEventListener('DOMContentLoaded', function() {
-  function bindFoto(id, handler) {
-    var el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('change', function() { handler(el); });
-      console.log('Bound:', id);
-    } else {
-      console.warn('No encontrado:', id);
-    }
-  }
-  bindFoto('input-foto-sol-directo',   function(el) { if (window.handleFotoSol)  window.handleFotoSol(el); });
-  bindFoto('input-foto-sol-2-directo', function(el) { if (window.handleFotoSol2) window.handleFotoSol2(el); });
-  bindFoto('input-foto-mod-directo',   function(el) { if (window.handleFotoMod)  window.handleFotoMod(el); });
-});
-
 // ── Handlers cámara — definidos temprano para evitar "not defined" ──
 function handleFotoSol(input) {
   if (typeof _handleFotoSolReal === 'function') _handleFotoSolReal(input);
@@ -2157,6 +2146,29 @@ function handleFotoSol2(input) {
 function handleFotoMod(input) {
   if (typeof _handleFotoModReal === 'function') _handleFotoModReal(input);
   else setTimeout(() => handleFotoMod(input), 100);
+}
+
+function restaurarFotosSolicitud() {
+  try {
+    const guardadas = JSON.parse(localStorage.getItem('fx_fotos_solicitud') || '[]');
+    if (!guardadas.length || !guardadas[0]) return;
+    FotosCapturadas.solicitud = guardadas;
+    if (typeof Solicitud !== 'undefined') Solicitud.fotosProblema = guardadas;
+    const preview = document.getElementById('foto-preview');
+    const fotoOk  = document.getElementById('foto-ok');
+    const btn     = document.getElementById('btn-ir-tecnicos');
+    if (preview) preview.style.display = 'none';
+    if (fotoOk) {
+      const grid = fotoOk.querySelector('div[style*="grid"]');
+      if (grid && grid.firstElementChild) {
+        grid.firstElementChild.innerHTML =
+          '<img src="' + guardadas[0] + '" style="width:100%;height:90px;object-fit:cover;border-radius:10px;border:.5px solid rgba(0,229,160,.3);">';
+      }
+      fotoOk.style.display = 'block';
+    }
+    fotoSolSubida = true;
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  } catch {}
 }
 
 // ── HISTORIA DE NAVEGACIÓN ────────────────────────────────────────────────────
@@ -2662,7 +2674,17 @@ let rapFotoOk = false;
 
 let fotoSolSubida = false;
 // simFoto, simFoto2 definidos en módulo de cámara real (al final del archivo)
-// irATecnicos — redefinida en módulo de solicitudes
+function irATecnicos() {
+  if (!fotoSolSubida) { alert('Sube al menos una foto del problema para continuar.'); return; }
+  fotoSolSubida = false;
+  const fp = document.getElementById('foto-preview');
+  const fo = document.getElementById('foto-ok');
+  if (fp) fp.style.display = 'flex';
+  if (fo) fo.style.display = 'none';
+  const btn = document.getElementById('btn-ir-tecnicos');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.4'; }
+  go('cli-tecnicos');
+}
 
 // ── MODIFICACIÓN DE TARIFA TÉCNICO ────────────────────────────────────────────
 let modFotoSubida = false;
@@ -3820,139 +3842,24 @@ function mostrarSubiendo(previewId) {
 // FOTO 1 — Problema del cliente (obligatoria)
 // ════════════════════════════════════════════════════════════
 function simFoto() {
-  abrirCamara('input-foto-sol', async (file) => {
-    mostrarSubiendo('foto-preview');
-    try {
-      const url = await subirFoto(file, 'problema');
-      FotosCapturadas.solicitud[0] = url;
-
-      // Actualizar en la solicitud global
-      if (typeof Solicitud !== 'undefined') {
-        Solicitud.fotosProblema = FotosCapturadas.solicitud;
-      }
-
-      // Mostrar preview real
-      const preview = document.getElementById('foto-preview');
-      const fotoOk  = document.getElementById('foto-ok');
-
-      if (preview) preview.style.display = 'none';
-      if (fotoOk) {
-        // Reemplazar placeholder con imagen real
-        const img = fotoOk.querySelector('img') || document.createElement('img');
-        img.src = url;
-        img.style.cssText = 'width:100%;height:90px;object-fit:cover;border-radius:10px;border:.5px solid rgba(0,229,160,.3);';
-
-        const grid = fotoOk.querySelector('div[style*="grid"]');
-        if (grid) {
-          const primerSlot = grid.firstElementChild;
-          if (primerSlot) { primerSlot.innerHTML = ''; primerSlot.appendChild(img); }
-        }
-
-        // Timestamp real
-        const ts = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-        const tsEl = fotoOk.querySelector('div[style*="accent"]');
-        if (tsEl) tsEl.textContent = '✓ Foto subida con GPS · Timestamp: ' + ts + ' hrs';
-
-        fotoOk.style.display = 'block';
-      }
-
-      // Habilitar botón continuar
-      fotoSolSubida = true;
-      const btn = document.getElementById('btn-ir-tecnicos');
-      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-
-      showSuccess('Foto subida correctamente ✓');
-    } catch (err) {
-      // Restaurar preview en caso de error
-      const preview = document.getElementById('foto-preview');
-      if (preview) {
-        preview.style.display = 'flex';
-        preview.innerHTML = `
-          <div style="font-size:32px;">📷</div>
-          <div style="font-size:13px;font-weight:700;">Toca para sacar foto</div>
-          <div style="font-size:11px;color:var(--muted);">GPS automático · Obligatoria</div>
-        `;
-      }
-      showError('Error al subir foto. Intenta de nuevo.');
-    }
-  });
-
+  const input = document.getElementById('input-foto-sol-directo');
+  if (input) { input.value = ''; input.click(); }
 }
 
 // ════════════════════════════════════════════════════════════
 // FOTO 2 — Segunda foto opcional (cliente)
 // ════════════════════════════════════════════════════════════
 function simFoto2() {
-  abrirCamara('input-foto-sol-2', async (file) => {
-    const segundoSlot = document.querySelector('#foto-ok div[style*="grid"] > div:last-child');
-    if (segundoSlot) {
-      segundoSlot.innerHTML = '<div style="font-size:18px;">⏳</div>';
-    }
-    try {
-      const url = await subirFoto(file, 'problema');
-      FotosCapturadas.solicitud[1] = url;
-      if (typeof Solicitud !== 'undefined') Solicitud.fotosProblema = FotosCapturadas.solicitud;
-
-      const img = document.createElement('img');
-      img.src = url;
-      img.style.cssText = 'width:100%;height:90px;object-fit:cover;border-radius:10px;border:.5px solid rgba(0,229,160,.3);';
-      if (segundoSlot) { segundoSlot.innerHTML = ''; segundoSlot.appendChild(img); }
-      showSuccess('Segunda foto subida ✓');
-    } catch {
-      if (segundoSlot) segundoSlot.innerHTML = '<div style="font-size:22px;color:var(--muted);">➕</div>';
-      showError('Error al subir la segunda foto.');
-    }
-  });
-
+  const input = document.getElementById('input-foto-sol-2-directo');
+  if (input) { input.value = ''; input.click(); }
 }
 
 // ════════════════════════════════════════════════════════════
 // FOTO TÉCNICO — Modificación de tarifa (obligatoria)
 // ════════════════════════════════════════════════════════════
 function simModFoto() {
-  abrirCamara('input-foto-mod', async (file) => {
-    mostrarSubiendo('mod-foto-preview');
-    try {
-      const url = await subirFoto(file, 'trabajo');
-      FotosCapturadas.modTarifa = url;
-
-      const preview = document.getElementById('mod-foto-preview');
-      const fotoOk  = document.getElementById('mod-foto-ok');
-
-      if (preview) {
-        const img = document.createElement('img');
-        img.src = url;
-        img.style.cssText = 'width:100%;height:140px;object-fit:cover;border-radius:13px;';
-        preview.innerHTML = '';
-        preview.appendChild(img);
-        preview.style.cursor = 'default';
-        preview.onclick = null;
-      }
-
-      if (fotoOk) {
-        const ts = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-        fotoOk.textContent = '✓ Foto subida · GPS verificado · ' + ts + ' hrs';
-        fotoOk.style.display = 'block';
-      }
-
-      modFotoSubida = true;
-      if (typeof updBtnMod === 'function') updBtnMod();
-      showSuccess('Foto de dificultades subida ✓');
-    } catch {
-      // Restaurar
-      const preview = document.getElementById('mod-foto-preview');
-      if (preview) {
-        preview.innerHTML = `
-          <div style="font-size:28px;">📷</div>
-          <div style="font-size:13px;font-weight:700;color:var(--accent2);">Documenta el problema real</div>
-          <div style="font-size:11px;color:var(--muted);">Foto obligatoria antes de solicitar ajuste</div>
-        `;
-        preview.onclick = simModFoto;
-      }
-      showError('Error al subir foto. Intenta de nuevo.');
-    }
-  });
-
+  const input = document.getElementById('input-foto-mod-directo');
+  if (input) { input.value = ''; input.click(); }
 }
 
 // ── Handlers directos para inputs en HTML ────────────────────
@@ -3960,7 +3867,7 @@ async function _handleFotoSolReal(input) {
   const file = input.files && input.files[0];
   if (!file) return;
 
-  // 1. Mostrar preview local inmediatamente (sin esperar al backend)
+  // 1. Preview local inmediato
   const localUrl = URL.createObjectURL(file);
   const preview = document.getElementById('foto-preview');
   const fotoOk  = document.getElementById('foto-ok');
@@ -3968,15 +3875,12 @@ async function _handleFotoSolReal(input) {
   if (preview) preview.style.display = 'none';
   if (fotoOk) {
     const grid = fotoOk.querySelector('div[style*="grid"]');
-    if (grid) {
-      const slot = grid.firstElementChild;
-      if (slot) {
-        const img = document.createElement('img');
-        img.src = localUrl;
-        img.style.cssText = 'width:100%;height:90px;object-fit:cover;border-radius:10px;border:.5px solid rgba(0,229,160,.3);';
-        slot.innerHTML = '';
-        slot.appendChild(img);
-      }
+    if (grid && grid.firstElementChild) {
+      const img = document.createElement('img');
+      img.src = localUrl;
+      img.style.cssText = 'width:100%;height:90px;object-fit:cover;border-radius:10px;border:.5px solid rgba(0,229,160,.3);';
+      grid.firstElementChild.innerHTML = '';
+      grid.firstElementChild.appendChild(img);
     }
     const ts = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
     const tsEl = fotoOk.querySelector('div[style*="accent"]');
@@ -3984,22 +3888,28 @@ async function _handleFotoSolReal(input) {
     fotoOk.style.display = 'block';
   }
 
-  // 2. Habilitar botón inmediatamente
+  // 2. Habilitar botón
   fotoSolSubida = true;
   const btn = document.getElementById('btn-ir-tecnicos');
   if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
 
-  // 3. Subir al backend en segundo plano
+  // 3. Persistir en localStorage
+  FotosCapturadas.solicitud[0] = localUrl;
+  if (typeof Solicitud !== 'undefined') Solicitud.fotosProblema = FotosCapturadas.solicitud;
+
+  // 4. Subir al backend en segundo plano
   try {
     const url = await subirFoto(file, 'problema');
     FotosCapturadas.solicitud[0] = url;
     if (typeof Solicitud !== 'undefined') Solicitud.fotosProblema = FotosCapturadas.solicitud;
-  } catch (err) {
-    // Guardar como base64 local si falla el backend
+    localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
+  } catch {
+    // Guardar base64 como fallback
     const reader = new FileReader();
     reader.onload = (e) => {
       FotosCapturadas.solicitud[0] = e.target.result;
       if (typeof Solicitud !== 'undefined') Solicitud.fotosProblema = FotosCapturadas.solicitud;
+      localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
     };
     reader.readAsDataURL(file);
   }
@@ -4008,44 +3918,57 @@ async function _handleFotoSolReal(input) {
 async function _handleFotoSol2Real(input) {
   const file = input.files && input.files[0];
   if (!file) return;
+  const localUrl = URL.createObjectURL(file);
+  const slot = document.querySelector('#foto-ok div[style*="grid"] > div:last-child, #foto-ok div[style*="grid"] > label:last-child');
+  if (slot) {
+    const img = document.createElement('img');
+    img.src = localUrl;
+    img.style.cssText = 'width:100%;height:90px;object-fit:cover;border-radius:10px;';
+    slot.innerHTML = '';
+    slot.appendChild(img);
+  }
   try {
     const url = await subirFoto(file, 'problema');
     FotosCapturadas.solicitud[1] = url;
-    if (typeof Solicitud !== 'undefined') Solicitud.fotosProblema = FotosCapturadas.solicitud;
-    const img = document.createElement('img');
-    img.src = url;
-    img.style.cssText = 'width:100%;height:90px;object-fit:cover;border-radius:10px;';
-    const slot = document.querySelector('#foto-ok div[style*="grid"] > label:last-child, #foto-ok div[style*="grid"] > div:last-child');
-    if (slot) { slot.innerHTML = ''; slot.appendChild(img); }
-    showSuccess('Segunda foto subida ✓');
-  } catch { showError('Error al subir la segunda foto.'); }
+    localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
+  } catch {
+    FotosCapturadas.solicitud[1] = localUrl;
+  }
 }
 
 async function _handleFotoModReal(input) {
   const file = input.files && input.files[0];
   if (!file) return;
-  mostrarSubiendo('mod-foto-preview');
+  const localUrl = URL.createObjectURL(file);
+  const preview = document.getElementById('mod-foto-preview');
+  const fotoOk  = document.getElementById('mod-foto-ok');
+
+  // Mostrar preview SIN destruir el input (solo ocultar placeholder)
+  if (preview) {
+    const placeholder = preview.querySelector('.mod-foto-placeholder');
+    if (placeholder) {
+      const img = document.createElement('img');
+      img.src = localUrl;
+      img.style.cssText = 'width:100%;height:140px;object-fit:cover;border-radius:13px;pointer-events:none;';
+      placeholder.style.display = 'none';
+      preview.insertBefore(img, placeholder);
+    }
+  }
+  if (fotoOk) {
+    const ts = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    fotoOk.textContent = '✓ Foto subida · GPS verificado · ' + ts + ' hrs';
+    fotoOk.style.display = 'block';
+  }
+
+  modFotoSubida = true;
+  if (typeof updBtnMod === 'function') updBtnMod();
+
   try {
     const url = await subirFoto(file, 'trabajo');
     FotosCapturadas.modTarifa = url;
-    const preview = document.getElementById('mod-foto-preview');
-    const fotoOk  = document.getElementById('mod-foto-ok');
-    if (preview) {
-      const img = document.createElement('img');
-      img.src = url;
-      img.style.cssText = 'width:100%;height:140px;object-fit:cover;border-radius:13px;';
-      preview.innerHTML = '';
-      preview.appendChild(img);
-    }
-    if (fotoOk) {
-      const ts = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-      fotoOk.textContent = '✓ Foto subida · GPS verificado · ' + ts + ' hrs';
-      fotoOk.style.display = 'block';
-    }
-    modFotoSubida = true;
-    if (typeof updBtnMod === 'function') updBtnMod();
-    showSuccess('Foto de dificultades subida ✓');
-  } catch { showError('Error al subir foto. Intenta de nuevo.'); }
+  } catch {
+    FotosCapturadas.modTarifa = localUrl;
+  }
 }
 
 // ── En móvil: segundo tap en foto existente ofrece reemplazar ─
@@ -4331,6 +4254,10 @@ window.pedirUbicacion = function() {
 // ── Interceptar navegación para iniciar/detener GPS ───────────
 const _goGPS = window.go;
 window.go = function(id) {
+  // Restaurar fotos si vuelve a la pantalla
+  if (id === 'cli-foto-solicitud') {
+    setTimeout(restaurarFotosSolicitud, 100);
+  }
   // Técnico entra a "en camino" → iniciar GPS
   if (id === 'tec-en-camino') {
     setTimeout(iniciarGPSTecnico, 300);

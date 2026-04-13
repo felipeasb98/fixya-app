@@ -2148,6 +2148,44 @@ function handleFotoMod(input) {
   else setTimeout(() => handleFotoMod(input), 100);
 }
 
+// ── Polling fallback: detecta archivos cuando change no dispara ──
+function iniciarPollingFoto(inputId, handler) {
+  var el = document.getElementById(inputId);
+  if (!el) return;
+  var interval = setInterval(function() {
+    if (el.files && el.files.length > 0) {
+      clearInterval(interval);
+      handler(el);
+    }
+  }, 200);
+  // Detener polling después de 60 segundos
+  setTimeout(function() { clearInterval(interval); }, 60000);
+}
+
+function abrirSelectorFoto(inputId, handler) {
+  var el = document.getElementById(inputId);
+  if (!el) return;
+  el.value = '';
+  // Registrar listeners múltiples
+  var fired = false;
+  function onFile() {
+    if (fired || !el.files || !el.files.length) return;
+    fired = true;
+    handler(el);
+  }
+  el.addEventListener('change', onFile, { once: true });
+  el.addEventListener('input', onFile, { once: true });
+  // Polling como fallback si change no dispara
+  var poll = setInterval(function() {
+    if (el.files && el.files.length > 0) {
+      clearInterval(poll);
+      onFile();
+    }
+  }, 150);
+  setTimeout(function() { clearInterval(poll); }, 60000);
+  el.click();
+}
+
 function restaurarFotosSolicitud() {
   try {
     const guardadas = JSON.parse(localStorage.getItem('fx_fotos_solicitud') || '[]');
@@ -3842,24 +3880,21 @@ function mostrarSubiendo(previewId) {
 // FOTO 1 — Problema del cliente (obligatoria)
 // ════════════════════════════════════════════════════════════
 function simFoto() {
-  const input = document.getElementById('input-foto-sol-directo');
-  if (input) { input.value = ''; input.click(); }
+  abrirSelectorFoto('input-foto-sol-directo', function(el) { handleFotoSol(el); });
 }
 
 // ════════════════════════════════════════════════════════════
 // FOTO 2 — Segunda foto opcional (cliente)
 // ════════════════════════════════════════════════════════════
 function simFoto2() {
-  const input = document.getElementById('input-foto-sol-2-directo');
-  if (input) { input.value = ''; input.click(); }
+  abrirSelectorFoto('input-foto-sol-2-directo', function(el) { handleFotoSol2(el); });
 }
 
 // ════════════════════════════════════════════════════════════
 // FOTO TÉCNICO — Modificación de tarifa (obligatoria)
 // ════════════════════════════════════════════════════════════
 function simModFoto() {
-  const input = document.getElementById('input-foto-mod-directo');
-  if (input) { input.value = ''; input.click(); }
+  abrirSelectorFoto('input-foto-mod-directo', function(el) { handleFotoMod(el); });
 }
 
 // ── Handlers directos para inputs en HTML ────────────────────

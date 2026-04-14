@@ -2180,39 +2180,70 @@ function abrirSelectorFoto(inputId, handler) {
 }
 
 // Abre selector de foto y lee el archivo via FileReader (sin depender de change event)
-function _crearInputFoto(idFoto, handler) {
+// ── Sistema de cámara definitivo ─────────────────────────────
+// Crea input en el body, lo mantiene visible, escucha con
+// múltiples métodos y procesa con FileReader directo
+var _fotoInputActivo = null;
+var _fotoCallbackActivo = null;
+
+function _crearInputFoto(handler) {
+  // Limpiar input anterior
+  if (_fotoInputActivo && _fotoInputActivo.parentNode) {
+    _fotoInputActivo.remove();
+  }
+
   var input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  input.id = idFoto; // Asignar ID para que delegation lo encuentre
-  input.style.cssText = 'position:fixed;top:-100px;left:-100px;opacity:0;';
+  // Visible pero fuera de pantalla — NO oculto
+  input.style.cssText = 'position:fixed;bottom:0;left:0;width:1px;height:1px;opacity:0.01;z-index:-1;';
   document.body.appendChild(input);
+  _fotoInputActivo = input;
+  _fotoCallbackActivo = handler;
 
-  var done = false;
+  var procesado = false;
+
   function procesar() {
-    if (done) return;
+    if (procesado) return;
     if (!input.files || !input.files[0]) return;
-    done = true;
-    clearInterval(poll);
-    handler(input);
-    setTimeout(function() { if (input.parentNode) input.remove(); }, 2000);
+    procesado = true;
+    var file = input.files[0];
+    console.log('Foto procesada:', file.name);
+
+    // Leer con FileReader directamente
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var dataUrl = e.target.result;
+      // Crear objeto fake con files para compatibilidad con handlers
+      var fakeInput = { files: [file], _dataUrl: dataUrl };
+      handler(fakeInput);
+    };
+    reader.readAsDataURL(file);
   }
 
+  // Todos los métodos posibles
   input.onchange = procesar;
-  input.addEventListener('change', procesar);
+  input.oninput = procesar;
+  input.addEventListener('change', procesar, true);
+  input.addEventListener('input', procesar, true);
 
-  input.click();
-
+  // Polling robusto
   var poll = setInterval(function() {
-    if (done) { clearInterval(poll); return; }
-    if (input.files && input.files[0]) procesar();
-  }, 200);
-  setTimeout(function() { clearInterval(poll); }, 30000);
+    if (procesado) { clearInterval(poll); return; }
+    if (input.files && input.files[0]) {
+      clearInterval(poll);
+      procesar();
+    }
+  }, 100);
+  setTimeout(function() { clearInterval(poll); }, 60000);
+
+  // Click después de todo está configurado
+  setTimeout(function() { input.click(); }, 0);
 }
 
-function abrirFoto1()   { _crearInputFoto('input-foto-sol-directo',   handleFotoSol);  }
-function abrirFoto2()   { _crearInputFoto('input-foto-sol-2-directo', handleFotoSol2); }
-function abrirFotoMod() { _crearInputFoto('input-foto-mod-directo',   handleFotoMod);  }
+function abrirFoto1()   { _crearInputFoto(function(inp) { handleFotoSol(inp); });  }
+function abrirFoto2()   { _crearInputFoto(function(inp) { handleFotoSol2(inp); }); }
+function abrirFotoMod() { _crearInputFoto(function(inp) { handleFotoMod(inp); });  }
 
 function restaurarFotosSolicitud() {
   try {
@@ -3930,8 +3961,8 @@ async function _handleFotoSolReal(input) {
   const file = input.files && input.files[0];
   if (!file) return;
 
-  // 1. Preview local inmediato
-  const localUrl = URL.createObjectURL(file);
+  // 1. Preview local inmediato — usar dataUrl si viene de FileReader
+  const localUrl = input._dataUrl || URL.createObjectURL(file);
   const preview = document.getElementById('foto-preview');
   const fotoOk  = document.getElementById('foto-ok');
 

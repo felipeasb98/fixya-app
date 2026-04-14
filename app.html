@@ -2214,9 +2214,9 @@ function _crearInputFoto(handler) {
     var reader = new FileReader();
     reader.onload = function(e) {
       var dataUrl = e.target.result;
-      // Crear objeto fake con files para compatibilidad con handlers
-      var fakeInput = { files: [file], _dataUrl: dataUrl };
-      handler(fakeInput);
+      console.log('FileReader OK, dataUrl len:', dataUrl.length);
+      // Llamar handler simplificado directamente con dataUrl
+      _procesarFotoConDataUrl(dataUrl, file, handler);
     };
     reader.readAsDataURL(file);
   }
@@ -2239,6 +2239,46 @@ function _crearInputFoto(handler) {
 
   // Click después de todo está configurado
   setTimeout(function() { input.click(); }, 0);
+}
+
+// Procesador directo de foto con dataUrl
+function _procesarFotoConDataUrl(dataUrl, file, handlerOverride) {
+  console.log('_procesarFotoConDataUrl llamado');
+  var preview = document.getElementById('foto-preview');
+  var fotoOk  = document.getElementById('foto-ok');
+  var btn     = document.getElementById('btn-ir-tecnicos');
+
+  // Ocultar zona de foto
+  if (preview) preview.style.display = 'none';
+
+  // Mostrar preview
+  if (fotoOk) {
+    var grid = fotoOk.querySelector('div[style*="grid"]');
+    if (grid && grid.firstElementChild) {
+      var img = document.createElement('img');
+      img.src = dataUrl;
+      img.style.cssText = 'width:100%;height:90px;object-fit:cover;border-radius:10px;border:.5px solid rgba(0,229,160,.3);';
+      grid.firstElementChild.innerHTML = '';
+      grid.firstElementChild.appendChild(img);
+    }
+    var ts = new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
+    var tsEl = fotoOk.querySelector('div[style*="accent"]');
+    if (tsEl) tsEl.textContent = '✓ Foto lista · ' + ts + ' hrs';
+    fotoOk.style.display = 'block';
+  }
+
+  // Habilitar botón
+  fotoSolSubida = true;
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+
+  // Guardar
+  if (typeof FotosCapturadas !== 'undefined') {
+    FotosCapturadas.solicitud[0] = dataUrl;
+    localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
+  }
+  if (typeof Solicitud !== 'undefined') Solicitud.fotosProblema = [dataUrl];
+
+  console.log('Foto lista, botón habilitado');
 }
 
 function abrirFoto1()   { _crearInputFoto(function(inp) { handleFotoSol(inp); });  }

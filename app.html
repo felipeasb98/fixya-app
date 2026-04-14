@@ -2186,18 +2186,16 @@ function abrirSelectorFoto(inputId, handler) {
   el.click();
 }
 
-// Binding directo al cargar — funciona aunque el label abra el input directamente
-window.addEventListener('load', function() {
-  function bindInput(id, fn) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('change', function() {
-      if (el.files && el.files[0]) fn(el);
-    });
-  }
-  bindInput('input-foto-sol-directo',   function(el) { handleFotoSol(el); });
-  bindInput('input-foto-sol-2-directo', function(el) { handleFotoSol2(el); });
-  bindInput('input-foto-mod-directo',   function(el) { handleFotoMod(el); });
+// Event delegation a nivel documento — funciona aunque los inputs estén en pantallas ocultas
+document.addEventListener('change', function(e) {
+  var el = e.target;
+  if (!el || el.type !== 'file') return;
+  if (!el.files || !el.files[0]) return;
+  var id = el.id;
+  console.log('FOTO capturada via delegation:', id, el.files[0].name);
+  if (id === 'input-foto-sol-directo')   handleFotoSol(el);
+  if (id === 'input-foto-sol-2-directo') handleFotoSol2(el);
+  if (id === 'input-foto-mod-directo')   handleFotoMod(el);
 });
 
 function restaurarFotosSolicitud() {

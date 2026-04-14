@@ -2186,6 +2186,20 @@ function abrirSelectorFoto(inputId, handler) {
   el.click();
 }
 
+// Binding directo al cargar — funciona aunque el label abra el input directamente
+window.addEventListener('load', function() {
+  function bindInput(id, fn) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', function() {
+      if (el.files && el.files[0]) fn(el);
+    });
+  }
+  bindInput('input-foto-sol-directo',   function(el) { handleFotoSol(el); });
+  bindInput('input-foto-sol-2-directo', function(el) { handleFotoSol2(el); });
+  bindInput('input-foto-mod-directo',   function(el) { handleFotoMod(el); });
+});
+
 function restaurarFotosSolicitud() {
   try {
     const guardadas = JSON.parse(localStorage.getItem('fx_fotos_solicitud') || '[]');

@@ -2180,73 +2180,39 @@ function abrirSelectorFoto(inputId, handler) {
 }
 
 // Abre selector de foto y lee el archivo via FileReader (sin depender de change event)
-function abrirFoto1() {
+function _crearInputFoto(idFoto, handler) {
   var input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
+  input.id = idFoto; // Asignar ID para que delegation lo encuentre
+  input.style.cssText = 'position:fixed;top:-100px;left:-100px;opacity:0;';
   document.body.appendChild(input);
-  input.style.cssText = 'position:fixed;top:-100px;';
-  
-  // Leer archivo cuando cambie
-  input.onchange = function() {
-    var file = input.files && input.files[0];
-    if (file) { handleFotoSol(input); }
-    setTimeout(function() { input.remove(); }, 1000);
-  };
-  
-  // Fallback: leer con timer si onchange no dispara
+
+  var done = false;
+  function procesar() {
+    if (done) return;
+    if (!input.files || !input.files[0]) return;
+    done = true;
+    clearInterval(poll);
+    handler(input);
+    setTimeout(function() { if (input.parentNode) input.remove(); }, 2000);
+  }
+
+  input.onchange = procesar;
+  input.addEventListener('change', procesar);
+
   input.click();
-  var checked = false;
+
   var poll = setInterval(function() {
-    if (checked) { clearInterval(poll); return; }
-    if (input.files && input.files[0]) {
-      checked = true;
-      clearInterval(poll);
-      handleFotoSol(input);
-    }
+    if (done) { clearInterval(poll); return; }
+    if (input.files && input.files[0]) procesar();
   }, 200);
   setTimeout(function() { clearInterval(poll); }, 30000);
 }
 
-function abrirFoto2() {
-  var input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  document.body.appendChild(input);
-  input.style.cssText = 'position:fixed;top:-100px;';
-  input.onchange = function() {
-    if (input.files && input.files[0]) handleFotoSol2(input);
-    setTimeout(function() { input.remove(); }, 1000);
-  };
-  input.click();
-  var poll = setInterval(function() {
-    if (input.files && input.files[0]) {
-      clearInterval(poll);
-      handleFotoSol2(input);
-    }
-  }, 200);
-  setTimeout(function() { clearInterval(poll); }, 30000);
-}
-
-function abrirFotoMod() {
-  var input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  document.body.appendChild(input);
-  input.style.cssText = 'position:fixed;top:-100px;';
-  input.onchange = function() {
-    if (input.files && input.files[0]) handleFotoMod(input);
-    setTimeout(function() { input.remove(); }, 1000);
-  };
-  input.click();
-  var poll = setInterval(function() {
-    if (input.files && input.files[0]) {
-      clearInterval(poll);
-      handleFotoMod(input);
-    }
-  }, 200);
-  setTimeout(function() { clearInterval(poll); }, 30000);
-}
+function abrirFoto1()   { _crearInputFoto('input-foto-sol-directo',   handleFotoSol);  }
+function abrirFoto2()   { _crearInputFoto('input-foto-sol-2-directo', handleFotoSol2); }
+function abrirFotoMod() { _crearInputFoto('input-foto-mod-directo',   handleFotoMod);  }
 
 function restaurarFotosSolicitud() {
   try {

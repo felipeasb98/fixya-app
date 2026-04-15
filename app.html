@@ -2110,7 +2110,7 @@ textarea.inp{resize:none;}
       <span style="font-size:22px;">📧</span>
       <div style="flex:1;">
         <div style="font-size:13px;font-weight:600;">Correo electrónico</div>
-        <div style="font-size:11px;color:var(--muted);">tecnico@fixya.cl · Respuesta en 2 hrs</div>
+        <div style="font-size:11px;color:var(--muted);">tecnico&#64;fixya.cl · Respuesta en 2 hrs</div>
       </div>
       <span style="color:var(--accent);">›</span>
     </div>
@@ -2262,37 +2262,42 @@ var _fotoCallbackActivo = null;
 function _crearInputFoto(handler) {
   if (_fotoInputActivo && _fotoInputActivo.parentNode) {
     _fotoInputActivo.remove();
+    _fotoInputActivo = null;
   }
 
   var input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  // Fuera del viewport, sin pointer-events
   input.style.cssText = 'position:fixed;top:-9999px;left:-9999px;pointer-events:none;';
   document.body.appendChild(input);
   _fotoInputActivo = input;
 
-  function procesar() {
-    if (!input.files || !input.files[0]) return;
-    var file = input.files[0];
-    console.log('Foto procesada:', file.name);
+  var done = false;
 
-    // Eliminar input INMEDIATAMENTE antes de procesar
+  function procesar() {
+    if (done) return;
+    if (!input.files || !input.files[0]) return;
+    done = true;
+
+    // Eliminar input del DOM INMEDIATAMENTE
     if (input.parentNode) input.parentNode.removeChild(input);
     _fotoInputActivo = null;
 
+    var file = input.files[0];
+    console.log('Foto procesada:', file.name);
+
     var reader = new FileReader();
     reader.onload = function(e) {
-      console.log('FileReader OK, dataUrl len:', e.target.result.length);
-      _procesarFotoConDataUrl(e.target.result, file, handler);
+      var dataUrl = e.target.result;
+      console.log('FileReader OK, dataUrl len:', dataUrl.length);
+      var fakeInput = { files: [file], _dataUrl: dataUrl };
+      handler(fakeInput);
     };
     reader.readAsDataURL(file);
   }
 
   input.onchange = procesar;
   input.addEventListener('change', procesar);
-
-  // Foco en el input antes del click para que el evento sea confiable
   input.focus();
   input.click();
 }
@@ -2390,7 +2395,11 @@ function eliminarFoto(slot) {
 }
 
 function abrirFoto1()   { _crearInputFoto(function(inp) { handleFotoSol(inp); });  }
-function abrirFoto2()   { _crearInputFoto(function(inp) { handleFotoSol2(inp); }); }
+function abrirFoto2() {
+  _crearInputFoto(function(inp) {
+    if (inp._dataUrl) _procesarFoto2ConDataUrl(inp._dataUrl);
+  });
+}
 function abrirFotoMod() { _crearInputFoto(function(inp) { handleFotoMod(inp); });  }
 
 function restaurarFotosSolicitud() {
@@ -3744,7 +3753,7 @@ async function resolverRubroId() {
     const res = await fetch('https://fixya-backend-production.up.railway.app/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'tecnico@fixya.cl', password: 'Test1234!', rol: 'tecnico' }),
+      body: JSON.stringify({ email: 'tecnico'+'@'+'fixya.cl', password: 'Test1234!', rol: 'tecnico' }),
     });
     const data = await res.json();
     if (data.perfil && data.perfil.rubros) {

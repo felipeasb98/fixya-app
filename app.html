@@ -1695,35 +1695,27 @@ textarea.inp{resize:none;}
 
   <!-- FOTO OBLIGATORIA -->
   <div class="lbl">Foto del problema <span style="color:var(--red);">*</span></div>
+  <!-- FOTO OBLIGATORIA -->
   <div id="foto-preview" onclick="abrirFoto1()" style="width:100%;height:160px;background:var(--card2);border:1.5px dashed rgba(255,255,255,.2);border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-bottom:12px;transition:all .2s;">
     <div style="font-size:32px;">📷</div>
     <div style="font-size:13px;font-weight:700;">Toca para sacar foto</div>
     <div style="font-size:11px;color:var(--muted);">GPS automático · Obligatoria</div>
   </div>
+
+  <!-- GALERÍA FOTOS (oculta hasta subir la primera) -->
   <div id="foto-ok" style="display:none;margin-bottom:12px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div id="foto-slot-1" style="height:90px;border-radius:10px;border:.5px solid rgba(0,229,160,.3);position:relative;overflow:hidden;background:#1C2333;">
-        <img id="foto-preview-1" style="width:100%;height:100%;object-fit:cover;display:none;">
-        <div id="foto-slot-1-ph" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;height:100%;"><div style="font-size:22px;">🔧</div><div style="font-size:10px;color:var(--accent);">Foto 1 · GPS ✓</div></div>
-        <button onclick="eliminarFoto(1)" id="btn-del-1" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);border:none;color:white;font-size:11px;cursor:pointer;display:none;z-index:10;">✕</button>
+      <div id="foto-slot-1" style="height:90px;border-radius:10px;border:.5px solid rgba(0,229,160,.3);position:relative;overflow:hidden;background:var(--card2);">
+        <img id="foto-preview-1" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
+        <button onclick="eliminarFoto(1)" id="btn-del-1" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);border:none;color:white;font-size:11px;line-height:1;cursor:pointer;display:none;z-index:10;">✕</button>
       </div>
       <div id="foto-slot-2" onclick="abrirFoto2()" style="height:90px;background:var(--card2);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;">
-        <img id="foto-preview-2" style="width:100%;height:100%;object-fit:cover;display:none;">
-        <div id="foto-slot-2-ph" style="font-size:22px;color:var(--muted);">➕</div>
-        <button onclick="event.stopPropagation();eliminarFoto(2)" id="btn-del-2" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);border:none;color:white;font-size:11px;cursor:pointer;display:none;z-index:10;">✕</button>
+        <img id="foto-preview-2" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
+        <div id="foto-slot-2-ph" style="font-size:22px;color:var(--muted);pointer-events:none;">➕</div>
+        <button onclick="event.stopPropagation();eliminarFoto(2)" id="btn-del-2" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);border:none;color:white;font-size:11px;line-height:1;cursor:pointer;display:none;z-index:10;">✕</button>
       </div>
     </div>
     <div id="foto-ts-label" style="margin-top:8px;padding:7px 10px;background:rgba(0,229,160,.06);border-radius:8px;font-size:11px;color:var(--accent);">✓ Foto lista</div>
-  </div>
-
-  <!-- DESCRIPCIÓN OPCIONAL -->
-  <div class="lbl">Descripción <span style="color:var(--muted);font-weight:400;">(opcional)</span></div>
-  <textarea class="inp" id="sol-desc" style="height:70px;resize:none;margin-bottom:12px;" placeholder="Ej: Fuga bajo el lavaplatos desde hace 2 horas..."></textarea>
-
-  <!-- AVISO INFORMATIVO -->
-  <div style="padding:10px 12px;background:rgba(77,158,255,.05);border:.5px solid rgba(77,158,255,.18);border-radius:10px;font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px;">
-    ℹ️ Si al llegar el técnico encuentra dificultades no descritas, te notificará <strong style="color:var(--white);">con foto y explicación</strong> la nueva tarifa antes de continuar. Puedes aceptar o rechazar.<br><br>
-    <span style="color:var(--muted);">Si rechazas: pagas los materiales que compró el técnico + <strong style="color:var(--white);">5% de retención FixYa</strong> sobre el total del trabajo.</span>
   </div>
 
   <button class="btn btn-a" id="btn-ir-tecnicos" onclick="irATecnicos()" style="opacity:.4;" disabled>Ver técnicos disponibles →</button>
@@ -2301,25 +2293,29 @@ function _crearInputFoto(handler) {
 }
 
 // Procesador de foto principal (slot 1)
-function _procesarFotoConDataUrl(dataUrl, file, handlerOverride) {
-  console.log('_procesarFotoConDataUrl llamado');
+function _procesarFotoConDataUrl(dataUrl) {
+  console.log('_procesarFotoConDataUrl llamado, dataUrl len:', dataUrl ? dataUrl.length : 0);
+
   var preview = document.getElementById('foto-preview');
   var fotoOk  = document.getElementById('foto-ok');
+  var img1    = document.getElementById('foto-preview-1');
+  var del1    = document.getElementById('btn-del-1');
+  var tsLabel = document.getElementById('foto-ts-label');
   var btn     = document.getElementById('btn-ir-tecnicos');
 
-  // Ocultar zona inicial y mostrar galería
-  if (preview) { preview.style.display = 'none'; }
-  if (fotoOk)  { fotoOk.style.display = 'block'; }
+  if (!img1) { console.error('foto-preview-1 no encontrado'); return; }
+
+  // Ocultar zona inicial, mostrar galería
+  if (preview) preview.style.display = 'none';
+  if (fotoOk)  fotoOk.style.display  = 'block';
 
   // Mostrar foto en slot 1
-  var img1 = document.getElementById('foto-preview-1');
-  var ph1  = document.getElementById('foto-slot-1-ph');
-  var del1 = document.getElementById('btn-del-1');
-  if (img1) { img1.src = dataUrl; img1.style.display = 'block'; }
-  if (ph1)  { ph1.style.display = 'none'; }
-  if (del1) { del1.style.display = 'flex'; }
+  img1.src = dataUrl;
+  img1.style.display = 'block';
+  if (del1) del1.style.display = 'flex';
+
+  // Timestamp
   var ts = new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
-  var tsLabel = document.getElementById('foto-ts-label');
   if (tsLabel) tsLabel.textContent = '✓ Foto lista · ' + ts + ' hrs';
 
   // Habilitar botón
@@ -2327,11 +2323,10 @@ function _procesarFotoConDataUrl(dataUrl, file, handlerOverride) {
   if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
 
   // Guardar
-  if (typeof FotosCapturadas !== 'undefined') {
-    FotosCapturadas.solicitud[0] = dataUrl;
-    localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
-  }
+  if (typeof FotosCapturadas !== 'undefined') FotosCapturadas.solicitud[0] = dataUrl;
   if (typeof Solicitud !== 'undefined') Solicitud.fotosProblema = [dataUrl];
+  try { localStorage.setItem('fx_fotos_solicitud', JSON.stringify([dataUrl])); } catch(e) {}
+
   console.log('Foto lista, botón habilitado');
 }
 
@@ -2392,9 +2387,7 @@ function eliminarFoto(slot) {
 
 function abrirFoto1() {
   _crearInputFoto(function(inp) {
-    if (inp._dataUrl) {
-      _procesarFotoConDataUrl(inp._dataUrl, inp.files[0], null);
-    }
+    if (inp && inp._dataUrl) _procesarFotoConDataUrl(inp._dataUrl);
   });
 }
 function abrirFoto2() {

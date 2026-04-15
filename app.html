@@ -2187,7 +2187,6 @@ var _fotoInputActivo = null;
 var _fotoCallbackActivo = null;
 
 function _crearInputFoto(handler) {
-  // Limpiar input anterior
   if (_fotoInputActivo && _fotoInputActivo.parentNode) {
     _fotoInputActivo.remove();
   }
@@ -2195,55 +2194,34 @@ function _crearInputFoto(handler) {
   var input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  // Visible pero fuera de pantalla — NO oculto
-  input.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;pointer-events:none;opacity:0;';
+  // Fuera del viewport, sin pointer-events
+  input.style.cssText = 'position:fixed;top:-9999px;left:-9999px;pointer-events:none;';
   document.body.appendChild(input);
   _fotoInputActivo = input;
-  _fotoCallbackActivo = handler;
-
-  var procesado = false;
 
   function procesar() {
-    if (procesado) return;
     if (!input.files || !input.files[0]) return;
-    procesado = true;
     var file = input.files[0];
     console.log('Foto procesada:', file.name);
 
-    // Leer con FileReader directamente
+    // Eliminar input INMEDIATAMENTE antes de procesar
+    if (input.parentNode) input.parentNode.removeChild(input);
+    _fotoInputActivo = null;
+
     var reader = new FileReader();
     reader.onload = function(e) {
-      var dataUrl = e.target.result;
-      console.log('FileReader OK, dataUrl len:', dataUrl.length);
-      // Eliminar input del DOM para que no intercepte otros clicks
-      if (input && input.parentNode) {
-        input.style.display = 'none';
-        input.parentNode.removeChild(input);
-      }
-      _fotoInputActivo = null;
-      _procesarFotoConDataUrl(dataUrl, file, handler);
+      console.log('FileReader OK, dataUrl len:', e.target.result.length);
+      _procesarFotoConDataUrl(e.target.result, file, handler);
     };
     reader.readAsDataURL(file);
   }
 
-  // Todos los métodos posibles
   input.onchange = procesar;
-  input.oninput = procesar;
-  input.addEventListener('change', procesar, true);
-  input.addEventListener('input', procesar, true);
+  input.addEventListener('change', procesar);
 
-  // Polling robusto
-  var poll = setInterval(function() {
-    if (procesado) { clearInterval(poll); return; }
-    if (input.files && input.files[0]) {
-      clearInterval(poll);
-      procesar();
-    }
-  }, 100);
-  setTimeout(function() { clearInterval(poll); }, 60000);
-
-  // Click después de todo está configurado
-  setTimeout(function() { input.click(); }, 0);
+  // Foco en el input antes del click para que el evento sea confiable
+  input.focus();
+  input.click();
 }
 
 // Procesador directo de foto con dataUrl
@@ -2816,17 +2794,7 @@ let rapFotoOk = false;
 
 let fotoSolSubida = false;
 // simFoto, simFoto2 definidos en módulo de cámara real (al final del archivo)
-function irATecnicos() {
-  if (!fotoSolSubida) { alert('Sube al menos una foto del problema para continuar.'); return; }
-  fotoSolSubida = false;
-  const fp = document.getElementById('foto-preview');
-  const fo = document.getElementById('foto-ok');
-  if (fp) fp.style.display = 'flex';
-  if (fo) fo.style.display = 'none';
-  const btn = document.getElementById('btn-ir-tecnicos');
-  if (btn) { btn.disabled = true; btn.style.opacity = '.4'; }
-  go('cli-tecnicos');
-}
+// irATecnicos — definida en módulo de solicitudes
 
 // ── MODIFICACIÓN DE TARIFA TÉCNICO ────────────────────────────────────────────
 let modFotoSubida = false;
@@ -3571,7 +3539,8 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="modal-section">Detalles</div>
     <div class="card" style="padding:10px 12px;margin-top:4px;">
       <div class="modal-price-row"><span style="color:var(--muted);font-size:12px;">Duración estimada</span><span style="font-size:12px;font-weight:600;" id="modal-dur">—</span></div>
-      <div class="modal-price-row"><span style="color:var(--muted);font-size:12px;">Materiales</<script>
+      <div class="modal-price-row"><span style="color:var(--muted);font-size:12px;">Materiales</</script>
+<script>
 // ============================================================
 // FIXYA — Módulo de Solicitudes
 // ============================================================

@@ -2296,8 +2296,8 @@ function _crearInputFoto(handler) {
     reader.readAsDataURL(file);
   }
 
+  // Solo onchange — addEventListener causa doble disparo
   input.onchange = procesar;
-  input.addEventListener('change', procesar);
   input.focus();
   input.click();
 }
@@ -2309,22 +2309,20 @@ function _procesarFotoConDataUrl(dataUrl, file, handlerOverride) {
   var fotoOk  = document.getElementById('foto-ok');
   var btn     = document.getElementById('btn-ir-tecnicos');
 
-  // Ocultar zona inicial
-  if (preview) preview.style.display = 'none';
+  // Ocultar zona inicial y mostrar galería
+  if (preview) { preview.style.display = 'none'; }
+  if (fotoOk)  { fotoOk.style.display = 'block'; }
 
   // Mostrar foto en slot 1
-  if (fotoOk) {
-    var img1 = document.getElementById('foto-preview-1');
-    var ph1  = document.getElementById('foto-slot-1-ph');
-    var del1 = document.getElementById('btn-del-1');
-    if (img1) { img1.src = dataUrl; img1.style.display = 'block'; }
-    if (ph1)  ph1.style.display = 'none';
-    if (del1) del1.style.display = 'flex';
-    var ts = new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
-    var tsLabel = document.getElementById('foto-ts-label');
-    if (tsLabel) tsLabel.textContent = '✓ Foto lista · ' + ts + ' hrs';
-    fotoOk.style.display = 'block';
-  }
+  var img1 = document.getElementById('foto-preview-1');
+  var ph1  = document.getElementById('foto-slot-1-ph');
+  var del1 = document.getElementById('btn-del-1');
+  if (img1) { img1.src = dataUrl; img1.style.display = 'block'; }
+  if (ph1)  { ph1.style.display = 'none'; }
+  if (del1) { del1.style.display = 'flex'; }
+  var ts = new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
+  var tsLabel = document.getElementById('foto-ts-label');
+  if (tsLabel) tsLabel.textContent = '✓ Foto lista · ' + ts + ' hrs';
 
   // Habilitar botón
   fotoSolSubida = true;

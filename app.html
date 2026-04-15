@@ -3642,7 +3642,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 
 // Estado global de la solicitud en curso
-const Solicitud = {
+// Expuesto en window para que sea accesible desde todos los <script>
+const Solicitud = window.Solicitud = {
   id: null,          // ID real del backend
   rubroId: null,     // ID del rubro en BD
   rubroNombre: null, // "gasfiteria" | "electricidad" etc
@@ -4095,6 +4096,9 @@ async function irATecnicos() {
     showError('Debes iniciar sesión para continuar.');
     return;
   }
+
+  // Guard: asegurar que window.Solicitud existe (cross-script safety)
+  if (!window.Solicitud) window.Solicitud = {};
 
   const btn = document.getElementById('btn-ir-tecnicos');
   if (btn) { btn.disabled = true; btn.textContent = 'Buscando técnicos...'; }
@@ -4891,7 +4895,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Funciones críticas movidas al último script ──
 async function resolverRubroId() {
   const cache = JSON.parse(localStorage.getItem('fx_rubros') || '{}');
-  const nombre = Solicitud.rubroNombre || 'gasfiteria';
+  const nombre = (window.Solicitud && window.Solicitud.rubroNombre) || 'gasfiteria';
   if (cache[nombre]) return cache[nombre];
 
   // Cargar rubros desde el técnico de prueba (tienen los IDs del seed)

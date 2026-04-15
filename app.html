@@ -2106,7 +2106,7 @@ textarea.inp{resize:none;}
       <span style="font-size:22px;">📧</span>
       <div style="flex:1;">
         <div style="font-size:13px;font-weight:600;">Correo electrónico</div>
-        <div style="font-size:11px;color:var(--muted);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2f5c405f405d5b4a6f494657564e014c43">[email&#160;protected]</a> · Respuesta en 2 hrs</div>
+        <div style="font-size:11px;color:var(--muted);">tecnico@fixya.cl · Respuesta en 2 hrs</div>
       </div>
       <span style="color:var(--accent);">›</span>
     </div>
@@ -3539,7 +3539,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="modal-section">Detalles</div>
     <div class="card" style="padding:10px 12px;margin-top:4px;">
       <div class="modal-price-row"><span style="color:var(--muted);font-size:12px;">Duración estimada</span><span style="font-size:12px;font-weight:600;" id="modal-dur">—</span></div>
-      <div class="modal-price-row"><span style="color:var(--muted);font-size:12px;">Materiales</</script>
+      <div class="modal-price-row"><span style="color:var(--muted);font-size:12px;">Materiales</
 <script>
 // ============================================================
 // FIXYA — Módulo de Solicitudes
@@ -3686,7 +3686,7 @@ async function resolverRubroId() {
     const res = await fetch('https://fixya-backend-production.up.railway.app/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: '<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="dca8b9bfb2b5bfb39cbab5a4a5bdf2bfb0">[email&#160;protected]</a>', password: 'Test1234!', rol: 'tecnico' }),
+      body: JSON.stringify({ email: 'tecnico@fixya.cl', password: 'Test1234!', rol: 'tecnico' }),
     });
     const data = await res.json();
     if (data.perfil && data.perfil.rubros) {
@@ -3850,7 +3850,7 @@ function conectarSocketCliente() {
 // Cargar Socket.io desde CDN y conectar
 (function loadSocket() {
   const script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/npm/<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data<script>
+  script.src = 'https://cdn.jsdelivr.net/npm/socket.io-client@4.7.4/dist/socket.io.min.js';
 // ============================================================
 // FIXYA — Módulo de Cámara Real
 // ============================================================
@@ -4024,24 +4024,31 @@ async function _handleFotoSolReal(input) {
 }
 
 async function _handleFotoSol2Real(input) {
-  const file = input.files && input.files[0];
-  if (!file) return;
-  const localUrl = URL.createObjectURL(file);
-  const slot = document.querySelector('#foto-ok div[style*="grid"] > div:last-child, #foto-ok div[style*="grid"] > label:last-child');
-  if (slot) {
-    const img = document.createElement('img');
-    img.src = localUrl;
-    img.style.cssText = 'width:100%;height:90px;object-fit:cover;border-radius:10px;';
-    slot.innerHTML = '';
-    slot.appendChild(img);
+  const dataUrl = input._dataUrl || (input.files && input.files[0] ? await new Promise(r => {
+    const reader = new FileReader();
+    reader.onload = e => r(e.target.result);
+    reader.readAsDataURL(input.files[0]);
+  }) : null);
+  if (!dataUrl) return;
+
+  // Mostrar en segundo slot SIN tocar el primero
+  const fotoOk = document.getElementById('foto-ok');
+  if (fotoOk) {
+    const grid = fotoOk.querySelector('div[style*="grid"]');
+    if (grid) {
+      const slots = grid.children;
+      const slot = slots[1] || slots[0];
+      if (slot) {
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.style.cssText = 'width:100%;height:90px;object-fit:cover;border-radius:10px;border:.5px solid rgba(0,229,160,.3);';
+        slot.innerHTML = '';
+        slot.appendChild(img);
+      }
+    }
   }
-  try {
-    const url = await subirFoto(file, 'problema');
-    FotosCapturadas.solicitud[1] = url;
-    localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
-  } catch {
-    FotosCapturadas.solicitud[1] = localUrl;
-  }
+  FotosCapturadas.solicitud[1] = dataUrl;
+  localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
 }
 
 async function _handleFotoModReal(input) {

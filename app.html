@@ -1700,7 +1700,7 @@ textarea.inp{resize:none;}
     <div style="font-size:13px;font-weight:700;">Toca para sacar foto</div>
     <div style="font-size:11px;color:var(--muted);">GPS automático · Obligatoria</div>
   </div>
-  <diid="foto-ok" style="display:none;margin-bottom:12px;">
+  <div id="foto-ok" style="display:none;margin-bottom:12px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div id="foto-slot-1" style="height:90px;border-radius:10px;border:.5px solid rgba(0,229,160,.3);position:relative;overflow:hidden;background:#1C2333;">
         <img id="foto-preview-1" style="width:100%;height:100%;object-fit:cover;display:none;">
@@ -1714,8 +1714,6 @@ textarea.inp{resize:none;}
       </div>
     </div>
     <div id="foto-ts-label" style="margin-top:8px;padding:7px 10px;background:rgba(0,229,160,.06);border-radius:8px;font-size:11px;color:var(--accent);">✓ Foto lista</div>
-  </div</div>
-    <div style="margin-top:8px;padding:7px 10px;background:rgba(0,229,160,.06);border-radius:8px;font-size:11px;color:var(--accent);">✓ Foto subida con GPS · Timestamp: 9:43 hrs</div>
   </div>
 
   <!-- DESCRIPCIÓN OPCIONAL -->
@@ -2290,8 +2288,8 @@ function _crearInputFoto(handler) {
     reader.onload = function(e) {
       var dataUrl = e.target.result;
       console.log('FileReader OK, dataUrl len:', dataUrl.length);
-      var fakeInput = { files: [file], _dataUrl: dataUrl };
-      handler(fakeInput);
+      // Llamar handler directamente con dataUrl
+      handler({ _dataUrl: dataUrl, files: [file] });
     };
     reader.readAsDataURL(file);
   }
@@ -2392,7 +2390,13 @@ function eliminarFoto(slot) {
   }
 }
 
-function abrirFoto1()   { _crearInputFoto(function(inp) { handleFotoSol(inp); });  }
+function abrirFoto1() {
+  _crearInputFoto(function(inp) {
+    if (inp._dataUrl) {
+      _procesarFotoConDataUrl(inp._dataUrl, inp.files[0], null);
+    }
+  });
+}
 function abrirFoto2() {
   _crearInputFoto(function(inp) {
     if (inp._dataUrl) _procesarFoto2ConDataUrl(inp._dataUrl);

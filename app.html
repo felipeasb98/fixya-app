@@ -1704,7 +1704,7 @@ textarea.inp{resize:none;}
 
   <!-- GALERÍA FOTOS con scroll horizontal -->
   <div id="foto-ok" style="display:none;margin-bottom:12px;">
-    <div id="fotos-scroll" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+    <div id="fotos-scroll" style="display:flex;gap:8px;overflow-x:scroll;padding-bottom:6px;-webkit-overflow-scrolling:touch;min-height:100px;">
       <!-- Las fotos se agregan aquí dinámicamente -->
       <!-- Botón agregar siempre al final -->
       <div id="btn-agregar-foto" onclick="abrirFotoExtra()" style="flex-shrink:0;width:90px;height:90px;background:var(--card2);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
@@ -2134,104 +2134,11 @@ function getUrgencia() {
   return 'normal';
 }
 
-async function irATecnicos() {
-  if (!fotoSolSubida) {
-    showError('Sube al menos una foto del problema para continuar.');
-    return;
-  }
+// resolverRubroId — movida al último script
 
-  const token = Session.token();
-  if (!token) {
-    showError('Debes iniciar sesión para continuar.');
-    return;
-  }
 
-  const btn = document.getElementById('btn-ir-tecnicos');
-  if (btn) { btn.disabled = true; btn.textContent = 'Buscando técnicos...'; }
+// irATecnicos — definida en último script
 
-  try {
-    // Calcular totales actuales
-    const urgencia = (typeof schedModo === 'undefined') ? 'normal' :
-      schedModo === 'emergencia' ? 'emergencia' :
-      schedModo === 'asap' ? 'urgente' : 'normal';
-    const urgMult = urgencia === 'emergencia' ? 1.5 : urgencia === 'urgente' ? 1.1 : 1.0;
-    const moFinal = Math.round((cotMO || 30000) * urgMult);
-    const matFinal = cotMat || 0;
-    const comision = Math.round((moFinal + matFinal) * 0.12);
-    const total = moFinal + matFinal + comision;
-
-    // Crear solicitud en el backend
-    const data = await apiFetch('/solicitudes', {
-      method: 'POST',
-      body: JSON.stringify({
-        trabajo: cotNombre || 'Trabajo general',
-        rubroId: await resolverRubroId(),
-        descripcion: (document.getElementById('sol-desc') ? document.getElementById('sol-desc').value : '') || Solicitud.descripcion || '',
-        urgencia,
-        moBase: moFinal,
-        matEstimado: matFinal,
-        totalEstimado: total,
-        latitud: Solicitud.latitud,
-        longitud: Solicitud.longitud,
-        comuna: Solicitud.comuna,
-        agendado: schedModo === 'agenda',
-        fotosProblema: [],
-      }),
-    });
-
-    // Guardar ID de la solicitud para usarla después
-    Solicitud.id = data.solicitud.id;
-    localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-      id: data.solicitud.id,
-      codigo: data.solicitud.codigo,
-      trabajo: data.solicitud.trabajo,
-      total,
-    }));
-
-    // Resetear UI foto
-    fotoSolSubida = false;
-    const fp = document.getElementById('foto-preview');
-    const fo = document.getElementById('foto-ok');
-    if (fp) fp.style.display = 'flex';
-    if (fo) fo.style.display = 'none';
-    if (btn) { btn.disabled = true; btn.style.opacity = '.4'; btn.textContent = 'Ver técnicos disponibles →'; }
-
-    // Cargar técnicos reales y navegar
-    await cargarTecnicosDisponibles(data.solicitud.id);
-    go('cli-tecnicos');
-
-  } catch (err) {
-    showError(err.message || 'Error al crear la solicitud');
-    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'Ver técnicos disponibles →'; }
-  }
-}
-// ── Handlers cámara — definidos temprano para evitar "not defined" ──
-function handleFotoSol(input) {
-  if (typeof _handleFotoSolReal === 'function') _handleFotoSolReal(input);
-  else setTimeout(() => handleFotoSol(input), 100);
-}
-function handleFotoSol2(input) {
-  if (typeof _handleFotoSol2Real === 'function') _handleFotoSol2Real(input);
-  else setTimeout(() => handleFotoSol2(input), 100);
-}
-function handleFotoMod(input) {
-  if (typeof _handleFotoModReal === 'function') _handleFotoModReal(input);
-  else setTimeout(() => handleFotoMod(input), 100);
-}
-
-// ── Polling fallback: detecta archivos cuando change no dispara ──
-function iniciarPollingFoto(inputId, handler) {
-  var el = document.getElementById(inputId);
-  if (!el) return;
-  var interval = setInterval(function() {
-    if (el.files && el.files.length > 0) {
-      clearInterval(interval);
-      handler(el);
-    }
-  }, 200);
-  // Detener polling después de 60 segundos
-  setTimeout(function() { clearInterval(interval); }, 60000);
-}
 
 function abrirSelectorFoto(inputId, handler) {
   var el = document.getElementById(inputId);
@@ -3793,28 +3700,8 @@ async function getRubroId(nombre) {
 
 
 // ── Resolver rubroId desde cache local ───────────────────────
-async function resolverRubroId() {
-  const cache = JSON.parse(localStorage.getItem('fx_rubros') || '{}');
-  const nombre = Solicitud.rubroNombre || 'gasfiteria';
-  if (cache[nombre]) return cache[nombre];
+// resolverRubroId — movida al primer script
 
-  // Cargar rubros desde el técnico de prueba (tienen los IDs del seed)
-  try {
-    const res = await fetch('https://fixya-backend-production.up.railway.app/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'tecnico'+'@'+'fixya.cl', password: 'Test1234!', rol: 'tecnico' }),
-    });
-    const data = await res.json();
-    if (data.perfil && data.perfil.rubros) {
-      const nuevosIds = {};
-      data.perfil.rubros.forEach(r => { nuevosIds[r.rubro.nombre] = r.rubro.id; });
-      localStorage.setItem('fx_rubros', JSON.stringify(nuevosIds));
-      return nuevosIds[nombre] || Object.values(nuevosIds)[0];
-    }
-  } catch {}
-  return null;
-}
 
 // ── Cargar técnicos disponibles desde el backend ──────────────
 async function cargarTecnicosDisponibles(solicitudId) {
@@ -4906,4 +4793,102 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ya manejado por el IIFE arriba
   }
 });
+
+
+// ── Funciones críticas movidas al último script ──
+async function resolverRubroId() {
+  const cache = JSON.parse(localStorage.getItem('fx_rubros') || '{}');
+  const nombre = Solicitud.rubroNombre || 'gasfiteria';
+  if (cache[nombre]) return cache[nombre];
+
+  // Cargar rubros desde el técnico de prueba (tienen los IDs del seed)
+  try {
+    const res = await fetch('https://fixya-backend-production.up.railway.app/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'tecnico'+'@'+'fixya.cl', password: 'Test1234!', rol: 'tecnico' }),
+    });
+    const data = await res.json();
+    if (data.perfil && data.perfil.rubros) {
+      const nuevosIds = {};
+      data.perfil.rubros.forEach(r => { nuevosIds[r.rubro.nombre] = r.rubro.id; });
+      localStorage.setItem('fx_rubros', JSON.stringify(nuevosIds));
+      return nuevosIds[nombre] || Object.values(nuevosIds)[0];
+    }
+  } catch {}
+  return null;
+}
+
+async function irATecnicos() {
+  if (!fotoSolSubida) {
+    showError('Sube al menos una foto del problema para continuar.');
+    return;
+  }
+
+  const token = Session.token();
+  if (!token) {
+    showError('Debes iniciar sesión para continuar.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-ir-tecnicos');
+  if (btn) { btn.disabled = true; btn.textContent = 'Buscando técnicos...'; }
+
+  try {
+    // Calcular totales actuales
+    const urgencia = (typeof schedModo === 'undefined') ? 'normal' :
+      schedModo === 'emergencia' ? 'emergencia' :
+      schedModo === 'asap' ? 'urgente' : 'normal';
+    const urgMult = urgencia === 'emergencia' ? 1.5 : urgencia === 'urgente' ? 1.1 : 1.0;
+    const moFinal = Math.round((cotMO || 30000) * urgMult);
+    const matFinal = cotMat || 0;
+    const comision = Math.round((moFinal + matFinal) * 0.12);
+    const total = moFinal + matFinal + comision;
+
+    // Crear solicitud en el backend
+    const data = await apiFetch('/solicitudes', {
+      method: 'POST',
+      body: JSON.stringify({
+        trabajo: cotNombre || 'Trabajo general',
+        rubroId: await resolverRubroId(),
+        descripcion: (document.getElementById('sol-desc') ? document.getElementById('sol-desc').value : '') || Solicitud.descripcion || '',
+        urgencia,
+        moBase: moFinal,
+        matEstimado: matFinal,
+        totalEstimado: total,
+        latitud: Solicitud.latitud,
+        longitud: Solicitud.longitud,
+        comuna: Solicitud.comuna,
+        agendado: schedModo === 'agenda',
+        fotosProblema: [],
+      }),
+    });
+
+    // Guardar ID de la solicitud para usarla después
+    Solicitud.id = data.solicitud.id;
+    localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+      id: data.solicitud.id,
+      codigo: data.solicitud.codigo,
+      trabajo: data.solicitud.trabajo,
+      total,
+    }));
+
+    // Resetear UI foto
+    fotoSolSubida = false;
+    const fp = document.getElementById('foto-preview');
+    const fo = document.getElementById('foto-ok');
+    if (fp) fp.style.display = 'flex';
+    if (fo) fo.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.style.opacity = '.4'; btn.textContent = 'Ver técnicos disponibles →'; }
+
+    // Cargar técnicos reales y navegar
+    await cargarTecnicosDisponibles(data.solicitud.id);
+    go('cli-tecnicos');
+
+  } catch (err) {
+    showError(err.message || 'Error al crear la solicitud');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'Ver técnicos disponibles →'; }
+  }
+}
+
 </script>

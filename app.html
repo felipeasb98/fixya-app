@@ -2215,7 +2215,12 @@ function _crearInputFoto(handler) {
     reader.onload = function(e) {
       var dataUrl = e.target.result;
       console.log('FileReader OK, dataUrl len:', dataUrl.length);
-      // Llamar handler simplificado directamente con dataUrl
+      // Eliminar input del DOM para que no intercepte otros clicks
+      if (input && input.parentNode) {
+        input.style.display = 'none';
+        input.parentNode.removeChild(input);
+      }
+      _fotoInputActivo = null;
       _procesarFotoConDataUrl(dataUrl, file, handler);
     };
     reader.readAsDataURL(file);

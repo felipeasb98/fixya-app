@@ -2196,7 +2196,7 @@ function _crearInputFoto(handler) {
   input.type = 'file';
   input.accept = 'image/*';
   // Visible pero fuera de pantalla — NO oculto
-  input.style.cssText = 'position:fixed;bottom:0;left:0;width:1px;height:1px;opacity:0.01;z-index:-1;';
+  input.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;pointer-events:none;opacity:0;';
   document.body.appendChild(input);
   _fotoInputActivo = input;
   _fotoCallbackActivo = handler;

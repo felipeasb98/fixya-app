@@ -3619,6 +3619,96 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// ── irATecnicos — definida aquí para garantizar disponibilidad global ──
+async function irATecnicos() {
+  if (!window.fotoSolSubida && !fotoSolSubida) {
+    showError('Sube al menos una foto del problema para continuar.');
+    return;
+  }
+
+  const token = Session.token();
+  if (!token) {
+    showError('Debes iniciar sesión para continuar.');
+    return;
+  }
+
+  // Guard: asegurar que window.Solicitud existe (cross-script safety)
+  if (!window.Solicitud) window.Solicitud = {};
+
+  const btn = document.getElementById('btn-ir-tecnicos');
+  if (btn) { btn.disabled = true; btn.textContent = 'Buscando técnicos...'; }
+
+  try {
+    const urgencia = (!window.schedModo || window.schedModo === 'normal') ? 'normal' :
+      window.schedModo === 'emergencia' ? 'emergencia' :
+      window.schedModo === 'asap' ? 'urgente' : 'normal';
+    const urgMult = urgencia === 'emergencia' ? 1.5 : urgencia === 'urgente' ? 1.1 : 1.0;
+    const moFinal = Math.round(((typeof cotMO!=="undefined"?cotMO:window.cotMO) || 30000) * urgMult);
+    const matFinal = (typeof cotMat!=="undefined"?cotMat:window.cotMat) || 0;
+    const comision = Math.round((moFinal + matFinal) * 0.12);
+    const total = moFinal + matFinal + comision;
+
+    const data = await apiFetch('/solicitudes', {
+      method: 'POST',
+      body: JSON.stringify({
+        trabajo: (typeof cotNombre!=="undefined"?cotNombre:window.cotNombre) || 'Trabajo general',
+        rubroId: await (async function() {
+          const cache = JSON.parse(localStorage.getItem('fx_rubros') || '{}');
+          const nombre = (window.Solicitud && window.Solicitud.rubroNombre) || 'gasfiteria';
+          if (cache[nombre]) return cache[nombre];
+          try {
+            const res = await fetch('https://fixya-backend-production.up.railway.app/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: 'tecnico'+'@'+'fixya.cl', password: 'Test1234!', rol: 'tecnico' }),
+            });
+            const d = await res.json();
+            if (d.perfil && d.perfil.rubros) {
+              const ids = {};
+              d.perfil.rubros.forEach(r => { ids[r.rubro.nombre] = r.rubro.id; });
+              localStorage.setItem('fx_rubros', JSON.stringify(ids));
+              return ids[nombre] || Object.values(ids)[0];
+            }
+          } catch(e) {}
+          return null;
+        })(),
+        descripcion: (document.getElementById('sol-desc') ? document.getElementById('sol-desc').value : '') || (window.Solicitud && window.Solicitud.descripcion) || '',
+        urgencia,
+        moBase: moFinal,
+        matEstimado: matFinal,
+        totalEstimado: total,
+        latitud: window.Solicitud.latitud,
+        longitud: window.Solicitud.longitud,
+        comuna: window.Solicitud.comuna,
+        agendado: (window.schedModo||null) === 'agenda',
+        fotosProblema: [],
+      }),
+    });
+
+    window.Solicitud.id = data.solicitud.id;
+    localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+      id: data.solicitud.id,
+      codigo: data.solicitud.codigo,
+      trabajo: data.solicitud.trabajo,
+      total,
+    }));
+
+    fotoSolSubida = false;
+    const fp = document.getElementById('foto-preview');
+    const fo = document.getElementById('foto-ok');
+    if (fp) fp.style.display = 'flex';
+    if (fo) fo.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.style.opacity = '.4'; btn.textContent = 'Ver técnicos disponibles →'; }
+
+    await cargarTecnicosDisponibles(data.solicitud.id);
+    go('cli-tecnicos');
+
+  } catch (err) {
+    showError(err.message || 'Error al crear la solicitud');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'Ver técnicos disponibles →'; }
+  }
+}
 </script>
 
 <!-- MODAL DESCRIPCIÓN TRABAJO -->
@@ -4085,99 +4175,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-async function irATecnicos() {
-  if (!window.fotoSolSubida && !fotoSolSubida) {
-    showError('Sube al menos una foto del problema para continuar.');
-    return;
-  }
-
-  const token = Session.token();
-  if (!token) {
-    showError('Debes iniciar sesión para continuar.');
-    return;
-  }
-
-  // Guard: asegurar que window.Solicitud existe (cross-script safety)
-  if (!window.Solicitud) window.Solicitud = {};
-
-  const btn = document.getElementById('btn-ir-tecnicos');
-  if (btn) { btn.disabled = true; btn.textContent = 'Buscando técnicos...'; }
-
-  try {
-    // Calcular totales actuales
-    const urgencia = (!window.schedModo || window.schedModo === 'normal') ? 'normal' :
-      window.schedModo === 'emergencia' ? 'emergencia' :
-      window.schedModo === 'asap' ? 'urgente' : 'normal';
-    const urgMult = urgencia === 'emergencia' ? 1.5 : urgencia === 'urgente' ? 1.1 : 1.0;
-    const moFinal = Math.round(((typeof cotMO!=="undefined"?cotMO:window.cotMO) || 30000) * urgMult);
-    const matFinal = (typeof cotMat!=="undefined"?cotMat:window.cotMat) || 0;
-    const comision = Math.round((moFinal + matFinal) * 0.12);
-    const total = moFinal + matFinal + comision;
-
-    // Crear solicitud en el backend
-    const data = await apiFetch('/solicitudes', {
-      method: 'POST',
-      body: JSON.stringify({
-        trabajo: (typeof cotNombre!=="undefined"?cotNombre:window.cotNombre) || 'Trabajo general',
-        rubroId: await (async function() {
-          const cache = JSON.parse(localStorage.getItem('fx_rubros') || '{}');
-          const nombre = (typeof window.Solicitud !== 'undefined' && window.Solicitud.rubroNombre) || 'gasfiteria';
-          if (cache[nombre]) return cache[nombre];
-          try {
-            const res = await fetch('https://fixya-backend-production.up.railway.app/api/auth/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: 'tecnico'+'@'+'fixya.cl', password: 'Test1234!', rol: 'tecnico' }),
-            });
-            const data = await res.json();
-            if (data.perfil && data.perfil.rubros) {
-              const ids = {};
-              data.perfil.rubros.forEach(r => { ids[r.rubro.nombre] = r.rubro.id; });
-              localStorage.setItem('fx_rubros', JSON.stringify(ids));
-              return ids[nombre] || Object.values(ids)[0];
-            }
-          } catch(e) {}
-          return null;
-        })(),
-        descripcion: (document.getElementById('sol-desc') ? document.getElementById('sol-desc').value : '') || window.Solicitud.descripcion || '',
-        urgencia,
-        moBase: moFinal,
-        matEstimado: matFinal,
-        totalEstimado: total,
-        latitud: window.Solicitud.latitud,
-        longitud: window.Solicitud.longitud,
-        comuna: window.Solicitud.comuna,
-        agendado: (window.schedModo||null) === 'agenda',
-        fotosProblema: [],
-      }),
-    });
-
-    // Guardar ID de la solicitud para usarla después
-    window.Solicitud.id = data.solicitud.id;
-    localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-      id: data.solicitud.id,
-      codigo: data.solicitud.codigo,
-      trabajo: data.solicitud.trabajo,
-      total,
-    }));
-
-    // Resetear UI foto
-    fotoSolSubida = false;
-    const fp = document.getElementById('foto-preview');
-    const fo = document.getElementById('foto-ok');
-    if (fp) fp.style.display = 'flex';
-    if (fo) fo.style.display = 'none';
-    if (btn) { btn.disabled = true; btn.style.opacity = '.4'; btn.textContent = 'Ver técnicos disponibles →'; }
-
-    // Cargar técnicos reales y navegar
-    await cargarTecnicosDisponibles(data.solicitud.id);
-    go('cli-tecnicos');
-
-  } catch (err) {
-    showError(err.message || 'Error al crear la solicitud');
-    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'Ver técnicos disponibles →'; }
-  }
-}
+// irATecnicos — movida al primer script para garantizar disponibilidad global
 </script>
 <script>
 // ============================================================

@@ -1704,7 +1704,7 @@ textarea.inp{resize:none;}
 
   <!-- GALERÍA FOTOS con scroll horizontal -->
   <div id="foto-ok" style="display:none;margin-bottom:12px;">
-    <div id="fotos-scroll" style="display:flex;gap:8px;overflow-x:scroll;padding-bottom:6px;-webkit-overflow-scrolling:touch;min-height:100px;">
+    <div id="fotos-scroll" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;touch-action:pan-x;cursor:grab;">
       <!-- Las fotos se agregan aquí dinámicamente -->
       <!-- Botón agregar siempre al final -->
       <div id="btn-agregar-foto" onclick="abrirFotoExtra()" style="flex-shrink:0;width:90px;height:90px;background:var(--card2);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
@@ -4820,7 +4820,7 @@ async function resolverRubroId() {
 }
 
 async function irATecnicos() {
-  if (!fotoSolSubida) {
+  if (!window.fotoSolSubida && !fotoSolSubida) {
     showError('Sube al menos una foto del problema para continuar.');
     return;
   }
@@ -4836,12 +4836,12 @@ async function irATecnicos() {
 
   try {
     // Calcular totales actuales
-    const urgencia = (typeof schedModo === 'undefined') ? 'normal' :
-      schedModo === 'emergencia' ? 'emergencia' :
-      schedModo === 'asap' ? 'urgente' : 'normal';
+    const urgencia = (!window.schedModo || window.schedModo === 'normal') ? 'normal' :
+      window.schedModo === 'emergencia' ? 'emergencia' :
+      window.schedModo === 'asap' ? 'urgente' : 'normal';
     const urgMult = urgencia === 'emergencia' ? 1.5 : urgencia === 'urgente' ? 1.1 : 1.0;
-    const moFinal = Math.round((cotMO || 30000) * urgMult);
-    const matFinal = cotMat || 0;
+    const moFinal = Math.round(((typeof cotMO!=="undefined"?cotMO:window.cotMO) || 30000) * urgMult);
+    const matFinal = (typeof cotMat!=="undefined"?cotMat:window.cotMat) || 0;
     const comision = Math.round((moFinal + matFinal) * 0.12);
     const total = moFinal + matFinal + comision;
 
@@ -4849,10 +4849,10 @@ async function irATecnicos() {
     const data = await apiFetch('/solicitudes', {
       method: 'POST',
       body: JSON.stringify({
-        trabajo: cotNombre || 'Trabajo general',
+        trabajo: (typeof cotNombre!=="undefined"?cotNombre:window.cotNombre) || 'Trabajo general',
         rubroId: await (async function() {
           const cache = JSON.parse(localStorage.getItem('fx_rubros') || '{}');
-          const nombre = (typeof Solicitud !== 'undefined' && Solicitud.rubroNombre) || 'gasfiteria';
+          const nombre = (typeof window.Solicitud !== 'undefined' && window.Solicitud.rubroNombre) || 'gasfiteria';
           if (cache[nombre]) return cache[nombre];
           try {
             const res = await fetch('https://fixya-backend-production.up.railway.app/api/auth/login', {
@@ -4870,21 +4870,21 @@ async function irATecnicos() {
           } catch(e) {}
           return null;
         })(),
-        descripcion: (document.getElementById('sol-desc') ? document.getElementById('sol-desc').value : '') || Solicitud.descripcion || '',
+        descripcion: (document.getElementById('sol-desc') ? document.getElementById('sol-desc').value : '') || window.Solicitud.descripcion || '',
         urgencia,
         moBase: moFinal,
         matEstimado: matFinal,
         totalEstimado: total,
-        latitud: Solicitud.latitud,
-        longitud: Solicitud.longitud,
-        comuna: Solicitud.comuna,
-        agendado: schedModo === 'agenda',
+        latitud: window.Solicitud.latitud,
+        longitud: window.Solicitud.longitud,
+        comuna: window.Solicitud.comuna,
+        agendado: (window.schedModo||null) === 'agenda',
         fotosProblema: [],
       }),
     });
 
     // Guardar ID de la solicitud para usarla después
-    Solicitud.id = data.solicitud.id;
+    window.Solicitud.id = data.solicitud.id;
     localStorage.setItem('fx_solicitud_activa', JSON.stringify({
       id: data.solicitud.id,
       codigo: data.solicitud.codigo,

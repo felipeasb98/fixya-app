@@ -1714,6 +1714,16 @@ textarea.inp{resize:none;}
     <div id="foto-ts-label" style="margin-top:8px;padding:7px 10px;background:rgba(0,229,160,.06);border-radius:8px;font-size:11px;color:var(--accent);">✓ Foto lista</div>
   </div>
 
+  <!-- DESCRIPCIÓN OPCIONAL -->
+  <div class="lbl">Descripción <span style="color:var(--muted);font-weight:400;">(opcional)</span></div>
+  <textarea class="inp" id="sol-desc" style="height:70px;resize:none;margin-bottom:12px;" placeholder="Ej: Fuga bajo el lavaplatos desde hace 2 horas..."></textarea>
+
+  <!-- AVISO INFORMATIVO -->
+  <div style="padding:10px 12px;background:rgba(77,158,255,.05);border:.5px solid rgba(77,158,255,.18);border-radius:10px;font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px;">
+    ℹ️ Si al llegar el técnico encuentra dificultades no descritas, te notificará <strong style="color:var(--white);">con foto y explicación</strong> la nueva tarifa antes de continuar. Puedes aceptar o rechazar.<br><br>
+    <span style="color:var(--muted);">Si rechazas: pagas los materiales que compró el técnico + <strong style="color:var(--white);">5% de retención FixYa</strong> sobre el total del trabajo.</span>
+  </div>
+
   <button class="btn btn-a" id="btn-ir-tecnicos" onclick="irATecnicos()" style="opacity:.4;" disabled>Ver técnicos disponibles →</button>
 </div>
 </div>
@@ -2141,7 +2151,9 @@ async function irATecnicos() {
 
   try {
     // Calcular totales actuales
-    const urgencia = getUrgencia();
+    const urgencia = (typeof schedModo === 'undefined') ? 'normal' :
+      schedModo === 'emergencia' ? 'emergencia' :
+      schedModo === 'asap' ? 'urgente' : 'normal';
     const urgMult = urgencia === 'emergencia' ? 1.5 : urgencia === 'urgente' ? 1.1 : 1.0;
     const moFinal = Math.round((cotMO || 30000) * urgMult);
     const matFinal = cotMat || 0;
@@ -2154,7 +2166,7 @@ async function irATecnicos() {
       body: JSON.stringify({
         trabajo: cotNombre || 'Trabajo general',
         rubroId: await resolverRubroId(),
-        descripcion: Solicitud.descripcion || '',
+        descripcion: (document.getElementById('sol-desc') ? document.getElementById('sol-desc').value : '') || Solicitud.descripcion || '',
         urgencia,
         moBase: moFinal,
         matEstimado: matFinal,

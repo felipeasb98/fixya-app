@@ -1700,17 +1700,21 @@ textarea.inp{resize:none;}
     <div style="font-size:13px;font-weight:700;">Toca para sacar foto</div>
     <div style="font-size:11px;color:var(--muted);">GPS automático · Obligatoria</div>
   </div>
-  <div id="foto-ok" style="display:none;margin-bottom:12px;">
+  <diid="foto-ok" style="display:none;margin-bottom:12px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div style="height:90px;background:linear-gradient(135deg,#1C2333,#0D1A2A);border-radius:10px;border:.5px solid rgba(0,229,160,.3);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;">
-        <div style="font-size:22px;">🔧</div>
-        <div style="font-size:10px;color:var(--accent);">Foto 1 · GPS ✓</div>
+      <div id="foto-slot-1" style="height:90px;border-radius:10px;border:.5px solid rgba(0,229,160,.3);position:relative;overflow:hidden;background:#1C2333;">
+        <img id="foto-preview-1" style="width:100%;height:100%;object-fit:cover;display:none;">
+        <div id="foto-slot-1-ph" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;height:100%;"><div style="font-size:22px;">🔧</div><div style="font-size:10px;color:var(--accent);">Foto 1 · GPS ✓</div></div>
+        <button onclick="eliminarFoto(1)" id="btn-del-1" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);border:none;color:white;font-size:11px;cursor:pointer;display:none;z-index:10;">✕</button>
       </div>
-      <div onclick="abrirFoto2()" style="height:90px;background:var(--card2);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-        <div style="font-size:22px;color:var(--muted);">➕</div>
+      <div id="foto-slot-2" onclick="abrirFoto2()" style="height:90px;background:var(--card2);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;">
+        <img id="foto-preview-2" style="width:100%;height:100%;object-fit:cover;display:none;">
+        <div id="foto-slot-2-ph" style="font-size:22px;color:var(--muted);">➕</div>
+        <button onclick="event.stopPropagation();eliminarFoto(2)" id="btn-del-2" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);border:none;color:white;font-size:11px;cursor:pointer;display:none;z-index:10;">✕</button>
       </div>
-
     </div>
+    <div id="foto-ts-label" style="margin-top:8px;padding:7px 10px;background:rgba(0,229,160,.06);border-radius:8px;font-size:11px;color:var(--accent);">✓ Foto lista</div>
+  </div</div>
     <div style="margin-top:8px;padding:7px 10px;background:rgba(0,229,160,.06);border-radius:8px;font-size:11px;color:var(--accent);">✓ Foto subida con GPS · Timestamp: 9:43 hrs</div>
   </div>
 
@@ -2127,6 +2131,75 @@ textarea.inp{resize:none;}
 </div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+async function irATecnicos() {
+  if (!fotoSolSubida) {
+    showError('Sube al menos una foto del problema para continuar.');
+    return;
+  }
+
+  const token = Session.token();
+  if (!token) {
+    showError('Debes iniciar sesión para continuar.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-ir-tecnicos');
+  if (btn) { btn.disabled = true; btn.textContent = 'Buscando técnicos...'; }
+
+  try {
+    // Calcular totales actuales
+    const urgencia = getUrgencia();
+    const urgMult = urgencia === 'emergencia' ? 1.5 : urgencia === 'urgente' ? 1.1 : 1.0;
+    const moFinal = Math.round((cotMO || 30000) * urgMult);
+    const matFinal = cotMat || 0;
+    const comision = Math.round((moFinal + matFinal) * 0.12);
+    const total = moFinal + matFinal + comision;
+
+    // Crear solicitud en el backend
+    const data = await apiFetch('/solicitudes', {
+      method: 'POST',
+      body: JSON.stringify({
+        trabajo: cotNombre || 'Trabajo general',
+        rubroId: await resolverRubroId(),
+        descripcion: Solicitud.descripcion || '',
+        urgencia,
+        moBase: moFinal,
+        matEstimado: matFinal,
+        totalEstimado: total,
+        latitud: Solicitud.latitud,
+        longitud: Solicitud.longitud,
+        comuna: Solicitud.comuna,
+        agendado: schedModo === 'agenda',
+        fotosProblema: [],
+      }),
+    });
+
+    // Guardar ID de la solicitud para usarla después
+    Solicitud.id = data.solicitud.id;
+    localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+      id: data.solicitud.id,
+      codigo: data.solicitud.codigo,
+      trabajo: data.solicitud.trabajo,
+      total,
+    }));
+
+    // Resetear UI foto
+    fotoSolSubida = false;
+    const fp = document.getElementById('foto-preview');
+    const fo = document.getElementById('foto-ok');
+    if (fp) fp.style.display = 'flex';
+    if (fo) fo.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.style.opacity = '.4'; btn.textContent = 'Ver técnicos disponibles →'; }
+
+    // Cargar técnicos reales y navegar
+    await cargarTecnicosDisponibles(data.solicitud.id);
+    go('cli-tecnicos');
+
+  } catch (err) {
+    showError(err.message || 'Error al crear la solicitud');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'Ver técnicos disponibles →'; }
+  }
+}
 // ── Handlers cámara — definidos temprano para evitar "not defined" ──
 function handleFotoSol(input) {
   if (typeof _handleFotoSolReal === 'function') _handleFotoSolReal(input);
@@ -2224,29 +2297,27 @@ function _crearInputFoto(handler) {
   input.click();
 }
 
-// Procesador directo de foto con dataUrl
+// Procesador de foto principal (slot 1)
 function _procesarFotoConDataUrl(dataUrl, file, handlerOverride) {
   console.log('_procesarFotoConDataUrl llamado');
   var preview = document.getElementById('foto-preview');
   var fotoOk  = document.getElementById('foto-ok');
   var btn     = document.getElementById('btn-ir-tecnicos');
 
-  // Ocultar zona de foto
+  // Ocultar zona inicial
   if (preview) preview.style.display = 'none';
 
-  // Mostrar preview
+  // Mostrar foto en slot 1
   if (fotoOk) {
-    var grid = fotoOk.querySelector('div[style*="grid"]');
-    if (grid && grid.firstElementChild) {
-      var img = document.createElement('img');
-      img.src = dataUrl;
-      img.style.cssText = 'width:100%;height:90px;object-fit:cover;border-radius:10px;border:.5px solid rgba(0,229,160,.3);';
-      grid.firstElementChild.innerHTML = '';
-      grid.firstElementChild.appendChild(img);
-    }
+    var img1 = document.getElementById('foto-preview-1');
+    var ph1  = document.getElementById('foto-slot-1-ph');
+    var del1 = document.getElementById('btn-del-1');
+    if (img1) { img1.src = dataUrl; img1.style.display = 'block'; }
+    if (ph1)  ph1.style.display = 'none';
+    if (del1) del1.style.display = 'flex';
     var ts = new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
-    var tsEl = fotoOk.querySelector('div[style*="accent"]');
-    if (tsEl) tsEl.textContent = '✓ Foto lista · ' + ts + ' hrs';
+    var tsLabel = document.getElementById('foto-ts-label');
+    if (tsLabel) tsLabel.textContent = '✓ Foto lista · ' + ts + ' hrs';
     fotoOk.style.display = 'block';
   }
 
@@ -2260,8 +2331,62 @@ function _procesarFotoConDataUrl(dataUrl, file, handlerOverride) {
     localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
   }
   if (typeof Solicitud !== 'undefined') Solicitud.fotosProblema = [dataUrl];
-
   console.log('Foto lista, botón habilitado');
+}
+
+// Procesador de foto secundaria (slot 2)
+function _procesarFoto2ConDataUrl(dataUrl) {
+  var img2 = document.getElementById('foto-preview-2');
+  var ph2  = document.getElementById('foto-slot-2-ph');
+  var del2 = document.getElementById('btn-del-2');
+  var slot2 = document.getElementById('foto-slot-2');
+  if (img2) { img2.src = dataUrl; img2.style.display = 'block'; }
+  if (ph2)  ph2.style.display = 'none';
+  if (del2) del2.style.display = 'flex';
+  if (slot2) slot2.style.border = '.5px solid rgba(0,229,160,.3)';
+  if (typeof FotosCapturadas !== 'undefined') {
+    FotosCapturadas.solicitud[1] = dataUrl;
+    localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
+  }
+}
+
+// Eliminar foto por slot
+function eliminarFoto(slot) {
+  if (slot === 1) {
+    var img1 = document.getElementById('foto-preview-1');
+    var ph1  = document.getElementById('foto-slot-1-ph');
+    var del1 = document.getElementById('btn-del-1');
+    var preview = document.getElementById('foto-preview');
+    var fotoOk  = document.getElementById('foto-ok');
+    var btn     = document.getElementById('btn-ir-tecnicos');
+    if (img1) { img1.src = ''; img1.style.display = 'none'; }
+    if (ph1)  ph1.style.display = 'flex';
+    if (del1) del1.style.display = 'none';
+    // Si tampoco hay foto 2, volver al estado inicial
+    if (!FotosCapturadas.solicitud[1]) {
+      if (fotoOk)  fotoOk.style.display = 'none';
+      if (preview) preview.style.display = 'flex';
+      fotoSolSubida = false;
+      if (btn) { btn.disabled = true; btn.style.opacity = '.4'; }
+    }
+    if (typeof FotosCapturadas !== 'undefined') {
+      FotosCapturadas.solicitud[0] = null;
+      localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
+    }
+  } else {
+    var img2  = document.getElementById('foto-preview-2');
+    var ph2   = document.getElementById('foto-slot-2-ph');
+    var del2  = document.getElementById('btn-del-2');
+    var slot2 = document.getElementById('foto-slot-2');
+    if (img2)  { img2.src = ''; img2.style.display = 'none'; }
+    if (ph2)   ph2.style.display = 'block';
+    if (del2)  del2.style.display = 'none';
+    if (slot2) slot2.style.border = '1.5px dashed rgba(255,255,255,.15)';
+    if (typeof FotosCapturadas !== 'undefined') {
+      FotosCapturadas.solicitud[1] = null;
+      localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
+    }
+  }
 }
 
 function abrirFoto1()   { _crearInputFoto(function(inp) { handleFotoSol(inp); });  }
@@ -3605,75 +3730,8 @@ function getUrgencia() {
 
 // ── CREAR SOLICITUD en el backend ─────────────────────────────
 // Se llama cuando el cliente toca "Ver técnicos disponibles →"
-async function irATecnicos() {
-  if (!fotoSolSubida) {
-    showError('Sube al menos una foto del problema para continuar.');
-    return;
-  }
+// irATecnicos movida al primer script
 
-  const token = Session.token();
-  if (!token) {
-    showError('Debes iniciar sesión para continuar.');
-    return;
-  }
-
-  const btn = document.getElementById('btn-ir-tecnicos');
-  if (btn) { btn.disabled = true; btn.textContent = 'Buscando técnicos...'; }
-
-  try {
-    // Calcular totales actuales
-    const urgencia = getUrgencia();
-    const urgMult = urgencia === 'emergencia' ? 1.5 : urgencia === 'urgente' ? 1.1 : 1.0;
-    const moFinal = Math.round((cotMO || 30000) * urgMult);
-    const matFinal = cotMat || 0;
-    const comision = Math.round((moFinal + matFinal) * 0.12);
-    const total = moFinal + matFinal + comision;
-
-    // Crear solicitud en el backend
-    const data = await apiFetch('/solicitudes', {
-      method: 'POST',
-      body: JSON.stringify({
-        trabajo: cotNombre || 'Trabajo general',
-        rubroId: await resolverRubroId(),
-        descripcion: Solicitud.descripcion || '',
-        urgencia,
-        moBase: moFinal,
-        matEstimado: matFinal,
-        totalEstimado: total,
-        latitud: Solicitud.latitud,
-        longitud: Solicitud.longitud,
-        comuna: Solicitud.comuna,
-        agendado: schedModo === 'agenda',
-        fotosProblema: [],
-      }),
-    });
-
-    // Guardar ID de la solicitud para usarla después
-    Solicitud.id = data.solicitud.id;
-    localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-      id: data.solicitud.id,
-      codigo: data.solicitud.codigo,
-      trabajo: data.solicitud.trabajo,
-      total,
-    }));
-
-    // Resetear UI foto
-    fotoSolSubida = false;
-    const fp = document.getElementById('foto-preview');
-    const fo = document.getElementById('foto-ok');
-    if (fp) fp.style.display = 'flex';
-    if (fo) fo.style.display = 'none';
-    if (btn) { btn.disabled = true; btn.style.opacity = '.4'; btn.textContent = 'Ver técnicos disponibles →'; }
-
-    // Cargar técnicos reales y navegar
-    await cargarTecnicosDisponibles(data.solicitud.id);
-    go('cli-tecnicos');
-
-  } catch (err) {
-    showError(err.message || 'Error al crear la solicitud');
-    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'Ver técnicos disponibles →'; }
-  }
-}
 
 // ── Resolver rubroId desde cache local ───────────────────────
 async function resolverRubroId() {
@@ -4024,31 +4082,9 @@ async function _handleFotoSolReal(input) {
 }
 
 async function _handleFotoSol2Real(input) {
-  const dataUrl = input._dataUrl || (input.files && input.files[0] ? await new Promise(r => {
-    const reader = new FileReader();
-    reader.onload = e => r(e.target.result);
-    reader.readAsDataURL(input.files[0]);
-  }) : null);
+  const dataUrl = input._dataUrl;
   if (!dataUrl) return;
-
-  // Mostrar en segundo slot SIN tocar el primero
-  const fotoOk = document.getElementById('foto-ok');
-  if (fotoOk) {
-    const grid = fotoOk.querySelector('div[style*="grid"]');
-    if (grid) {
-      const slots = grid.children;
-      const slot = slots[1] || slots[0];
-      if (slot) {
-        const img = document.createElement('img');
-        img.src = dataUrl;
-        img.style.cssText = 'width:100%;height:90px;object-fit:cover;border-radius:10px;border:.5px solid rgba(0,229,160,.3);';
-        slot.innerHTML = '';
-        slot.appendChild(img);
-      }
-    }
-  }
-  FotosCapturadas.solicitud[1] = dataUrl;
-  localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
+  _procesarFoto2ConDataUrl(dataUrl);
 }
 
 async function _handleFotoModReal(input) {

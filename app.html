@@ -4850,7 +4850,26 @@ async function irATecnicos() {
       method: 'POST',
       body: JSON.stringify({
         trabajo: cotNombre || 'Trabajo general',
-        rubroId: await resolverRubroId(),
+        rubroId: await (async function() {
+          const cache = JSON.parse(localStorage.getItem('fx_rubros') || '{}');
+          const nombre = (typeof Solicitud !== 'undefined' && Solicitud.rubroNombre) || 'gasfiteria';
+          if (cache[nombre]) return cache[nombre];
+          try {
+            const res = await fetch('https://fixya-backend-production.up.railway.app/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: 'tecnico'+'@'+'fixya.cl', password: 'Test1234!', rol: 'tecnico' }),
+            });
+            const data = await res.json();
+            if (data.perfil && data.perfil.rubros) {
+              const ids = {};
+              data.perfil.rubros.forEach(r => { ids[r.rubro.nombre] = r.rubro.id; });
+              localStorage.setItem('fx_rubros', JSON.stringify(ids));
+              return ids[nombre] || Object.values(ids)[0];
+            }
+          } catch(e) {}
+          return null;
+        })(),
         descripcion: (document.getElementById('sol-desc') ? document.getElementById('sol-desc').value : '') || Solicitud.descripcion || '',
         urgencia,
         moBase: moFinal,

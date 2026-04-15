@@ -1702,17 +1702,13 @@ textarea.inp{resize:none;}
     <div style="font-size:11px;color:var(--muted);">GPS automático · Obligatoria</div>
   </div>
 
-  <!-- GALERÍA FOTOS (oculta hasta subir la primera) -->
+  <!-- GALERÍA FOTOS con scroll horizontal -->
   <div id="foto-ok" style="display:none;margin-bottom:12px;">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div id="foto-slot-1" style="height:90px;border-radius:10px;border:.5px solid rgba(0,229,160,.3);position:relative;overflow:hidden;background:var(--card2);">
-        <img id="foto-preview-1" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
-        <button onclick="eliminarFoto(1)" id="btn-del-1" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);border:none;color:white;font-size:11px;line-height:1;cursor:pointer;display:none;z-index:10;">✕</button>
-      </div>
-      <div id="foto-slot-2" onclick="abrirFoto2()" style="height:90px;background:var(--card2);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;">
-        <img id="foto-preview-2" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
-        <div id="foto-slot-2-ph" style="font-size:22px;color:var(--muted);pointer-events:none;">➕</div>
-        <button onclick="event.stopPropagation();eliminarFoto(2)" id="btn-del-2" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);border:none;color:white;font-size:11px;line-height:1;cursor:pointer;display:none;z-index:10;">✕</button>
+    <div id="fotos-scroll" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+      <!-- Las fotos se agregan aquí dinámicamente -->
+      <!-- Botón agregar siempre al final -->
+      <div id="btn-agregar-foto" onclick="abrirFotoExtra()" style="flex-shrink:0;width:90px;height:90px;background:var(--card2);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <div style="font-size:22px;color:var(--muted);">➕</div>
       </div>
     </div>
     <div id="foto-ts-label" style="margin-top:8px;padding:7px 10px;background:rgba(0,229,160,.06);border-radius:8px;font-size:11px;color:var(--accent);">✓ Foto lista</div>
@@ -2121,6 +2117,13 @@ textarea.inp{resize:none;}
 </div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+function getUrgencia() {
+  if (typeof schedModo === 'undefined') return 'normal';
+  if (schedModo === 'emergencia') return 'emergencia';
+  if (schedModo === 'asap') return 'urgente';
+  return 'normal';
+}
+
 async function irATecnicos() {
   if (!fotoSolSubida) {
     showError('Sube al menos una foto del problema para continuar.');
@@ -2292,58 +2295,97 @@ function _crearInputFoto(handler) {
   input.click();
 }
 
-// Procesador de foto principal (slot 1)
-function _procesarFotoConDataUrl(dataUrl) {
-  console.log('_procesarFotoConDataUrl llamado, dataUrl len:', dataUrl ? dataUrl.length : 0);
+// ── Sistema de galería de fotos dinámica ─────────────────────
+var _fotosGuardadas = [];
 
+function _agregarFotoAGaleria(dataUrl) {
+  var scroll = document.getElementById('fotos-scroll');
+  var btnAgregar = document.getElementById('btn-agregar-foto');
+  var fotoOk = document.getElementById('foto-ok');
   var preview = document.getElementById('foto-preview');
-  var fotoOk  = document.getElementById('foto-ok');
-  var img1    = document.getElementById('foto-preview-1');
-  var del1    = document.getElementById('btn-del-1');
+  var btn = document.getElementById('btn-ir-tecnicos');
   var tsLabel = document.getElementById('foto-ts-label');
-  var btn     = document.getElementById('btn-ir-tecnicos');
 
-  if (!img1) { console.error('foto-preview-1 no encontrado'); return; }
+  if (!scroll) return;
 
-  // Ocultar zona inicial, mostrar galería
+  // Guardar dataUrl
+  var idx = _fotosGuardadas.length;
+  _fotosGuardadas.push(dataUrl);
+
+  // Crear slot de foto
+  var slot = document.createElement('div');
+  slot.style.cssText = 'flex-shrink:0;width:90px;height:90px;border-radius:10px;border:.5px solid rgba(0,229,160,.3);position:relative;overflow:hidden;background:var(--card2);';
+
+  var img = document.createElement('img');
+  img.src = dataUrl;
+  img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+  slot.appendChild(img);
+
+  var delBtn = document.createElement('button');
+  delBtn.textContent = '✕';
+  delBtn.style.cssText = 'position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);border:none;color:white;font-size:11px;line-height:1;cursor:pointer;z-index:10;';
+  var capturedIdx = idx;
+  delBtn.onclick = function() { _eliminarFotoDeGaleria(capturedIdx, slot); };
+  slot.appendChild(delBtn);
+
+  // Insertar ANTES del botón agregar
+  scroll.insertBefore(slot, btnAgregar);
+
+  // Mostrar galería, ocultar preview inicial
   if (preview) preview.style.display = 'none';
-  if (fotoOk)  fotoOk.style.display  = 'block';
+  if (fotoOk) fotoOk.style.display = 'block';
 
-  // Mostrar foto en slot 1
-  img1.src = dataUrl;
-  img1.style.display = 'block';
-  if (del1) del1.style.display = 'flex';
-
-  // Timestamp
-  var ts = new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
-  if (tsLabel) tsLabel.textContent = '✓ Foto lista · ' + ts + ' hrs';
-
-  // Habilitar botón
+  // Habilitar botón continuar
   fotoSolSubida = true;
   if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
 
-  // Guardar
-  if (typeof FotosCapturadas !== 'undefined') FotosCapturadas.solicitud[0] = dataUrl;
-  if (typeof Solicitud !== 'undefined') Solicitud.fotosProblema = [dataUrl];
-  try { localStorage.setItem('fx_fotos_solicitud', JSON.stringify([dataUrl])); } catch(e) {}
+  // Timestamp
+  var ts = new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
+  if (tsLabel) tsLabel.textContent = '✓ ' + _fotosGuardadas.filter(Boolean).length + ' foto(s) · ' + ts + ' hrs';
 
-  console.log('Foto lista, botón habilitado');
+  // Guardar
+  if (typeof FotosCapturadas !== 'undefined') FotosCapturadas.solicitud = _fotosGuardadas.filter(Boolean);
+  if (typeof Solicitud !== 'undefined') Solicitud.fotosProblema = _fotosGuardadas.filter(Boolean);
+  try { localStorage.setItem('fx_fotos_solicitud', JSON.stringify(_fotosGuardadas.filter(Boolean))); } catch(e) {}
+
+  console.log('Foto agregada a galería, total:', _fotosGuardadas.filter(Boolean).length);
+
+  // Scroll al final para mostrar el botón +
+  setTimeout(function() { scroll.scrollLeft = scroll.scrollWidth; }, 100);
 }
 
-// Procesador de foto secundaria (slot 2)
-function _procesarFoto2ConDataUrl(dataUrl) {
-  var img2 = document.getElementById('foto-preview-2');
-  var ph2  = document.getElementById('foto-slot-2-ph');
-  var del2 = document.getElementById('btn-del-2');
-  var slot2 = document.getElementById('foto-slot-2');
-  if (img2) { img2.src = dataUrl; img2.style.display = 'block'; }
-  if (ph2)  ph2.style.display = 'none';
-  if (del2) del2.style.display = 'flex';
-  if (slot2) slot2.style.border = '.5px solid rgba(0,229,160,.3)';
-  if (typeof FotosCapturadas !== 'undefined') {
-    FotosCapturadas.solicitud[1] = dataUrl;
-    localStorage.setItem('fx_fotos_solicitud', JSON.stringify(FotosCapturadas.solicitud));
+function _eliminarFotoDeGaleria(idx, slotEl) {
+  _fotosGuardadas[idx] = null;
+  if (slotEl && slotEl.parentNode) slotEl.parentNode.removeChild(slotEl);
+
+  var restantes = _fotosGuardadas.filter(Boolean);
+  var btn = document.getElementById('btn-ir-tecnicos');
+  var preview = document.getElementById('foto-preview');
+  var fotoOk = document.getElementById('foto-ok');
+  var tsLabel = document.getElementById('foto-ts-label');
+
+  if (restantes.length === 0) {
+    fotoSolSubida = false;
+    if (btn) { btn.disabled = true; btn.style.opacity = '.4'; }
+    if (preview) preview.style.display = 'flex';
+    if (fotoOk) fotoOk.style.display = 'none';
+  } else {
+    if (tsLabel) tsLabel.textContent = '✓ ' + restantes.length + ' foto(s)';
   }
+
+  if (typeof FotosCapturadas !== 'undefined') FotosCapturadas.solicitud = restantes;
+  if (typeof Solicitud !== 'undefined') Solicitud.fotosProblema = restantes;
+  try { localStorage.setItem('fx_fotos_solicitud', JSON.stringify(restantes)); } catch(e) {}
+}
+
+// Procesador principal — agrega foto a la galería
+function _procesarFotoConDataUrl(dataUrl) {
+  console.log('_procesarFotoConDataUrl llamado, dataUrl len:', dataUrl ? dataUrl.length : 0);
+  _agregarFotoAGaleria(dataUrl);
+}
+
+function _procesarFoto2ConDataUrl(dataUrl) {
+  _agregarFotoAGaleria(dataUrl);
 }
 
 // Eliminar foto por slot
@@ -2393,6 +2435,11 @@ function abrirFoto1() {
 function abrirFoto2() {
   _crearInputFoto(function(inp) {
     if (inp._dataUrl) _procesarFoto2ConDataUrl(inp._dataUrl);
+  });
+}
+function abrirFotoExtra() {
+  _crearInputFoto(function(inp) {
+    if (inp && inp._dataUrl) _agregarFotoAGaleria(inp._dataUrl);
   });
 }
 function abrirFotoMod() { _crearInputFoto(function(inp) { handleFotoMod(inp); });  }
@@ -3725,12 +3772,8 @@ async function getRubroId(nombre) {
 }
 
 // ── Calcular urgencia desde el modo de cotización ─────────────
-function getUrgencia() {
-  if (typeof schedModo === 'undefined') return 'normal';
-  if (schedModo === 'emergencia') return 'emergencia';
-  if (schedModo === 'asap') return 'urgente';
-  return 'normal';
-}
+// getUrgencia — movida al primer script
+
 
 // ── CREAR SOLICITUD en el backend ─────────────────────────────
 // Se llama cuando el cliente toca "Ver técnicos disponibles →"

@@ -3363,17 +3363,128 @@ const Session = {
   existe() { return !!localStorage.getItem('fx_token'); },
 };
 
-// ── Fetch autenticado ─────────────────────────────────────────
-async function apiFetch(path, options = {}) {
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
-  const token = Session.token();
-  if (token) headers['Authorization'] = 'Bearer ' + token;
+// ── Fetch autenticado con auto-refresh de token ───────────────
+let _refreshing = false;
+let _refreshQueue = [];
 
-  const res = await fetch(API + path, { ...options, headers });
+async function _doRefresh() {
+  const refreshToken = localStorage.getItem('fx_refresh');
+  if (!refreshToken) throw new Error('Sin refresh token');
+  const res = await fetch(API + '/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  });
+  if (!res.ok) throw new Error('Refresh fallido');
+  const data = await res.json();
+  // El backend devuelve accessToken y refreshToken nuevos
+  localStorage.setItem('fx_token', data.accessToken);
+  if (data.refreshToken) localStorage.setItem('fx_refresh', data.refreshToken);
+  return data.accessToken;
+}
+
+async function apiFetch(path, options = {}) {
+  const makeReq = (token) => {
+    const headers = { 'Content-Type': 'application/json', ...options.headers };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    return fetch(API + path, { ...options, headers });
+  };
+
+  let res = await makeReq(Session.token());
   const data = await res.json().catch(() => ({}));
+
+  // Si el token expiró, intentar refresh automático una sola vez
+  if (res.status === 401 && localStorage.getItem('fx_refresh')) {
+    try {
+      // Cola de requests paralelos: solo uno hace el refresh
+      if (_refreshing) {
+        await new Promise((resolve, reject) => _refreshQueue.push({ resolve, reject }));
+      } else {
+        _refreshing = true;
+        try {
+          const newToken = await _doRefresh();
+          _refreshQueue.forEach(p => p.resolve());
+          _refreshQueue = [];
+          _refreshing = false;
+          // Reintentar la request original con token nuevo
+          res = await makeReq(newToken);
+          const data2 = await res.json().catch(() => ({}));
+          if (!res.ok) throw { status: res.status, message: data2.error || 'Error en la solicitud' };
+          return data2;
+        } catch (e) {
+          _refreshQueue.forEach(p => p.reject(e));
+          _refreshQueue = [];
+          _refreshing = false;
+          // Refresh falló → limpiar sesión y pedir re-login
+          Session.clear();
+          mostrarModalLogin('Tu sesión expiró. Vuelve a ingresar.');
+          throw { status: 401, message: 'Sesión expirada. Ingresa nuevamente.' };
+        }
+      }
+      // Si estaba en cola, reintentar
+      res = await makeReq(Session.token());
+      const data3 = await res.json().catch(() => ({}));
+      if (!res.ok) throw { status: res.status, message: data3.error || 'Error en la solicitud' };
+      return data3;
+    } catch (e) {
+      if (e.status) throw e;
+      throw { status: 401, message: 'Sesión expirada. Ingresa nuevamente.' };
+    }
+  }
 
   if (!res.ok) throw { status: res.status, message: data.error || 'Error en la solicitud' };
   return data;
+}
+
+// ── Modal de re-login inline (sin salir de la pantalla actual) ─
+function mostrarModalLogin(mensajeExtra) {
+  // Evitar duplicados
+  if (document.getElementById('relogin-modal')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'relogin-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(6,9,26,.92);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+  const rol = Session.rol() || 'usuario';
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:.5px solid var(--border);border-radius:18px;padding:24px;width:100%;max-width:360px;">
+      <div style="font-size:22px;font-weight:800;margin-bottom:6px;">Sesión expirada</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">${mensajeExtra || 'Tu sesión venció. Ingresa tus credenciales para continuar.'}</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px;">Email</div>
+      <input id="rl-email" type="email" placeholder="correo@ejemplo.cl" style="width:100%;padding:11px 13px;border-radius:10px;background:rgba(255,255,255,.07);border:.5px solid var(--border);font-size:14px;color:var(--text);outline:none;margin-bottom:9px;font-family:'DM Sans',sans-serif;">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px;">Contraseña</div>
+      <input id="rl-pass" type="password" placeholder="••••••••" style="width:100%;padding:11px 13px;border-radius:10px;background:rgba(255,255,255,.07);border:.5px solid var(--border);font-size:14px;color:var(--text);outline:none;margin-bottom:16px;font-family:'DM Sans',sans-serif;">
+      <button id="rl-btn" onclick="submitRelogin('${rol}')" style="width:100%;padding:14px;border-radius:12px;background:var(--accent);color:#05120A;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;border:none;">Ingresar nuevamente →</button>
+      <div id="rl-error" style="color:var(--red);font-size:12px;margin-top:10px;text-align:center;display:none;"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Auto-focus email
+  setTimeout(() => { const el = document.getElementById('rl-email'); if (el) el.focus(); }, 100);
+}
+
+async function submitRelogin(rol) {
+  const email = document.getElementById('rl-email')?.value?.trim();
+  const pass  = document.getElementById('rl-pass')?.value;
+  const errEl = document.getElementById('rl-error');
+  const btn   = document.getElementById('rl-btn');
+  if (!email || !pass) { if (errEl) { errEl.textContent = 'Completa los campos'; errEl.style.display = 'block'; } return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Ingresando...'; }
+  try {
+    const data = await fetch(API + '/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass, rol }),
+    }).then(r => r.json());
+    if (!data.accessToken) throw new Error(data.error || 'Credenciales incorrectas');
+    Session.save(data);
+    document.getElementById('relogin-modal')?.remove();
+    showSuccess('Sesión renovada ✓');
+  } catch(e) {
+    if (errEl) { errEl.textContent = e.message || 'Error al ingresar'; errEl.style.display = 'block'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Ingresar nuevamente →'; }
+  }
 }
 
 // ── Mostrar error en pantalla (reemplaza alert) ───────────────
@@ -4115,26 +4226,7 @@ async function irATecnicos() {
       method: 'POST',
       body: JSON.stringify({
         trabajo: (typeof cotNombre!=="undefined"?cotNombre:window.cotNombre) || 'Trabajo general',
-        rubroId: await (async function() {
-          const cache = JSON.parse(localStorage.getItem('fx_rubros') || '{}');
-          const nombre = (Solicitud && Solicitud.rubroNombre) || 'gasfiteria';
-          if (cache[nombre]) return cache[nombre];
-          try {
-            const res = await fetch('https://fixya-backend-production.up.railway.app/api/auth/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: 'tecnico'+'@'+'fixya.cl', password: 'Test1234!', rol: 'tecnico' }),
-            });
-            const d = await res.json();
-            if (d.perfil && d.perfil.rubros) {
-              const ids = {};
-              d.perfil.rubros.forEach(r => { ids[r.rubro.nombre] = r.rubro.id; });
-              localStorage.setItem('fx_rubros', JSON.stringify(ids));
-              return ids[nombre] || Object.values(ids)[0];
-            }
-          } catch(e) {}
-          return null;
-        })(),
+        rubroId: await resolverRubroId(),
         descripcion: (document.getElementById('sol-desc') ? document.getElementById('sol-desc').value : '') || Solicitud.descripcion || '',
         urgencia,
         moBase: moFinal,
@@ -4891,19 +4983,15 @@ async function resolverRubroId() {
   const nombre = (window.Solicitud && window.Solicitud.rubroNombre) || 'gasfiteria';
   if (cache[nombre]) return cache[nombre];
 
-  // Cargar rubros desde el técnico de prueba (tienen los IDs del seed)
+  // Endpoint público GET /api/rubros → [{ id, nombre, emoji }]
   try {
-    const res = await fetch('https://fixya-backend-production.up.railway.app/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'tecnico'+'@'+'fixya.cl', password: 'Test1234!', rol: 'tecnico' }),
-    });
-    const data = await res.json();
-    if (data.perfil && data.perfil.rubros) {
+    const res = await fetch(API + '/rubros');
+    if (res.ok) {
+      const lista = await res.json(); // array
       const nuevosIds = {};
-      data.perfil.rubros.forEach(r => { nuevosIds[r.rubro.nombre] = r.rubro.id; });
+      lista.forEach(r => { nuevosIds[r.nombre] = r.id; });
       localStorage.setItem('fx_rubros', JSON.stringify(nuevosIds));
-      return nuevosIds[nombre] || Object.values(nuevosIds)[0];
+      return nuevosIds[nombre] || Object.values(nuevosIds)[0] || null;
     }
   } catch {}
   return null;

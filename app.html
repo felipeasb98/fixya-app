@@ -3749,14 +3749,18 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="modal-section">Detalles</div>
     <div class="card" style="padding:10px 12px;margin-top:4px;">
       <div class="modal-price-row"><span style="color:var(--muted);font-size:12px;">Duración estimada</span><span style="font-size:12px;font-weight:600;" id="modal-dur">—</span></div>
-      <div class="modal-price-row"><span style="color:var(--muted);font-size:12px;">Materiales</
+      <div class="modal-price-row"><span style="color:var(--muted);font-size:12px;">Materiales incluidos</span><span style="font-size:12px;font-weight:600;" id="modal-mat">—</span></div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 // FIXYA — Módulo de Solicitudes
 // ============================================================
 
 // Estado global de la solicitud en curso
-// Expuesto en window para que sea accesible desde todos los <script>
+// Expuesto en window para que sea accesible desde todos los scripts
 const Solicitud = window.Solicitud = {
   id: null,          // ID real del backend
   rubroId: null,     // ID del rubro en BD
@@ -3969,8 +3973,13 @@ function conectarSocketCliente() {
 
 // Cargar Socket.io desde CDN y conectar
 (function loadSocket() {
+  if (document.getElementById('socketio-script')) return;
   const script = document.createElement('script');
+  script.id = 'socketio-script';
   script.src = 'https://cdn.jsdelivr.net/npm/socket.io-client@4.7.4/dist/socket.io.min.js';
+  script.onload = function() { if (typeof conectarSocket === 'function') conectarSocket(); };
+  document.head.appendChild(script);
+})();
 // ============================================================
 // FIXYA — Módulo de Cámara Real
 // ============================================================

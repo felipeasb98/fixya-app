@@ -13,7 +13,7 @@ html,body{min-height:100%;background:var(--bg);transition:background .3s,color .
 body{font-family:'DM Sans',sans-serif;color:var(--text);overflow-x:hidden;}
 .screen{display:none;flex-direction:column;min-height:100vh;animation:fu .22s ease;}
 .screen.active{display:flex;}
-@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}} @keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
 
 /* STATUS BAR */
 .status{display:flex;justify-content:space-between;align-items:center;padding:10px 16px 0;font-size:11px;color:var(--muted);flex-shrink:0;}
@@ -796,7 +796,7 @@ textarea.inp{resize:none;}
   </div>
   <div style="display:flex;gap:8px;">
     <button class="btn btn-ghost btn-sm" onclick="back()" style="flex:1;">✗ Rechazar</button>
-    <button class="btn btn-g" onclick="go('tec-en-camino')" style="flex:2;">✓ Aceptar →</button>
+    <button class="btn btn-g" id="btn-tec-aceptar" onclick="tecAceptarYPartir()" style="flex:2;">✓ Aceptar →</button>
   </div>
 </div>
 </div>
@@ -822,7 +822,7 @@ textarea.inp{resize:none;}
   <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;margin-bottom:12px;">
     📸 Al llegar: sube foto de todos los materiales. El cliente tiene <strong>15 min</strong> para verificar.
   </div>
-  <button class="btn btn-g" onclick="go('tec-mat-verificar')">📍 Llegué — verificar materiales →</button>
+  <button class="btn btn-g" onclick="tecLlego()">📍 Llegué — verificar materiales →</button>
 </div>
 </div>
 
@@ -1823,21 +1823,18 @@ textarea.inp{resize:none;}
 <div class="status"><span>9:44</span><span>👷 Técnicos</span><span>📶</span></div>
 <div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Técnicos disponibles</div></div>
 <div class="wrap">
-  <div class="sub">3 técnicos verificados cerca tuyo ahora mismo.</div>
-  <div class="tec-card" onclick="go('cli-verificar-mat')">
-    <div class="tec-av" style="background:rgba(0,229,160,.12);">👷</div>
-    <div style="flex:1;"><div style="font-size:13px;font-weight:700;">Carlos Mendoza</div><div style="font-size:11px;color:var(--accent2);">⭐⭐⭐⭐⭐ 4.9 · 127 trabajos</div><div style="display:flex;gap:4px;margin-top:4px;"><span class="tag tg" style="font-size:9px;">✓ Verificado</span><span class="tag ta" style="font-size:9px;">⭐ Fundador</span><span class="tag tb" style="font-size:9px;">1.2 km</span></div></div>
-    <div style="text-align:right;"><div style="font-family:'JetBrains Mono';font-size:12px;font-weight:700;color:var(--accent);" id="tec1-price">$37.500</div><div style="font-size:10px;color:var(--muted);">~15 min</div></div>
-  </div>
-  <div class="tec-card">
-    <div class="tec-av" style="background:rgba(244,164,41,.12);">👷</div>
-    <div style="flex:1;"><div style="font-size:13px;font-weight:700;">Roberto Silva</div><div style="font-size:11px;color:var(--accent2);">⭐⭐⭐⭐ 4.7 · 89 trabajos</div><div style="display:flex;gap:4px;margin-top:4px;"><span class="tag tg" style="font-size:9px;">✓ Verificado</span><span class="tag tb" style="font-size:9px;">2.1 km</span></div></div>
-    <div style="text-align:right;"><div style="font-family:'JetBrains Mono';font-size:12px;font-weight:700;color:var(--accent);" id="tec2-price">$37.500</div><div style="font-size:10px;color:var(--muted);">~22 min</div></div>
-  </div>
-  <div class="tec-card">
-    <div class="tec-av" style="background:rgba(77,158,255,.12);">👷</div>
-    <div style="flex:1;"><div style="font-size:13px;font-weight:700;">Javier Rojas</div><div style="font-size:11px;color:var(--accent2);">⭐⭐⭐⭐⭐ 4.8 · 203 trabajos</div><div style="display:flex;gap:4px;margin-top:4px;"><span class="tag tg" style="font-size:9px;">✓ Verificado</span><span class="tag tb" style="font-size:9px;">3.4 km</span></div></div>
-    <div style="text-align:right;"><div style="font-family:'JetBrains Mono';font-size:12px;font-weight:700;color:var(--accent);" id="tec3-price">$37.500</div><div style="font-size:10px;color:var(--muted);">~28 min</div></div>
+  <div class="sub" id="tec-sub">Buscando técnicos verificados cerca tuyo...</div>
+  <div id="tec-lista">
+    <div style="text-align:center;padding:40px 20px;">
+      <div style="font-size:36px;margin-bottom:12px;">🔍</div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:6px;">Notificando técnicos</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;">Los técnicos disponibles recibirán tu solicitud ahora mismo. Aparecerán aquí en cuanto se postulen.</div>
+      <div style="margin-top:20px;display:flex;gap:6px;justify-content:center;">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite;"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite .4s;"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite .8s;"></div>
+      </div>
+    </div>
   </div>
 </div>
 </div>
@@ -3529,6 +3526,8 @@ window.addEventListener('DOMContentLoaded', () => {
     // Si hay sesión activa, saltar el onboarding e ir directo al home
     if (rol === 'tecnico') go('tec-home');
     else if (rol === 'usuario') go('cli-home');
+    // Conectar socket en background (Socket.io se carga dinámicamente)
+    setTimeout(() => { if (typeof conectarSocket === 'function') conectarSocket(); }, 1500);
   }
   // Mostrar nombre en perfil si hay sesión
   actualizarUIConPerfil();
@@ -3596,6 +3595,7 @@ async function submitLogin(rol) {
     document.getElementById('login-modal-overlay')?.remove();
     actualizarUIConPerfil();
     showSuccess('Bienvenido, ' + data.perfil.nombre.split(' ')[0] + ' 👋');
+    setTimeout(() => { if (typeof conectarSocket === 'function') conectarSocket(); }, 800);
 
     if (rol === 'tecnico') go('tec-home');
     else go('cli-home');
@@ -3842,18 +3842,18 @@ async function cargarTecnicosDisponibles(solicitudId) {
 
 // ── Renderizar tarjetas de técnicos reales ────────────────────
 function renderizarTecnicos(tecnicos) {
-  const wrap = document.querySelector('#s-cli-tecnicos .wrap');
-  if (!wrap || tecnicos.length === 0) return;
+  const lista = document.getElementById('tec-lista');
+  const sub = document.getElementById('tec-sub');
+  if (!lista || tecnicos.length === 0) return;
 
-  // Remover tarjetas hardcodeadas y reemplazar con reales
-  const tarjetasViejas = wrap.querySelectorAll('.tec-card');
-  tarjetasViejas.forEach(t => t.remove());
-
-  const sub = wrap.querySelector('.sub');
+  // Actualizar subtítulo
   if (sub) sub.textContent = tecnicos.length + ' técnico' + (tecnicos.length > 1 ? 's' : '') + ' disponible' + (tecnicos.length > 1 ? 's' : '') + ' cerca tuyo.';
 
+  // Limpiar estado de espera
+  lista.innerHTML = '';
+
   tecnicos.forEach(tec => {
-    const stars = '⭐'.repeat(Math.round(tec.ratingPromedio || 5));
+    const stars = '⭐'.repeat(Math.min(5, Math.round(tec.ratingPromedio || 5)));
     const div = document.createElement('div');
     div.className = 'tec-card';
     div.onclick = () => elegirTecnico(tec.id);
@@ -3869,11 +3869,11 @@ function renderizarTecnicos(tecnicos) {
         </div>
       </div>
       <div style="text-align:right;">
-        <div style="font-family:\'JetBrains Mono\';font-size:12px;font-weight:700;color:var(--accent);">${fmt ? fmt(Solicitud.totalEstimado || 0) : '$0'}</div>
+        <div style="font-family:'JetBrains Mono';font-size:12px;font-weight:700;color:var(--accent);">${typeof fmt === 'function' ? fmt(Solicitud.totalEstimado || 0) : '$0'}</div>
         <div style="font-size:10px;color:var(--muted);">Disponible</div>
       </div>
     `;
-    wrap.insertBefore(div, wrap.lastElementChild);
+    lista.appendChild(div);
   });
 }
 
@@ -3957,9 +3957,20 @@ function conectarSocketCliente() {
       if (solicitudId) await cargarTecnicosDisponibles(solicitudId);
     });
 
-    // Técnico confirmado → notificar
+    // Técnico en camino → navegar al cliente a pantalla de seguimiento
     socket.on('notif:tecnico_en_camino', () => {
       showSuccess('🚗 Tu técnico está en camino');
+      const screenActual = document.querySelector('.screen.active');
+      if (screenActual && ['s-cli-tecnicos','s-cli-home'].includes(screenActual.id)) {
+        // navegar a pantalla de seguimiento si existe, sino home con solicitud activa
+        go('cli-home');
+      }
+    });
+
+    // Técnico llegó → cliente debe verificar materiales
+    socket.on('notif:trabajo_iniciado', () => {
+      showSuccess('📍 Tu técnico llegó. Verifica los materiales que trajo.');
+      setTimeout(() => go('cli-verificar-mat'), 800);
     });
 
     // Trabajo terminado → pedir confirmación
@@ -3969,6 +3980,63 @@ function conectarSocketCliente() {
 
     window._fixya_socket = socket;
   } catch {}
+}
+
+// ── Función unificada: detecta rol y conecta socket ───────────
+function conectarSocket() {
+  const token = Session.token();
+  if (!token || typeof io === 'undefined') return;
+  if (window._fixya_socket && window._fixya_socket.connected) return;
+
+  const rol = Session.rol();
+
+  if (rol === 'usuario') {
+    conectarSocketCliente();
+    return;
+  }
+
+  if (rol === 'tecnico') {
+    try {
+      const socket = io('https://fixya-backend-production.up.railway.app', {
+        auth: { token },
+        transports: ['websocket'],
+      });
+
+      // Técnico recibe nueva solicitud → guardar ID y navegar a alerta
+      socket.on('nueva:solicitud', (data) => {
+        if (data && data.solicitudId) {
+          // Guardar en localStorage para que tecAceptarYPartir lo encuentre
+          const actual = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+          localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+            ...actual,
+            id: data.solicitudId,
+            trabajo: data.trabajo || actual.trabajo,
+          }));
+        }
+        // Solo navegar si está en home
+        const screenActual = document.querySelector('.screen.active');
+        if (screenActual && screenActual.id === 's-tec-home') {
+          go('tec-alerta');
+        } else {
+          showSuccess('⚡ Nueva solicitud disponible');
+        }
+      });
+
+      // Técnico recibe notificaciones generales
+      socket.on('notif:tecnico_elegido', (data) => {
+        showSuccess('✅ El cliente te eligió. ¡Dirígete al domicilio!');
+        const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+        if (data && data.solicitudId && !sol.id) {
+          localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+            ...sol, id: data.solicitudId,
+          }));
+        }
+      });
+
+      window._fixya_socket = socket;
+    } catch {}
+    return;
+  }
 }
 
 // Cargar Socket.io desde CDN y conectar
@@ -4272,6 +4340,9 @@ async function irATecnicos() {
     if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'Ver técnicos disponibles →'; }
   }
 }
+
+
+
 </script>
 <script>
 // ============================================================

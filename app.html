@@ -741,12 +741,19 @@ textarea.inp{resize:none;}
     <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:16px;font-weight:800;color:var(--accent2);">$112K</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Esta semana</div></div>
     <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--purple);">0</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Pendientes</div></div>
   </div>
-  <div class="hl-a hl" style="margin-bottom:12px;cursor:pointer;" onclick="go('tec-alerta')">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;"><div style="font-size:12px;font-weight:700;color:var(--accent2);">⚡ NUEVO TRABAJO</div><span class="tag tr">🔴 Urgente</span></div>
-    <div style="font-size:14px;font-weight:700;margin-bottom:3px;">Reparación fuga cañería</div>
-    <div style="font-size:12px;color:var(--muted);">📍 Providencia 1234 · 1.2 km</div>
+  <!-- Card trabajo disponible — oculta por defecto, se muestra al recibir nueva:solicitud -->
+  <div class="hl-a hl" id="tec-home-trabajo-card" style="margin-bottom:12px;cursor:pointer;display:none;" onclick="go('tec-alerta')">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
+      <div style="font-size:12px;font-weight:700;color:var(--accent2);">⚡ NUEVO TRABAJO</div>
+      <span class="tag tr" id="thc-urgencia">🔴 Urgente</span>
+    </div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:3px;" id="thc-trabajo">—</div>
+    <div style="font-size:12px;color:var(--muted);" id="thc-dist">📍 —</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px;">
-      <div><div style="font-size:10px;color:var(--muted);">Tú recibes</div><div style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--accent);">$46.875</div></div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);">Tú recibes</div>
+        <div style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--accent);" id="thc-total">$0</div>
+      </div>
       <button class="btn btn-g btn-sm">Ver trabajo →</button>
     </div>
   </div>
@@ -4027,23 +4034,14 @@ function conectarSocketCliente() {
   try {
     const socket = io('https://fixya-backend-production.up.railway.app', {
       auth: { token },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
+      transports: ['websocket'],
     });
 
     socket.on('connect', () => {
-      console.log('[FixYa] Socket cliente conectado:', socket.id);
       const solicitudActiva = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       if (solicitudActiva.id) {
         socket.emit('solicitud:join', solicitudActiva.id);
-        console.log('[FixYa] Joined room:', solicitudActiva.id);
       }
-    });
-
-    socket.on('connect_error', (err) => {
-      console.warn('[FixYa] Error socket cliente:', err.message);
     });
 
     // Nuevo postulante → actualizar lista de técnicos
@@ -4100,97 +4098,80 @@ function conectarSocketCliente() {
 // ── Función unificada: detecta rol y conecta socket ───────────
 function conectarSocket() {
   const token = Session.token();
-  if (!token) return;
+  if (!token || typeof io === 'undefined') return;
+  if (window._fixya_socket && window._fixya_socket.connected) return;
 
-  if (typeof io === 'undefined') {
-    setTimeout(conectarSocket, 500);
+  const rol = Session.rol();
+
+  if (rol === 'usuario') {
+    conectarSocketCliente();
     return;
   }
 
-  const s = window._fixya_socket;
-  if (s && s.connected) return;
-  if (s && !s.connected) { try { s.disconnect(); } catch {} window._fixya_socket = null; }
-
-  const rol = Session.rol();
-  console.log('[FixYa] Conectando socket como:', rol);
-
-  if (rol === 'usuario') { conectarSocketCliente(); return; }
-
   if (rol === 'tecnico') {
-    const socket = io('https://fixya-backend-production.up.railway.app', {
-      auth: { token },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
-    });
+    try {
+      const socket = io('https://fixya-backend-production.up.railway.app', {
+        auth: { token },
+        transports: ['websocket'],
+      });
 
-    socket.on('connect', () => {
-      console.log('[FixYa] Socket tecnico conectado:', socket.id);
-      socket.emit('tecnico:disponible', true);
-    });
+      // Técnico recibe nueva solicitud → guardar ID y navegar a alerta
+      socket.on('nueva:solicitud', (data) => {
+        if (data && data.solicitudId) {
+          // Guardar en localStorage para que tecAceptarYPartir lo encuentre
+          localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+            id: data.solicitudId,
+            trabajo: data.trabajo || '',
+            total: data.totalEstimado || 0,
+            urgencia: data.urgencia || 'normal',
+            moBase: data.moBase || 0,
+            descripcion: data.descripcion || '',
+            fotosProblema: data.fotosProblema || [],
+            latCliente: data.latitud,
+            lngCliente: data.longitud,
+            comuna: data.comuna || '',
+          }));
+        }
 
-    socket.on('connect_error', (err) => {
-      console.warn('[FixYa] Error socket tecnico:', err.message);
-    });
+        // Poblar pantalla con datos reales
+        poblarTecAlerta(data || {});
 
-    socket.on('nueva:solicitud', (data) => {
-      console.log('[FixYa] nueva:solicitud recibida', data);
-      if (data && data.solicitudId) {
-        localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-          id: data.solicitudId,
-          trabajo: data.trabajo || '',
-          total: data.totalEstimado || 0,
-          urgencia: data.urgencia || 'normal',
-          moBase: data.moBase || 0,
-          descripcion: data.descripcion || '',
-          fotosProblema: data.fotosProblema || [],
-          latCliente: data.latitud,
-          lngCliente: data.longitud,
-          comuna: data.comuna || '',
-        }));
-      }
-      poblarTecAlerta(data || {});
-      const screenActual = document.querySelector('.screen.active');
-      if (screenActual && screenActual.id === 's-tec-home') {
-        go('tec-alerta');
-      } else {
-        showSuccess('Nueva solicitud disponible');
-      }
-    });
+        // Solo navegar si está en home
+        const screenActual = document.querySelector('.screen.active');
+        if (screenActual && screenActual.id === 's-tec-home') {
+          go('tec-alerta');
+        } else {
+          showSuccess('⚡ Nueva solicitud disponible');
+        }
+      });
 
-    socket.on('notif:trabajo_confirmado', async (data) => {
-      console.log('[FixYa] trabajo_confirmado', data);
-      showSuccess('El cliente te eligio! Dirigete al domicilio');
-      const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-      if (data && data.solicitudId && !sol.id) {
-        localStorage.setItem('fx_solicitud_activa', JSON.stringify({ ...sol, id: data.solicitudId }));
-      }
-      try { await cambiarEstado('en-camino'); } catch {}
-      go('tec-en-camino');
-    });
+      // Cliente eligió a este técnico → ir en camino
+      socket.on('notif:trabajo_confirmado', async (data) => {
+        showSuccess('✅ ¡El cliente te eligió! Dirígete al domicilio 🚗');
+        const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+        if (data && data.solicitudId && !sol.id) {
+          localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+            ...sol, id: data.solicitudId,
+          }));
+        }
+        // Marcar en camino en backend
+        try { await cambiarEstado('en-camino'); } catch {}
+        go('tec-en-camino');
+      });
 
-    window._fixya_socket = socket;
+      window._fixya_socket = socket;
+    } catch {}
+    return;
   }
 }
 
-// Cargar Socket.io desde backend propio (evita bloqueo por Edge/Safari)
+// Cargar Socket.io desde CDN y conectar
 (function loadSocket() {
   if (document.getElementById('socketio-script')) return;
   const script = document.createElement('script');
   script.id = 'socketio-script';
-  script.src = 'https://fixya-backend-production.up.railway.app/socket.io/socket.io.js';
-  script.onload = function() {
-    console.log('[FixYa] Socket.io cargado desde backend');
-    if (typeof conectarSocket === 'function') conectarSocket();
-  };
-  script.onerror = function() {
-    console.warn('[FixYa] Fallback a CDN socket.io');
-    const fb = document.createElement('script');
-    fb.src = 'https://cdn.socket.io/4.7.4/socket.io.min.js';
-    fb.onload = function() { if (typeof conectarSocket === 'function') conectarSocket(); };
-    document.head.appendChild(fb);
-  };
+  script.src = 'https://cdn.jsdelivr.net/npm/socket.io-client@4.7.4/dist/socket.io.min.js';
+  script.onload = function() { if (typeof conectarSocket === 'function') conectarSocket(); };
   document.head.appendChild(script);
 })();
 // ============================================================
@@ -4463,11 +4444,19 @@ async function irATecnicos() {
     });
 
     Solicitud.id = data.solicitud.id;
+
+    // Incluir fotos en localStorage para que el técnico las pueda ver
+    let _fotosParaGuardar = [];
+    try {
+      _fotosParaGuardar = JSON.parse(localStorage.getItem('fx_fotos_solicitud') || '[]').filter(Boolean);
+    } catch {}
+
     localStorage.setItem('fx_solicitud_activa', JSON.stringify({
       id: data.solicitud.id,
       codigo: data.solicitud.codigo,
       trabajo: data.solicitud.trabajo,
       total,
+      fotosProblema: _fotosParaGuardar,
     }));
 
     fotoSolSubida = false;
@@ -4858,6 +4847,7 @@ function poblarTecAlerta(data) {
   const moFinal = Math.round(mo * urgMult);
   const comision = Math.round(moFinal * 0.12);
 
+  // ── Pantalla tec-alerta ───────────────────────────────────
   if (el('tec-alerta-trabajo')) el('tec-alerta-trabajo').textContent = trabajo;
 
   // Badge urgencia
@@ -4865,33 +4855,51 @@ function poblarTecAlerta(data) {
   if (badge) {
     if (urgencia === 'emergencia') { badge.textContent = '🔴 Emergencia'; badge.className = 'tag tr'; }
     else if (urgencia === 'urgente') { badge.textContent = '🟠 Urgente'; badge.className = 'tag ta'; }
-    else { badge.textContent = '🟢 Normal'; badge.className = 'tag tg'; badge.style.display = urgencia === 'normal' ? 'none' : ''; }
+    else { badge.textContent = '🟢 Normal'; badge.className = 'tag tg'; }
   }
 
   // Descripción
+  const descWrap = el('tec-alerta-desc-wrap');
   if (data.descripcion) {
     if (el('tec-alerta-desc')) el('tec-alerta-desc').textContent = '"' + data.descripcion + '"';
+    if (descWrap) descWrap.style.display = '';
   } else {
-    if (el('tec-alerta-desc-wrap')) el('tec-alerta-desc-wrap').style.display = 'none';
+    if (descWrap) descWrap.style.display = 'none';
   }
 
-  // Fotos del problema
-  const fotos = data.fotosProblema || [];
+  // Fotos: pueden ser URLs o base64 guardadas en localStorage
   const fotosWrap = el('tec-alerta-fotos-wrap');
   const fotosContainer = el('tec-alerta-fotos');
+
+  // Intentar obtener fotos del socket (URLs) o de localStorage (base64)
+  let fotos = data.fotosProblema || [];
+  if (fotos.length === 0) {
+    // Fotos base64 guardadas en localStorage por el cliente
+    const solLocal = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+    fotos = solLocal.fotosProblema || [];
+  }
+  // También revisar FotosCapturadas si están en memoria (mismo browser - solo en tests locales)
+  if (fotos.length === 0 && typeof FotosCapturadas !== 'undefined') {
+    fotos = FotosCapturadas.solicitud || [];
+  }
+
   if (fotos.length > 0 && fotosContainer) {
     fotosContainer.innerHTML = '';
-    fotos.forEach(url => {
+    fotos.forEach(src => {
       const img = document.createElement('img');
-      img.src = url;
-      img.style.cssText = 'height:90px;width:90px;object-fit:cover;border-radius:9px;flex-shrink:0;border:.5px solid var(--border);';
+      img.src = src; // funciona tanto con URL como con base64
+      img.style.cssText = 'height:90px;width:90px;object-fit:cover;border-radius:9px;flex-shrink:0;border:.5px solid var(--border);cursor:pointer;';
+      img.onclick = () => { window.open(src, '_blank'); };
       fotosContainer.appendChild(img);
     });
     if (fotosWrap) fotosWrap.style.display = 'block';
+  } else {
+    if (fotosWrap) fotosWrap.style.display = 'none';
   }
 
   // Distancia
-  if (data.latitud && el('tec-alerta-dist')) {
+  const distEl = el('tec-alerta-dist');
+  if (data.latitud && distEl) {
     const tecLat = window._tecLatActual;
     const tecLng = window._tecLngActual;
     if (tecLat && tecLng) {
@@ -4900,11 +4908,13 @@ function poblarTecAlerta(data) {
       const dLng = (data.longitud - tecLng) * Math.PI / 180;
       const a = Math.sin(dLat/2)**2 + Math.cos(tecLat*Math.PI/180)*Math.cos(data.latitud*Math.PI/180)*Math.sin(dLng/2)**2;
       const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      el('tec-alerta-dist').textContent = dist < 1 ? Math.round(dist*1000) + ' m' : dist.toFixed(1) + ' km';
+      const distStr = dist < 1 ? Math.round(dist*1000) + ' m' : dist.toFixed(1) + ' km';
+      distEl.textContent = distStr;
+      if (el('thc-dist')) el('thc-dist').textContent = '📍 ' + (data.comuna || '') + ' · ' + distStr;
     }
   }
 
-  // Precios
+  // Precios en tec-alerta
   if (el('tec-alerta-total')) el('tec-alerta-total').textContent = fmt(moFinal);
   if (el('tec-alerta-total2')) el('tec-alerta-total2').textContent = fmt(moFinal);
   if (el('tec-alerta-mo')) el('tec-alerta-mo').textContent = fmt(mo);
@@ -4918,6 +4928,20 @@ function poblarTecAlerta(data) {
     if (el('tec-alerta-urg-lbl')) el('tec-alerta-urg-lbl').textContent = 'Urgencia ×' + urgMult.toFixed(2);
     if (el('tec-alerta-urg-val')) el('tec-alerta-urg-val').textContent = '+' + fmt(urgExtra);
     if (el('tec-alerta-mo-desc')) el('tec-alerta-mo-desc').textContent = 'M.O. ' + fmt(mo) + ' × urgencia ×' + urgMult.toFixed(2);
+  }
+
+  // ── Card en tec-home (aparece cuando llega nueva solicitud) ──
+  const homeCard = el('tec-home-trabajo-card');
+  if (homeCard) {
+    homeCard.style.display = '';
+    if (el('thc-trabajo')) el('thc-trabajo').textContent = trabajo;
+    if (el('thc-total')) el('thc-total').textContent = fmt(moFinal);
+    const homeBadge = el('thc-urgencia');
+    if (homeBadge) {
+      if (urgencia === 'emergencia') { homeBadge.textContent = '🔴 Emergencia'; homeBadge.className = 'tag tr'; }
+      else if (urgencia === 'urgente') { homeBadge.textContent = '🟠 Urgente'; homeBadge.className = 'tag ta'; }
+      else { homeBadge.textContent = '🟢 Normal'; homeBadge.className = 'tag tg'; }
+    }
   }
 }
 

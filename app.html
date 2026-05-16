@@ -730,7 +730,7 @@ textarea.inp{resize:none;}
       </div>
       <div style="font-size:12px;color:var(--muted);">Gasfitero · 4.9⭐ · 127 trabajos</div>
     </div>
-    <div style="position:relative;cursor:pointer;" onclick="go('tec-notif')"><div style="font-size:26px;">🔔</div><div style="position:absolute;top:-2px;right:-2px;width:13px;height:13px;background:var(--red);border-radius:50%;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;">2</div></div>
+    <div style="position:relative;cursor:pointer;" onclick="go('tec-notif')"><div style="font-size:26px;">🔔</div><div id="tec-notif-badge" style="position:absolute;top:-2px;right:-2px;width:13px;height:13px;background:var(--red);border-radius:50%;font-size:8px;font-weight:700;display:none;align-items:center;justify-content:center;">0</div></div>
   </div>
   <div class="toggle-wrap">
     <div><div style="font-size:13px;font-weight:700;" id="tog-lbl">🟢 Disponible para trabajos</div><div style="font-size:11px;color:var(--muted);">Los clientes pueden encontrarte</div></div>
@@ -741,7 +741,7 @@ textarea.inp{resize:none;}
     <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:16px;font-weight:800;color:var(--accent2);">$112K</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Esta semana</div></div>
     <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--purple);">0</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Pendientes</div></div>
   </div>
-  <!-- Card trabajo disponible — oculta por defecto, se muestra al recibir nueva:solicitud -->
+  <!-- Card dinámica — oculta hasta recibir nueva:solicitud -->
   <div class="hl-a hl" id="tec-home-trabajo-card" style="margin-bottom:12px;cursor:pointer;display:none;" onclick="go('tec-alerta')">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
       <div style="font-size:12px;font-weight:700;color:var(--accent2);">⚡ NUEVO TRABAJO</div>
@@ -1162,11 +1162,14 @@ textarea.inp{resize:none;}
 
 <div class="screen" id="s-tec-notif">
 <div class="status"><span>9:41</span><span>🔔 Notificaciones</span><span>📶</span></div>
-<div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Notificaciones</div></div>
+<div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Notificaciones</div><button onclick="limpiarNotifs('tec')" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:4px 8px;">Limpiar</button></div>
 <div class="wrap">
-  <div class="notif"><div class="notif-dot" style="background:var(--red);"></div><div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">⚡ Nuevo trabajo urgente</div><div style="font-size:12px;color:var(--muted);">Reparación fuga · 1.2km · $46.875</div><div style="font-size:10px;color:var(--muted);margin-top:3px;">Hace 2 min</div></div></div>
-  <div class="notif"><div class="notif-dot" style="background:var(--accent);"></div><div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">💸 Pago liberado</div><div style="font-size:12px;color:var(--muted);">$68.750 · Instalación calefont #FY-2844</div><div style="font-size:10px;color:var(--muted);margin-top:3px;">Hace 1 hora</div></div></div>
-  <div class="notif"><div class="notif-dot" style="background:var(--accent2);"></div><div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">⭐ Nueva calificación</div><div style="font-size:12px;color:var(--muted);">María González te dio 5 estrellas</div><div style="font-size:10px;color:var(--muted);margin-top:3px;">Hace 2 horas</div></div></div>
+  <div id="tec-notif-lista">
+    <div id="tec-notif-empty" style="text-align:center;padding:40px 20px;color:var(--muted);">
+      <div style="font-size:32px;margin-bottom:10px;">🔔</div>
+      <div style="font-size:13px;">Sin notificaciones</div>
+    </div>
+  </div>
 </div>
 </div>
 
@@ -4034,10 +4037,13 @@ function conectarSocketCliente() {
   try {
     const socket = io('https://fixya-backend-production.up.railway.app', {
       auth: { token },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 10,
     });
 
     socket.on('connect', () => {
+      console.log('[FixYa] Socket cliente conectado:', socket.id);
       const solicitudActiva = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       if (solicitudActiva.id) {
         socket.emit('solicitud:join', solicitudActiva.id);
@@ -4098,80 +4104,110 @@ function conectarSocketCliente() {
 // ── Función unificada: detecta rol y conecta socket ───────────
 function conectarSocket() {
   const token = Session.token();
-  if (!token || typeof io === 'undefined') return;
-  if (window._fixya_socket && window._fixya_socket.connected) return;
+  if (!token) return;
 
-  const rol = Session.rol();
-
-  if (rol === 'usuario') {
-    conectarSocketCliente();
+  if (typeof io === 'undefined') {
+    setTimeout(conectarSocket, 500);
     return;
   }
 
+  const s = window._fixya_socket;
+  if (s && s.connected) return;
+  if (s && !s.connected) { try { s.disconnect(); } catch {} window._fixya_socket = null; }
+
+  const rol = Session.rol();
+  console.log('[FixYa] Conectando socket como:', rol);
+
+  if (rol === 'usuario') { conectarSocketCliente(); return; }
+
   if (rol === 'tecnico') {
-    try {
-      const socket = io('https://fixya-backend-production.up.railway.app', {
-        auth: { token },
-        transports: ['websocket'],
+    const socket = io('https://fixya-backend-production.up.railway.app', {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
+    });
+
+    socket.on('connect', () => {
+      console.log('[FixYa] Socket tecnico conectado:', socket.id);
+      socket.emit('tecnico:disponible', true);
+      // Mostrar badge vacío al conectar
+      actualizarBadgeNotif('tec', 0);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.warn('[FixYa] Error socket tecnico:', err.message);
+    });
+
+    socket.on('nueva:solicitud', (data) => {
+      console.log('[FixYa] nueva:solicitud recibida', data);
+      if (data && data.solicitudId) {
+        localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+          id: data.solicitudId,
+          trabajo: data.trabajo || '',
+          total: data.totalEstimado || 0,
+          urgencia: data.urgencia || 'normal',
+          moBase: data.moBase || 0,
+          descripcion: data.descripcion || '',
+          fotosProblema: data.fotosProblema || [],
+          latCliente: data.latitud,
+          lngCliente: data.longitud,
+          comuna: data.comuna || '',
+        }));
+      }
+      agregarNotif('tec', {
+        icono: '⚡',
+        color: 'var(--red)',
+        titulo: 'Nuevo trabajo: ' + (data.trabajo || '—'),
+        desc: (data.comuna || '') + ' · $' + Math.round(data.totalEstimado || 0).toLocaleString('es-CL'),
       });
+      poblarTecAlerta(data || {});
+      const screenActual = document.querySelector('.screen.active');
+      if (screenActual && screenActual.id === 's-tec-home') {
+        go('tec-alerta');
+      } else {
+        showSuccess('Nueva solicitud disponible');
+      }
+    });
 
-      // Técnico recibe nueva solicitud → guardar ID y navegar a alerta
-      socket.on('nueva:solicitud', (data) => {
-        if (data && data.solicitudId) {
-          // Guardar en localStorage para que tecAceptarYPartir lo encuentre
-          localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-            id: data.solicitudId,
-            trabajo: data.trabajo || '',
-            total: data.totalEstimado || 0,
-            urgencia: data.urgencia || 'normal',
-            moBase: data.moBase || 0,
-            descripcion: data.descripcion || '',
-            fotosProblema: data.fotosProblema || [],
-            latCliente: data.latitud,
-            lngCliente: data.longitud,
-            comuna: data.comuna || '',
-          }));
-        }
+    socket.on('notif:trabajo_confirmado', async (data) => {
+      console.log('[FixYa] trabajo_confirmado', data);
+      agregarNotif('tec', { icono: '✅', color: 'var(--accent)', titulo: 'El cliente te eligio', desc: 'Dirigete al domicilio' });
+      showSuccess('El cliente te eligio! Dirigete al domicilio');
+      const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      if (data && data.solicitudId && !sol.id) {
+        localStorage.setItem('fx_solicitud_activa', JSON.stringify({ ...sol, id: data.solicitudId }));
+      }
+      try { await cambiarEstado('en-camino'); } catch {}
+      go('tec-en-camino');
+    });
 
-        // Poblar pantalla con datos reales
-        poblarTecAlerta(data || {});
+    socket.on('notif:pago_liberado', (data) => {
+      agregarNotif('tec', { icono: '💸', color: 'var(--accent)', titulo: 'Pago liberado', desc: data.monto ? '$' + Number(data.monto).toLocaleString('es-CL') : '' });
+    });
 
-        // Solo navegar si está en home
-        const screenActual = document.querySelector('.screen.active');
-        if (screenActual && screenActual.id === 's-tec-home') {
-          go('tec-alerta');
-        } else {
-          showSuccess('⚡ Nueva solicitud disponible');
-        }
-      });
-
-      // Cliente eligió a este técnico → ir en camino
-      socket.on('notif:trabajo_confirmado', async (data) => {
-        showSuccess('✅ ¡El cliente te eligió! Dirígete al domicilio 🚗');
-        const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-        if (data && data.solicitudId && !sol.id) {
-          localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-            ...sol, id: data.solicitudId,
-          }));
-        }
-        // Marcar en camino en backend
-        try { await cambiarEstado('en-camino'); } catch {}
-        go('tec-en-camino');
-      });
-
-      window._fixya_socket = socket;
-    } catch {}
-    return;
+    window._fixya_socket = socket;
   }
 }
 
-// Cargar Socket.io desde CDN y conectar
+// Cargar Socket.io desde backend propio (evita bloqueo CDN en Edge/Safari)
 (function loadSocket() {
   if (document.getElementById('socketio-script')) return;
   const script = document.createElement('script');
   script.id = 'socketio-script';
-  script.src = 'https://cdn.jsdelivr.net/npm/socket.io-client@4.7.4/dist/socket.io.min.js';
-  script.onload = function() { if (typeof conectarSocket === 'function') conectarSocket(); };
+  script.src = 'https://fixya-backend-production.up.railway.app/socket.io/socket.io.js';
+  script.onload = function() {
+    console.log('[FixYa] Socket.io cargado desde backend');
+    if (typeof conectarSocket === 'function') conectarSocket();
+  };
+  script.onerror = function() {
+    console.warn('[FixYa] Fallback CDN socket.io');
+    const fb = document.createElement('script');
+    fb.src = 'https://cdn.socket.io/4.7.4/socket.io.min.js';
+    fb.onload = function() { if (typeof conectarSocket === 'function') conectarSocket(); };
+    document.head.appendChild(fb);
+  };
   document.head.appendChild(script);
 })();
 // ============================================================
@@ -4447,9 +4483,7 @@ async function irATecnicos() {
 
     // Incluir fotos en localStorage para que el técnico las pueda ver
     let _fotosParaGuardar = [];
-    try {
-      _fotosParaGuardar = JSON.parse(localStorage.getItem('fx_fotos_solicitud') || '[]').filter(Boolean);
-    } catch {}
+    try { _fotosParaGuardar = JSON.parse(localStorage.getItem('fx_fotos_solicitud') || '[]').filter(Boolean); } catch {}
 
     localStorage.setItem('fx_solicitud_activa', JSON.stringify({
       id: data.solicitud.id,
@@ -4466,7 +4500,20 @@ async function irATecnicos() {
     if (fo) fo.style.display = 'none';
     if (btn) { btn.disabled = true; btn.style.opacity = '.4'; btn.textContent = 'Ver técnicos disponibles →'; }
 
+    // Unirse a sala socket para recibir postulantes en tiempo real
+    const _sock = window._fixya_socket;
+    if (_sock && _sock.connected) _sock.emit('solicitud:join', data.solicitud.id);
+
     await cargarTecnicosDisponibles(data.solicitud.id);
+
+    // Polling cada 5s mientras espera en cli-tecnicos
+    clearInterval(window._pollingPostulantes);
+    window._pollingPostulantes = setInterval(async () => {
+      const sc = document.querySelector('.screen.active');
+      if (!sc || sc.id !== 's-cli-tecnicos') { clearInterval(window._pollingPostulantes); return; }
+      await cargarTecnicosDisponibles(data.solicitud.id);
+    }, 5000);
+
     go('cli-tecnicos');
 
   } catch (err) {
@@ -4836,6 +4883,79 @@ async function cambiarEstado(endpoint, method = 'PATCH', body = {}) {
 // TÉCNICO — Aceptar trabajo y marcar "en camino"
 // ════════════════════════════════════════════════════════════
 // ── Poblar pantalla tec-alerta con datos reales ───────────────
+// ── Sistema de notificaciones en tiempo real ─────────────────
+function agregarNotif(tipo, { icono, color, titulo, desc }) {
+  const key = 'fx_notif_' + tipo;
+  const lista = JSON.parse(localStorage.getItem(key) || '[]');
+  lista.unshift({ icono, color, titulo, desc, ts: Date.now() });
+  if (lista.length > 30) lista.pop();
+  localStorage.setItem(key, JSON.stringify(lista));
+  renderNotifs(tipo);
+  actualizarBadgeNotif(tipo, lista.filter(n => !n.leida).length);
+}
+
+function renderNotifs(tipo) {
+  const key = 'fx_notif_' + tipo;
+  const lista = JSON.parse(localStorage.getItem(key) || '[]');
+  const container = document.getElementById(tipo + '-notif-lista');
+  const empty = document.getElementById(tipo + '-notif-empty');
+  if (!container) return;
+
+  // Remove existing notif divs (keep empty state)
+  container.querySelectorAll('.notif').forEach(n => n.remove());
+
+  if (lista.length === 0) {
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  lista.forEach(n => {
+    const div = document.createElement('div');
+    div.className = 'notif';
+    const ago = _timeAgo(n.ts);
+    div.innerHTML = '<div class="notif-dot" style="background:' + n.color + ';"></div>' +
+      '<div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">' + n.icono + ' ' + n.titulo + '</div>' +
+      (n.desc ? '<div style="font-size:12px;color:var(--muted);">' + n.desc + '</div>' : '') +
+      '<div style="font-size:10px;color:var(--muted);margin-top:3px;">' + ago + '</div></div>';
+    container.appendChild(div);
+  });
+}
+
+function limpiarNotifs(tipo) {
+  localStorage.removeItem('fx_notif_' + tipo);
+  renderNotifs(tipo);
+  actualizarBadgeNotif(tipo, 0);
+}
+
+function actualizarBadgeNotif(tipo, count) {
+  // Buscar el badge de notificaciones según tipo
+  const badgeId = tipo === 'tec' ? 'tec-notif-badge' : 'cli-notif-badge';
+  const badge = document.getElementById(badgeId);
+  if (badge) {
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'flex' : 'none';
+  }
+}
+
+function _timeAgo(ts) {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return 'Ahora';
+  if (diff < 3600) return 'Hace ' + Math.floor(diff/60) + ' min';
+  if (diff < 86400) return 'Hace ' + Math.floor(diff/3600) + ' hrs';
+  return 'Hace ' + Math.floor(diff/86400) + ' dias';
+}
+
+// Cargar notificaciones guardadas al navegar a pantalla de notifs
+document.addEventListener('DOMContentLoaded', () => {
+  // Renderizar notifs al abrir la pantalla
+  const observer = new MutationObserver(() => {
+    const tecNotif = document.querySelector('#s-tec-notif.active');
+    if (tecNotif) renderNotifs('tec');
+  });
+  observer.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+});
+
 function poblarTecAlerta(data) {
   const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
   const el = (id) => document.getElementById(id);
@@ -4847,7 +4967,6 @@ function poblarTecAlerta(data) {
   const moFinal = Math.round(mo * urgMult);
   const comision = Math.round(moFinal * 0.12);
 
-  // ── Pantalla tec-alerta ───────────────────────────────────
   if (el('tec-alerta-trabajo')) el('tec-alerta-trabajo').textContent = trabajo;
 
   // Badge urgencia
@@ -4867,27 +4986,21 @@ function poblarTecAlerta(data) {
     if (descWrap) descWrap.style.display = 'none';
   }
 
-  // Fotos: pueden ser URLs o base64 guardadas en localStorage
+  // Fotos: URLs del backend O base64 de localStorage O FotosCapturadas en memoria
+  let fotos = (data.fotosProblema || []).filter(Boolean);
+  if (fotos.length === 0) {
+    try { fotos = JSON.parse(localStorage.getItem('fx_fotos_solicitud') || '[]').filter(Boolean); } catch {}
+  }
+  if (fotos.length === 0 && typeof FotosCapturadas !== 'undefined') {
+    fotos = (FotosCapturadas.solicitud || []).filter(Boolean);
+  }
   const fotosWrap = el('tec-alerta-fotos-wrap');
   const fotosContainer = el('tec-alerta-fotos');
-
-  // Intentar obtener fotos del socket (URLs) o de localStorage (base64)
-  let fotos = data.fotosProblema || [];
-  if (fotos.length === 0) {
-    // Fotos base64 guardadas en localStorage por el cliente
-    const solLocal = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-    fotos = solLocal.fotosProblema || [];
-  }
-  // También revisar FotosCapturadas si están en memoria (mismo browser - solo en tests locales)
-  if (fotos.length === 0 && typeof FotosCapturadas !== 'undefined') {
-    fotos = FotosCapturadas.solicitud || [];
-  }
-
   if (fotos.length > 0 && fotosContainer) {
     fotosContainer.innerHTML = '';
     fotos.forEach(src => {
       const img = document.createElement('img');
-      img.src = src; // funciona tanto con URL como con base64
+      img.src = src;
       img.style.cssText = 'height:90px;width:90px;object-fit:cover;border-radius:9px;flex-shrink:0;border:.5px solid var(--border);cursor:pointer;';
       img.onclick = () => { window.open(src, '_blank'); };
       fotosContainer.appendChild(img);
@@ -4898,8 +5011,8 @@ function poblarTecAlerta(data) {
   }
 
   // Distancia
-  const distEl = el('tec-alerta-dist');
-  if (data.latitud && distEl) {
+  let distStr = '—';
+  if (data.latitud) {
     const tecLat = window._tecLatActual;
     const tecLng = window._tecLngActual;
     if (tecLat && tecLng) {
@@ -4908,39 +5021,38 @@ function poblarTecAlerta(data) {
       const dLng = (data.longitud - tecLng) * Math.PI / 180;
       const a = Math.sin(dLat/2)**2 + Math.cos(tecLat*Math.PI/180)*Math.cos(data.latitud*Math.PI/180)*Math.sin(dLng/2)**2;
       const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      const distStr = dist < 1 ? Math.round(dist*1000) + ' m' : dist.toFixed(1) + ' km';
-      distEl.textContent = distStr;
-      if (el('thc-dist')) el('thc-dist').textContent = '📍 ' + (data.comuna || '') + ' · ' + distStr;
+      distStr = dist < 1 ? Math.round(dist*1000) + ' m' : dist.toFixed(1) + ' km';
     }
   }
+  if (el('tec-alerta-dist')) el('tec-alerta-dist').textContent = distStr;
 
-  // Precios en tec-alerta
+  // Precios
   if (el('tec-alerta-total')) el('tec-alerta-total').textContent = fmt(moFinal);
   if (el('tec-alerta-total2')) el('tec-alerta-total2').textContent = fmt(moFinal);
   if (el('tec-alerta-mo')) el('tec-alerta-mo').textContent = fmt(mo);
   if (el('tec-alerta-com')) el('tec-alerta-com').textContent = fmt(comision);
 
-  // Fila urgencia
   if (urgMult > 1) {
     const urgExtra = moFinal - mo;
     const urgRow = el('tec-alerta-urg-row');
     if (urgRow) urgRow.style.display = '';
-    if (el('tec-alerta-urg-lbl')) el('tec-alerta-urg-lbl').textContent = 'Urgencia ×' + urgMult.toFixed(2);
+    if (el('tec-alerta-urg-lbl')) el('tec-alerta-urg-lbl').textContent = 'Urgencia x' + urgMult.toFixed(2);
     if (el('tec-alerta-urg-val')) el('tec-alerta-urg-val').textContent = '+' + fmt(urgExtra);
-    if (el('tec-alerta-mo-desc')) el('tec-alerta-mo-desc').textContent = 'M.O. ' + fmt(mo) + ' × urgencia ×' + urgMult.toFixed(2);
+    if (el('tec-alerta-mo-desc')) el('tec-alerta-mo-desc').textContent = 'M.O. ' + fmt(mo) + ' x urgencia x' + urgMult.toFixed(2);
   }
 
-  // ── Card en tec-home (aparece cuando llega nueva solicitud) ──
+  // Card en tec-home
   const homeCard = el('tec-home-trabajo-card');
   if (homeCard) {
     homeCard.style.display = '';
     if (el('thc-trabajo')) el('thc-trabajo').textContent = trabajo;
     if (el('thc-total')) el('thc-total').textContent = fmt(moFinal);
-    const homeBadge = el('thc-urgencia');
-    if (homeBadge) {
-      if (urgencia === 'emergencia') { homeBadge.textContent = '🔴 Emergencia'; homeBadge.className = 'tag tr'; }
-      else if (urgencia === 'urgente') { homeBadge.textContent = '🟠 Urgente'; homeBadge.className = 'tag ta'; }
-      else { homeBadge.textContent = '🟢 Normal'; homeBadge.className = 'tag tg'; }
+    if (el('thc-dist')) el('thc-dist').textContent = '📍 ' + (data.comuna || '') + (distStr !== '—' ? ' · ' + distStr : '');
+    const hb = el('thc-urgencia');
+    if (hb) {
+      if (urgencia === 'emergencia') { hb.textContent = '🔴 Emergencia'; hb.className = 'tag tr'; }
+      else if (urgencia === 'urgente') { hb.textContent = '🟠 Urgente'; hb.className = 'tag ta'; }
+      else { hb.textContent = '🟢 Normal'; hb.className = 'tag tg'; }
     }
   }
 }

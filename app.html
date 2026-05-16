@@ -813,7 +813,7 @@ textarea.inp{resize:none;}
     </div>
   </div>
   <div style="display:flex;gap:8px;">
-    <button class="btn btn-ghost btn-sm" onclick="back()" style="flex:1;">✗ Rechazar</button>
+    <button class="btn btn-ghost btn-sm" onclick="tecnicoRechazarTrabajo()" style="flex:1;">✗ Rechazar</button>
     <button class="btn btn-g" id="btn-tec-aceptar" onclick="tecAceptarYPartir()" style="flex:2;">✓ Aceptar →</button>
   </div>
 </div>
@@ -1872,7 +1872,6 @@ textarea.inp{resize:none;}
       </div>
     </div>
   </div>
-  <button onclick="cancelarSolicitudActiva()" style="width:100%;margin-top:14px;padding:11px;background:rgba(255,77,109,.08);border:.5px solid rgba(255,77,109,.25);border-radius:10px;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">✕ Cancelar solicitud</button>
 </div>
 </div>
 
@@ -2431,6 +2430,7 @@ function go(id) {
   if (fullId === 's-tec-alerta') startTimer('tmr-tec', 5 * 60);
   if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
   if (fullId === 's-cli-historial') setTimeout(cargarHistorial, 50);
+  if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
 }
 
 function back() {
@@ -3562,12 +3562,11 @@ window.addEventListener('DOMContentLoaded', () => {
   if (Session.existe()) {
     const rol = Session.rol();
     if (rol === 'tecnico') {
-      // Técnico: verificar si tiene trabajo activo
-      const solTec = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       go('tec-home');
-      // Si tiene trabajo en curso, poblar la card
+      // Restaurar card si tenía trabajo activo
+      const solTec = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       if (solTec.id && typeof poblarTecAlerta === 'function') {
-        setTimeout(() => poblarTecAlerta(solTec), 200);
+        setTimeout(() => poblarTecAlerta(solTec), 300);
       }
     } else if (rol === 'usuario') {
       go('cli-home');
@@ -3575,33 +3574,32 @@ window.addEventListener('DOMContentLoaded', () => {
       setTimeout(async () => {
         const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
         if (!sol.id) return;
-        // Verificar estado con backend antes de navegar
         try {
           const data = await apiFetch('/solicitudes/' + sol.id);
           if (!data) { localStorage.removeItem('fx_solicitud_activa'); return; }
-          const s = data.estado;
-          if (s === 'PENDIENTE') {
-            // Aún esperando técnico — volver a cli-tecnicos
+          const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
+          if (!activos.includes(data.estado)) {
+            localStorage.removeItem('fx_solicitud_activa');
+            return;
+          }
+          // Enriquecer con datos del backend
+          localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+            ...sol,
+            tecnicoId: data.tecnicoId || sol.tecnicoId,
+            tecnicoNombre: data.tecnico?.nombre || sol.tecnicoNombre,
+            trabajo: data.trabajo || sol.trabajo,
+          }));
+          // Navegar a pantalla correcta según estado
+          if (data.estado === 'PENDIENTE') {
             await cargarTecnicosDisponibles(sol.id);
             go('cli-tecnicos');
-          } else if (s === 'ACEPTADA' || s === 'EN_CAMINO') {
-            // Técnico en camino
-            localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-              ...sol,
-              tecnicoNombre: data.tecnico?.nombre || sol.tecnicoNombre,
-              tecnicoId: data.tecnicoId || sol.tecnicoId,
-            }));
+          } else if (data.estado === 'ACEPTADA' || data.estado === 'EN_CAMINO') {
             if (typeof actualizarPantallaEnCamino === 'function') actualizarPantallaEnCamino();
             go('cli-en-camino');
-          } else if (s === 'EN_TRABAJO') {
-            // Técnico llegó — verificar materiales
+          } else if (data.estado === 'EN_TRABAJO') {
             go('cli-verificar-mat');
           }
-          // COMPLETADA / CANCELADA → limpiar
-          if (['COMPLETADA', 'CANCELADA', 'CANCELADO'].includes(s)) {
-            localStorage.removeItem('fx_solicitud_activa');
-          }
-        } catch {} // sin internet: quedarse en home
+        } catch {}
       }, 800);
     }
     setTimeout(() => { if (typeof conectarSocket === 'function') conectarSocket(); }, 1500);
@@ -4001,20 +3999,17 @@ async function actualizarCardSolActiva() {
   const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
   const container = document.getElementById('cli-home-sol-activa');
   if (!container) return;
-
   if (!sol.id) { container.style.display = 'none'; return; }
 
-  // Verificar con el backend
   try {
     const data = await apiFetch('/solicitudes/' + sol.id);
-    const estadosActivos = ['PENDIENTE', 'ACEPTADA', 'EN_CAMINO', 'EN_TRABAJO'];
-    if (!data || !estadosActivos.includes(data.estado)) {
+    const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
+    if (!data || !activos.includes(data.estado)) {
       localStorage.removeItem('fx_solicitud_activa');
       localStorage.removeItem('fx_fotos_solicitud');
       container.style.display = 'none';
       return;
     }
-    // Enriquecer localStorage con datos del backend
     localStorage.setItem('fx_solicitud_activa', JSON.stringify({
       ...sol,
       trabajo: data.trabajo || sol.trabajo,
@@ -4022,13 +4017,12 @@ async function actualizarCardSolActiva() {
       tecnicoId: data.tecnicoId || sol.tecnicoId,
       tecnicoNombre: data.tecnico?.nombre || sol.tecnicoNombre,
     }));
-  } catch {} // sin internet: mostrar igual
+  } catch {}
 
   const s = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
   container.style.display = '';
   const el = (id) => document.getElementById(id);
   if (el('cli-home-sol-trabajo')) el('cli-home-sol-trabajo').textContent = s.trabajo || '—';
-
   if (s.fotoMateriales) {
     if (el('cli-home-sol-status')) el('cli-home-sol-status').textContent = '📸 Verifica los materiales del técnico';
     if (el('cli-home-sol-estado')) { el('cli-home-sol-estado').textContent = '🔵 Verificando'; el('cli-home-sol-estado').className = 'tag tb'; }
@@ -4087,39 +4081,47 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 });
 
-// ── Cargar historial de solicitudes del cliente ───────────────
+// ── Técnico rechaza trabajo → ocultar card en home ───────────
+function tecnicoRechazarTrabajo() {
+  const card = document.getElementById('tec-home-trabajo-card');
+  if (card) card.style.display = 'none';
+  localStorage.removeItem('fx_solicitud_activa');
+  if (typeof stopTimer === 'function') stopTimer('tmr-tec', '—');
+  go('tec-home');
+}
+
+// ── Cargar historial real desde backend ───────────────────────
 async function cargarHistorial() {
   const lista = document.getElementById('historial-lista');
   const loading = document.getElementById('historial-loading');
   if (!lista) return;
-  if (loading) loading.style.display = '';
+  if (loading) { loading.style.display = ''; loading.textContent = 'Cargando...'; }
 
   try {
     const data = await apiFetch('/solicitudes/mis-solicitudes');
-    const solicitudes = data.solicitudes || data || [];
+    const solicitudes = Array.isArray(data) ? data : (data.solicitudes || []);
     if (loading) loading.style.display = 'none';
 
     if (!solicitudes.length) {
-      lista.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--muted);"><div style="font-size:32px;margin-bottom:10px;">📋</div><div style="font-size:13px;">Aún no tienes reparaciones</div></div>';
+      lista.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--muted);"><div style="font-size:32px;margin-bottom:10px;">📋</div><div style="font-size:13px;">Aun no tienes reparaciones</div></div>';
       return;
     }
 
+    const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
     const estadoTag = (e) => {
-      if (['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO'].includes(e))
-        return '<span class="tag ta" style="font-size:9px;">En curso</span>';
+      if (activos.includes(e)) return '<span class="tag ta" style="font-size:9px;">En curso</span>';
       if (e === 'COMPLETADA') return '<span class="tag tg" style="font-size:9px;">Completado</span>';
-      return '<span class="tag" style="font-size:9px;background:var(--card2);">Cancelado</span>';
+      return '<span class="tag" style="font-size:9px;background:rgba(255,255,255,.07);">Cancelado</span>';
     };
 
-    const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
     lista.innerHTML = '<div class="card" style="padding:0;overflow:hidden;">' +
       solicitudes.map(s => {
-        const fecha = new Date(s.creadoAt || s.createdAt || Date.now()).toLocaleDateString('es-CL',{day:'numeric',month:'short'});
+        const fecha = new Date(s.creadoAt || s.createdAt || Date.now()).toLocaleDateString('es-CL', {day:'numeric', month:'short'});
         const tec = s.tecnico?.nombre ? ' · ' + s.tecnico.nombre.split(' ')[0] : '';
         const esActivo = activos.includes(s.estado);
-        return '<div class="row" style="padding:11px 13px;cursor:pointer;" onclick="' +
-          (esActivo ? 'irASolicitudActiva()' : '') + '">' +
-          '<div><div style="font-size:13px;font-weight:600;">' + s.trabajo + tec + '</div>' +
+        return '<div class="row" style="padding:11px 13px;cursor:' + (esActivo ? 'pointer' : 'default') + ';"' +
+          (esActivo ? ' onclick="irASolicitudActiva()"' : '') + '>' +
+          '<div><div style="font-size:13px;font-weight:600;">' + (s.trabajo || 'Servicio') + tec + '</div>' +
           '<div style="font-size:11px;color:var(--muted);">' + fecha + '</div></div>' +
           '<div>' + estadoTag(s.estado) + '</div></div>';
       }).join('') + '</div>';
@@ -4932,13 +4934,9 @@ window.go = function(id) {
   if (screenActual && screenActual.id === 's-tec-en-camino' && id !== 'tec-en-camino') {
     detenerGPSTecnico();
   }
-  // Cliente en "en camino" → iniciar mapa de tracking
-  if (id === 'cli-en-camino') {
+  // Cliente en "en camino" o "verificar materiales" → iniciar mapa de tracking
+  if (id === 'cli-en-camino' || id === 'cli-verificar-mat') {
     setTimeout(iniciarMapaCliente, 400);
-  }
-  // Cliente en "verificar materiales" → también iniciar mapa
-  if (id === 'cli-verificar-mat') {
-    setTimeout(iniciarMapaCliente, 300);
   }
   _goGPS(id);
 };

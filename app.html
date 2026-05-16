@@ -741,21 +741,13 @@ textarea.inp{resize:none;}
     <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:16px;font-weight:800;color:var(--accent2);">$112K</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Esta semana</div></div>
     <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--purple);">0</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Pendientes</div></div>
   </div>
-  <!-- Card dinámica — oculta hasta recibir nueva:solicitud -->
-  <div class="hl-a hl" id="tec-home-trabajo-card" style="margin-bottom:12px;cursor:pointer;display:none;" onclick="go('tec-alerta')">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
-      <div style="font-size:12px;font-weight:700;color:var(--accent2);">⚡ NUEVO TRABAJO</div>
-      <span class="tag tr" id="thc-urgencia">🔴 Urgente</span>
+  <!-- Lista de trabajos disponibles — se puebla dinámicamente -->
+  <div id="tec-trabajos-disponibles" style="display:none;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.5px;">⚡ Trabajos disponibles</div>
+      <div id="tec-trabajos-count" style="font-size:11px;color:var(--muted);"></div>
     </div>
-    <div style="font-size:14px;font-weight:700;margin-bottom:3px;" id="thc-trabajo">—</div>
-    <div style="font-size:12px;color:var(--muted);" id="thc-dist">📍 —</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px;">
-      <div>
-        <div style="font-size:10px;color:var(--muted);">Tú recibes</div>
-        <div style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--accent);" id="thc-total">$0</div>
-      </div>
-      <button class="btn btn-g btn-sm">Ver trabajo →</button>
-    </div>
+    <div id="tec-trabajos-lista"></div>
   </div>
   <div class="lbl">Trabajos recientes</div>
   <div class="card" style="padding:0;overflow:hidden;">
@@ -3566,7 +3558,7 @@ window.addEventListener('DOMContentLoaded', () => {
       // Restaurar card si tenía trabajo activo
       const solTec = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       if (solTec.id && typeof poblarTecAlerta === 'function') {
-        // Verificar que la solicitud sigue activa antes de mostrar la card
+        // Verificar que la solicitud sigue activa antes de mostrar
         setTimeout(async () => {
           try {
             const data = await apiFetch('/solicitudes/' + solTec.id);
@@ -3575,12 +3567,15 @@ window.addEventListener('DOMContentLoaded', () => {
               localStorage.removeItem('fx_solicitud_activa');
               return;
             }
-            poblarTecAlerta({ ...solTec, trabajo: data.trabajo, urgencia: data.urgencia });
+            // Si está en camino o en trabajo, ir a la pantalla correcta
+            if (data.estado === 'EN_CAMINO') { go('tec-en-camino'); return; }
+            if (data.estado === 'EN_TRABAJO') { go('tec-mat-verificar'); return; }
+            // Si pendiente, mostrar en lista de disponibles
+            agregarTrabajoDisponible({ ...solTec, solicitudId: solTec.id, trabajo: data.trabajo, urgencia: data.urgencia });
           } catch {
-            // Sin internet: limpiar para no mostrar datos obsoletos
             localStorage.removeItem('fx_solicitud_activa');
           }
-        }, 300);
+        }, 500);
       }
     } else if (rol === 'usuario') {
       go('cli-home');
@@ -4095,10 +4090,76 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 });
 
-// ── Técnico rechaza trabajo → ocultar card en home ───────────
+// ── Lista de trabajos disponibles en tec-home ────────────────
+const _trabajosDisponibles = {}; // solicitudId → data
+
+function agregarTrabajoDisponible(data) {
+  if (!data || !data.solicitudId) return;
+  _trabajosDisponibles[data.solicitudId] = data;
+  renderizarTrabajosDisponibles();
+}
+
+function quitarTrabajoDisponible(solicitudId) {
+  delete _trabajosDisponibles[solicitudId];
+  renderizarTrabajosDisponibles();
+}
+
+function renderizarTrabajosDisponibles() {
+  const wrap = document.getElementById('tec-trabajos-disponibles');
+  const lista = document.getElementById('tec-trabajos-lista');
+  const count = document.getElementById('tec-trabajos-count');
+  if (!wrap || !lista) return;
+
+  const items = Object.values(_trabajosDisponibles);
+  if (items.length === 0) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = '';
+  if (count) count.textContent = items.length + ' disponible' + (items.length > 1 ? 's' : '');
+
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+
+  lista.innerHTML = items.map(d => {
+    const mo = d.moBase || d.totalEstimado || 0;
+    const urgMult = d.urgencia === 'emergencia' ? 1.5 : d.urgencia === 'urgente' ? 1.1 : 1.0;
+    const moFinal = Math.round(mo * urgMult);
+    const urgLabel = d.urgencia === 'emergencia' ? '🔴 Emergencia' : d.urgencia === 'urgente' ? '🟠 Urgente' : '🟢 Normal';
+    const urgClass = d.urgencia === 'emergencia' ? 'tag tr' : d.urgencia === 'urgente' ? 'tag ta' : 'tag tg';
+    return '<div class="hl-a hl" style="margin-bottom:8px;cursor:pointer;" onclick="verTrabajoDisponible(\'' + d.solicitudId + '\')">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+      '<div style="font-size:13px;font-weight:700;">' + (d.trabajo || 'Trabajo disponible') + '</div>' +
+      '<span class="' + urgClass + '" style="font-size:9px;">' + urgLabel + '</span></div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">' + (d.descripcion ? '"' + d.descripcion.substring(0, 60) + (d.descripcion.length > 60 ? '..."' : '"') : '') + '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+      '<div><div style="font-size:10px;color:var(--muted);">Tú recibes</div>' +
+      '<div style="font-family:\'JetBrains Mono\';font-size:18px;font-weight:800;color:var(--accent);">' + fmt(moFinal) + '</div></div>' +
+      '<button class="btn btn-g btn-sm">Ver →</button></div></div>';
+  }).join('');
+}
+
+function verTrabajoDisponible(solicitudId) {
+  const data = _trabajosDisponibles[solicitudId];
+  if (!data) return;
+  // Guardar como solicitud activa del técnico
+  localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+    id: solicitudId,
+    trabajo: data.trabajo || '',
+    total: data.totalEstimado || 0,
+    urgencia: data.urgencia || 'normal',
+    moBase: data.moBase || 0,
+    descripcion: data.descripcion || '',
+    fotosProblema: data.fotosProblema || [],
+    latCliente: data.latitud,
+    lngCliente: data.longitud,
+    comuna: data.comuna || '',
+  }));
+  poblarTecAlerta(data);
+  go('tec-alerta');
+}
+
+// ── Técnico rechaza trabajo → quitarlo de la lista ───────────
 function tecnicoRechazarTrabajo() {
-  const card = document.getElementById('tec-home-trabajo-card');
-  if (card) card.style.display = 'none';
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  if (sol.id) quitarTrabajoDisponible(sol.id);
   localStorage.removeItem('fx_solicitud_activa');
   if (typeof stopTimer === 'function') stopTimer('tmr-tec', '—');
   go('tec-home');
@@ -4343,14 +4404,8 @@ function conectarSocket() {
         desc: (data.comuna || '') + ' · $' + Math.round(data.totalEstimado || 0).toLocaleString('es-CL'),
       });
       poblarTecAlerta(data || {});
-      // Mostrar card en home y vibrar, NO navegar automáticamente
-      const screenActual = document.querySelector('.screen.active');
-      if (screenActual && screenActual.id === 's-tec-home') {
-        // Ya está en home — la card aparece sola via poblarTecAlerta, mostrar toast
-        showSuccess('Nueva solicitud disponible — toca Ver trabajo');
-      } else {
-        showSuccess('Nueva solicitud disponible');
-      }
+      // Agregar a lista (no navegar automáticamente)
+      showSuccess('Nuevo trabajo disponible');
     });
 
     socket.on('notif:trabajo_confirmado', async (data) => {
@@ -5223,20 +5278,8 @@ function poblarTecAlerta(data) {
     if (el('tec-alerta-mo-desc')) el('tec-alerta-mo-desc').textContent = 'M.O. ' + fmt(mo) + ' x urgencia x' + urgMult.toFixed(2);
   }
 
-  // Card en tec-home
-  const homeCard = el('tec-home-trabajo-card');
-  if (homeCard) {
-    homeCard.style.display = '';
-    if (el('thc-trabajo')) el('thc-trabajo').textContent = trabajo;
-    if (el('thc-total')) el('thc-total').textContent = fmt(moFinal);
-    if (el('thc-dist')) el('thc-dist').textContent = '📍 ' + (data.comuna || '') + (distStr !== '—' ? ' · ' + distStr : '');
-    const hb = el('thc-urgencia');
-    if (hb) {
-      if (urgencia === 'emergencia') { hb.textContent = '🔴 Emergencia'; hb.className = 'tag tr'; }
-      else if (urgencia === 'urgente') { hb.textContent = '🟠 Urgente'; hb.className = 'tag ta'; }
-      else { hb.textContent = '🟢 Normal'; hb.className = 'tag tg'; }
-    }
-  }
+  // Agregar/actualizar en lista de trabajos disponibles en tec-home
+  agregarTrabajoDisponible(data);
 }
 
 async function tecAceptarYPartir() {

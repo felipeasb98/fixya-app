@@ -3992,7 +3992,7 @@ function actualizarPantallaEnCamino() {
 }
 
 // ── Mostrar/ocultar card de solicitud activa en cli-home ──────
-function actualizarCardSolActiva() {
+async function actualizarCardSolActiva() {
   const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
   const container = document.getElementById('cli-home-sol-activa');
   if (!container) return;
@@ -4000,6 +4000,21 @@ function actualizarCardSolActiva() {
   if (!sol.id) {
     container.style.display = 'none';
     return;
+  }
+
+  // Verificar con el backend que la solicitud sigue activa
+  try {
+    const data = await apiFetch('/solicitudes/' + sol.id);
+    const estadosActivos = ['PENDIENTE', 'ACEPTADA', 'EN_CAMINO', 'EN_TRABAJO'];
+    if (!data || !estadosActivos.includes(data.estado)) {
+      // Solicitud cerrada, cancelada o no existe → limpiar
+      localStorage.removeItem('fx_solicitud_activa');
+      localStorage.removeItem('fx_fotos_solicitud');
+      container.style.display = 'none';
+      return;
+    }
+  } catch {
+    // Si falla la verificación (sin internet), mostrar igual pero no bloquear
   }
 
   container.style.display = '';

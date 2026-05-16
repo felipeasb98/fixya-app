@@ -4044,7 +4044,7 @@ async function cancelarSolicitudActiva() {
   if (!confirmar) return;
 
   try {
-    await apiFetch('/solicitudes/' + sol.id + '/cancelar', { method: 'PATCH', body: JSON.stringify({}) });
+    await apiFetch('/solicitudes/' + sol.id + '/cancelar', { method: 'PATCH', body: JSON.stringify({ motivo: 'Cancelado por el cliente' }) });
   } catch {}
 
   localStorage.removeItem('fx_solicitud_activa');
@@ -4098,7 +4098,7 @@ async function cargarHistorial() {
   if (loading) { loading.style.display = ''; loading.textContent = 'Cargando...'; }
 
   try {
-    const data = await apiFetch('/solicitudes/mis-solicitudes');
+    const data = await apiFetch('/solicitudes/mis-solicitudes?limit=50');
     const solicitudes = Array.isArray(data) ? data : (data.solicitudes || []);
     if (loading) loading.style.display = 'none';
 
@@ -4107,26 +4107,67 @@ async function cargarHistorial() {
       return;
     }
 
-    const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
-    const estadoTag = (e) => {
-      if (activos.includes(e)) return '<span class="tag ta" style="font-size:9px;">En curso</span>';
-      if (e === 'COMPLETADA') return '<span class="tag tg" style="font-size:9px;">Completado</span>';
+    const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO','CON_POSTULANTES'];
+    const estadoLabel = (e) => {
+      if (e === 'PENDIENTE') return '<span class="tag ta" style="font-size:9px;">⏳ Buscando técnico</span>';
+      if (e === 'CON_POSTULANTES') return '<span class="tag ta" style="font-size:9px;">👷 Con postulantes</span>';
+      if (e === 'ACEPTADA') return '<span class="tag ta" style="font-size:9px;">✓ Aceptado</span>';
+      if (e === 'EN_CAMINO') return '<span class="tag ta" style="font-size:9px;">🚗 En camino</span>';
+      if (e === 'EN_TRABAJO') return '<span class="tag ta" style="font-size:9px;">🔧 En trabajo</span>';
+      if (e === 'COMPLETADA') return '<span class="tag tg" style="font-size:9px;">✓ Completado</span>';
       return '<span class="tag" style="font-size:9px;background:rgba(255,255,255,.07);">Cancelado</span>';
     };
 
-    lista.innerHTML = '<div class="card" style="padding:0;overflow:hidden;">' +
+    lista.innerHTML = '<div class="card" style="padding:0;overflow:hidden;" id="historial-card">' +
       solicitudes.map(s => {
         const fecha = new Date(s.creadoAt || s.createdAt || Date.now()).toLocaleDateString('es-CL', {day:'numeric', month:'short'});
         const tec = s.tecnico?.nombre ? ' · ' + s.tecnico.nombre.split(' ')[0] : '';
         const esActivo = activos.includes(s.estado);
-        return '<div class="row" style="padding:11px 13px;cursor:' + (esActivo ? 'pointer' : 'default') + ';"' +
-          (esActivo ? ' onclick="irASolicitudActiva()"' : '') + '>' +
+        return '<div style="border-bottom:.5px solid var(--border);">' +
+          '<div class="row" style="padding:11px 13px;cursor:' + (esActivo ? 'pointer' : 'default') + ';"' +
+          (esActivo ? ' onclick="verSolicitudHistorial(\'' + s.id + '\',\'' + s.estado + '\')"' : '') + '>' +
           '<div><div style="font-size:13px;font-weight:600;">' + (s.trabajo || 'Servicio') + tec + '</div>' +
-          '<div style="font-size:11px;color:var(--muted);">' + fecha + '</div></div>' +
-          '<div>' + estadoTag(s.estado) + '</div></div>';
+          '<div style="font-size:11px;color:var(--muted);">' + fecha + ' · ' + s.codigo + '</div></div>' +
+          '<div>' + estadoLabel(s.estado) + '</div></div>' +
+          (esActivo ? '<div style="padding:0 13px 10px;"><button onclick="cancelarDesdeHistorial(\'' + s.id + '\')" style="width:100%;padding:7px;background:rgba(255,77,109,.07);border:.5px solid rgba(255,77,109,.2);border-radius:8px;color:var(--red);font-size:11px;font-weight:600;cursor:pointer;">✕ Cancelar esta solicitud</button></div>' : '') +
+          '</div>';
       }).join('') + '</div>';
   } catch {
     if (loading) { loading.textContent = 'Error al cargar. Toca para reintentar.'; loading.style.cursor = 'pointer'; loading.onclick = cargarHistorial; }
+  }
+}
+
+async function cancelarDesdeHistorial(solicitudId) {
+  if (!confirm('¿Cancelar esta solicitud?')) return;
+  try {
+    await apiFetch('/solicitudes/' + solicitudId + '/cancelar', { method: 'PATCH', body: JSON.stringify({ motivo: 'Cancelado por el cliente' }) });
+    // Si era la solicitud activa en localStorage, limpiarla
+    const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+    if (sol.id === solicitudId) {
+      localStorage.removeItem('fx_solicitud_activa');
+      localStorage.removeItem('fx_fotos_solicitud');
+    }
+    showSuccess('Solicitud cancelada');
+    cargarHistorial(); // recargar lista
+  } catch(e) {
+    showError(e.message || 'No se pudo cancelar');
+  }
+}
+
+function verSolicitudHistorial(id, estado) {
+  // Cargar esta solicitud como activa y navegar a pantalla correcta
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  if (sol.id !== id) {
+    localStorage.setItem('fx_solicitud_activa', JSON.stringify({ ...sol, id }));
+  }
+  const activos = ['PENDIENTE','CON_POSTULANTES'];
+  if (activos.includes(estado)) {
+    go('cli-tecnicos');
+  } else if (estado === 'EN_CAMINO' || estado === 'ACEPTADA') {
+    if (typeof actualizarPantallaEnCamino === 'function') actualizarPantallaEnCamino();
+    go('cli-en-camino');
+  } else if (estado === 'EN_TRABAJO') {
+    go('cli-verificar-mat');
   }
 }
 

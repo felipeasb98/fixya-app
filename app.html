@@ -1240,12 +1240,18 @@ textarea.inp{resize:none;}
   </div>
 
 
-  <!-- SOLICITUD ACTIVA -->
-  <div class="lbl">Solicitud activa</div>
-  <div class="hl-a hl" style="cursor:pointer;" onclick="irASolicitudActiva()">
-    <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><div style="font-size:13px;font-weight:700;">Reparación fuga cañería</div><span class="tag ta">🟡 En curso</span></div>
-    <div style="font-size:12px;color:var(--muted);">Carlos M. · ⭐4.9 · Llega ~6 min</div>
-    <div style="margin-top:7px;padding:7px 9px;background:rgba(255,255,255,.04);border-radius:8px;font-size:12px;color:var(--muted);">⏳ Verificar materiales cuando llegue</div>
+  <!-- SOLICITUD ACTIVA — dinámica, oculta si no hay solicitud -->
+  <div id="cli-home-sol-activa" style="display:none;">
+    <div class="lbl">Solicitud activa</div>
+    <div class="hl-a hl" style="cursor:pointer;" onclick="irASolicitudActiva()">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+        <div style="font-size:13px;font-weight:700;" id="cli-home-sol-trabajo">—</div>
+        <span class="tag ta" id="cli-home-sol-estado">🟡 En curso</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);" id="cli-home-sol-tecnico">Buscando técnico...</div>
+      <div style="margin-top:7px;padding:7px 9px;background:rgba(255,255,255,.04);border-radius:8px;font-size:12px;color:var(--muted);" id="cli-home-sol-status">⏳ Esperando técnico</div>
+    </div>
+    <button onclick="cancelarSolicitudActiva()" style="width:100%;margin-top:6px;padding:9px;background:rgba(255,77,109,.08);border:.5px solid rgba(255,77,109,.25);border-radius:10px;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">✕ Cancelar solicitud</button>
   </div>
 </div>
 <div class="nav-bottom">
@@ -2457,6 +2463,7 @@ function go(id) {
   }
   // Timers
   if (fullId === 's-tec-alerta') startTimer('tmr-tec', 5 * 60);
+  if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
 }
 
 function back() {
@@ -2482,6 +2489,12 @@ function startTimer(id, secs) {
     s--;
   }
   tick(); timerI = setInterval(tick, 1000);
+}
+
+function stopTimer(id, mensaje) {
+  if (timerI) { clearInterval(timerI); timerI = null; }
+  const el = id ? document.getElementById(id) : null;
+  if (el) el.textContent = mensaje || '✓';
 }
 
 // ── TOGGLE DISPONIBILIDAD ─────────────────────────────────────────────────────
@@ -3978,23 +3991,67 @@ function actualizarPantallaEnCamino() {
   if (el('cli-ec-mo')) el('cli-ec-mo').textContent = total;
 }
 
+// ── Mostrar/ocultar card de solicitud activa en cli-home ──────
+function actualizarCardSolActiva() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const container = document.getElementById('cli-home-sol-activa');
+  if (!container) return;
+
+  if (!sol.id) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = '';
+  const el = (id) => document.getElementById(id);
+
+  if (el('cli-home-sol-trabajo')) el('cli-home-sol-trabajo').textContent = sol.trabajo || '—';
+
+  if (sol.fotoMateriales) {
+    if (el('cli-home-sol-status')) el('cli-home-sol-status').textContent = '📸 Verifica los materiales del técnico';
+    if (el('cli-home-sol-estado')) { el('cli-home-sol-estado').textContent = '🔵 Verificando'; el('cli-home-sol-estado').className = 'tag tb'; }
+  } else if (sol.tecnicoId || sol.tecnicoNombre) {
+    if (el('cli-home-sol-tecnico')) el('cli-home-sol-tecnico').textContent = (sol.tecnicoNombre || 'Técnico') + ' · En camino';
+    if (el('cli-home-sol-status')) el('cli-home-sol-status').textContent = '🚗 El técnico viene en camino';
+  } else {
+    if (el('cli-home-sol-tecnico')) el('cli-home-sol-tecnico').textContent = 'Buscando técnico...';
+    if (el('cli-home-sol-status')) el('cli-home-sol-status').textContent = '⏳ Esperando que un técnico acepte';
+  }
+}
+
+// ── Cancelar solicitud activa ─────────────────────────────────
+async function cancelarSolicitudActiva() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  if (!sol.id) { localStorage.removeItem('fx_solicitud_activa'); actualizarCardSolActiva(); return; }
+
+  const confirmar = confirm('¿Cancelar la solicitud?\n\nSi ya hay un técnico en camino se aplicará la política de cancelación.');
+  if (!confirmar) return;
+
+  try {
+    await apiFetch('/solicitudes/' + sol.id + '/cancelar', { method: 'PATCH', body: JSON.stringify({}) });
+  } catch {}
+
+  localStorage.removeItem('fx_solicitud_activa');
+  localStorage.removeItem('fx_fotos_solicitud');
+  clearInterval(window._pollingPostulantes);
+  actualizarCardSolActiva();
+  showSuccess('Solicitud cancelada');
+}
+
 // ── Navegar a la pantalla correcta según estado de la solicitud activa ─
 function irASolicitudActiva() {
   const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
   if (!sol.id) return;
-  // Si hay foto de materiales = técnico ya llegó → ir a verificar
   if (sol.fotoMateriales) {
     go('cli-verificar-mat');
     setTimeout(() => startTimer('tmr-cli', 10 * 60), 300);
     return;
   }
-  // Si técnico fue elegido = viene en camino
   if (sol.tecnicoId || sol.tecnicoNombre) {
     actualizarPantallaEnCamino();
     go('cli-en-camino');
     return;
   }
-  // Si no fue elegido = aún esperando postulantes
   go('cli-tecnicos');
 }
 document.addEventListener('DOMContentLoaded', () => {
@@ -4047,14 +4104,17 @@ function conectarSocketCliente() {
       const solicitudActiva = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       if (solicitudActiva.id) {
         socket.emit('solicitud:join', solicitudActiva.id);
+        console.log('[FixYa] Joined room:', solicitudActiva.id);
       }
+      if (typeof actualizarCardSolActiva === 'function') actualizarCardSolActiva();
     });
 
     // Nuevo postulante → actualizar lista de técnicos
     socket.on('notif:nuevo_postulante', async (data) => {
-      showSuccess('👷 Nuevo técnico disponible para tu solicitud');
+      showSuccess('👷 Nuevo técnico disponible');
       const solicitudId = Solicitud.id || JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}').id;
       if (solicitudId) await cargarTecnicosDisponibles(solicitudId);
+      if (typeof actualizarCardSolActiva === 'function') actualizarCardSolActiva();
     });
 
     // Técnico en camino → navegar al cliente a pantalla de seguimiento
@@ -4163,9 +4223,11 @@ function conectarSocket() {
         desc: (data.comuna || '') + ' · $' + Math.round(data.totalEstimado || 0).toLocaleString('es-CL'),
       });
       poblarTecAlerta(data || {});
+      // Mostrar card en home y vibrar, NO navegar automáticamente
       const screenActual = document.querySelector('.screen.active');
       if (screenActual && screenActual.id === 's-tec-home') {
-        go('tec-alerta');
+        // Ya está en home — la card aparece sola via poblarTecAlerta, mostrar toast
+        showSuccess('Nueva solicitud disponible — toca Ver trabajo');
       } else {
         showSuccess('Nueva solicitud disponible');
       }
@@ -5072,14 +5134,14 @@ async function tecAceptarYPartir() {
       method: 'POST',
       body: JSON.stringify({ solicitudId: sol.id, mensaje: 'Disponible', tiempoEta: 15 }),
     });
-    showSuccess('✅ Postulación enviada. Esperando que el cliente te elija...');
+    stopTimer('tmr-tec', 'Postulado ✓');
+    showSuccess('Postulacion enviada. Esperando que el cliente te elija...');
     // No navegar aún — esperar evento notif:tecnico_elegido
-    // El botón queda deshabilitado para evitar doble postulación
     if (btn) btn.textContent = 'Esperando cliente...';
   } catch (err) {
-    // Si el error es que ya se postuló, igual esperar
     if (err.message && err.message.includes('ya')) {
-      showSuccess('Ya estás postulado. Esperando al cliente...');
+      stopTimer('tmr-tec', 'Postulado ✓');
+      showSuccess('Ya estas postulado. Esperando al cliente...');
       if (btn) btn.textContent = 'Esperando cliente...';
     } else {
       showError(err.message || 'Error al postularse');

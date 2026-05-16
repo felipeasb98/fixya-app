@@ -3566,7 +3566,21 @@ window.addEventListener('DOMContentLoaded', () => {
       // Restaurar card si tenía trabajo activo
       const solTec = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       if (solTec.id && typeof poblarTecAlerta === 'function') {
-        setTimeout(() => poblarTecAlerta(solTec), 300);
+        // Verificar que la solicitud sigue activa antes de mostrar la card
+        setTimeout(async () => {
+          try {
+            const data = await apiFetch('/solicitudes/' + solTec.id);
+            const estadosActivos = ['PENDIENTE','CON_POSTULANTES','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
+            if (!data || !estadosActivos.includes(data.estado)) {
+              localStorage.removeItem('fx_solicitud_activa');
+              return;
+            }
+            poblarTecAlerta({ ...solTec, trabajo: data.trabajo, urgencia: data.urgencia });
+          } catch {
+            // Sin internet: limpiar para no mostrar datos obsoletos
+            localStorage.removeItem('fx_solicitud_activa');
+          }
+        }, 300);
       }
     } else if (rol === 'usuario') {
       go('cli-home');

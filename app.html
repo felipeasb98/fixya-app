@@ -772,26 +772,37 @@ textarea.inp{resize:none;}
 <div class="wrap">
   <div class="timer-box">
     <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">⏳ Tiempo para decidir</div>
-    <div class="timer-num" id="tmr-tec">0:15</div>
+    <div class="timer-num" id="tmr-tec">5:00</div>
     <div style="font-size:11px;color:var(--muted);margin-top:2px;">Si no respondes, pasa al siguiente técnico</div>
   </div>
   <div class="card" style="margin-bottom:9px;">
-    <div style="display:flex;justify-content:space-between;margin-bottom:9px;"><div style="font-size:14px;font-weight:700;">Reparación fuga cañería</div><span class="tag tr">🔴 Urgente</span></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px;">
-      <div style="padding:8px;background:var(--card2);border-radius:9px;font-size:12px;"><div style="color:var(--muted);">📍 Distancia</div><div style="font-weight:700;margin-top:1px;">1.2 km</div></div>
-      <div style="padding:8px;background:var(--card2);border-radius:9px;font-size:12px;"><div style="color:var(--muted);">⏱️ Duración est.</div><div style="font-weight:700;margin-top:1px;">1–2 hrs</div></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:9px;">
+      <div style="font-size:14px;font-weight:700;" id="tec-alerta-trabajo">Reparación fuga cañería</div>
+      <span class="tag tr" id="tec-alerta-urgencia">🔴 Urgente</span>
     </div>
-    <div style="font-size:12px;color:var(--muted);line-height:1.5;padding:9px;background:var(--card2);border-radius:9px;">"Fuga en cañería PVC bajo el lavaplatos. Chorreando hace 2 horas."</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px;">
+      <div style="padding:8px;background:var(--card2);border-radius:9px;font-size:12px;"><div style="color:var(--muted);">📍 Distancia</div><div style="font-weight:700;margin-top:1px;" id="tec-alerta-dist">1.2 km</div></div>
+      <div style="padding:8px;background:var(--card2);border-radius:9px;font-size:12px;"><div style="color:var(--muted);">⏱️ Duración est.</div><div style="font-weight:700;margin-top:1px;" id="tec-alerta-dur">1–2 hrs</div></div>
+    </div>
+    <!-- Descripción del cliente -->
+    <div id="tec-alerta-desc-wrap" style="font-size:12px;color:var(--muted);line-height:1.5;padding:9px;background:var(--card2);border-radius:9px;margin-bottom:9px;">
+      <span id="tec-alerta-desc">"Fuga en cañería PVC bajo el lavaplatos. Chorreando hace 2 horas."</span>
+    </div>
+    <!-- Fotos del problema -->
+    <div id="tec-alerta-fotos-wrap" style="display:none;">
+      <div style="font-size:10px;color:var(--accent2);font-weight:700;margin-bottom:6px;">📷 FOTOS DEL PROBLEMA</div>
+      <div id="tec-alerta-fotos" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;"></div>
+    </div>
   </div>
   <div class="hl" style="margin-bottom:9px;">
     <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:5px;">💰 TÚ RECIBES</div>
-    <div class="big-n">$46.875</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:4px;">M.O. $37.500 × urgencia ×1.10</div>
+    <div class="big-n" id="tec-alerta-total">$46.875</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;" id="tec-alerta-mo-desc">M.O. $37.500 × urgencia ×1.10</div>
     <div class="desglose">
-      <div class="dr"><span class="dl">M.O. fija</span><span class="dv rg">$37.500</span></div>
-      <div class="dr"><span class="dl">Urgencia ×1.10</span><span class="dv ra">+$9.375</span></div>
-      <div class="dr" style="border-top:.5px solid rgba(255,255,255,.07);margin-top:3px;padding-top:3px;"><span class="dl" style="color:var(--text);font-weight:600;">Total</span><span class="dv rg">$46.875</span></div>
-      <div class="dr"><span class="dl" style="font-size:10px;">Comisión FixYa 12% (paga el cliente)</span><span class="dv" style="font-size:10px;color:var(--muted);">$6.750</span></div>
+      <div class="dr"><span class="dl">M.O. fija</span><span class="dv rg" id="tec-alerta-mo">$37.500</span></div>
+      <div class="dr" id="tec-alerta-urg-row" style="display:none;"><span class="dl" id="tec-alerta-urg-lbl">Urgencia ×1.10</span><span class="dv ra" id="tec-alerta-urg-val">+$0</span></div>
+      <div class="dr" style="border-top:.5px solid rgba(255,255,255,.07);margin-top:3px;padding-top:3px;"><span class="dl" style="color:var(--text);font-weight:600;">Total</span><span class="dv rg" id="tec-alerta-total2">$46.875</span></div>
+      <div class="dr"><span class="dl" style="font-size:10px;">Comisión FixYa 12% (paga el cliente)</span><span class="dv" style="font-size:10px;color:var(--muted);" id="tec-alerta-com">$6.750</span></div>
     </div>
   </div>
   <div style="display:flex;gap:8px;">
@@ -2435,7 +2446,7 @@ function go(id) {
     window.scrollTo(0, 0);
   }
   // Timers
-  if (fullId === 's-tec-alerta') startTimer('tmr-tec', 15);
+  if (fullId === 's-tec-alerta') startTimer('tmr-tec', 5 * 60);
 }
 
 function back() {
@@ -4101,13 +4112,23 @@ function conectarSocket() {
       socket.on('nueva:solicitud', (data) => {
         if (data && data.solicitudId) {
           // Guardar en localStorage para que tecAceptarYPartir lo encuentre
-          const actual = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
           localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-            ...actual,
             id: data.solicitudId,
-            trabajo: data.trabajo || actual.trabajo,
+            trabajo: data.trabajo || '',
+            total: data.totalEstimado || 0,
+            urgencia: data.urgencia || 'normal',
+            moBase: data.moBase || 0,
+            descripcion: data.descripcion || '',
+            fotosProblema: data.fotosProblema || [],
+            latCliente: data.latitud,
+            lngCliente: data.longitud,
+            comuna: data.comuna || '',
           }));
         }
+
+        // Poblar pantalla con datos reales
+        poblarTecAlerta(data || {});
+
         // Solo navegar si está en home
         const screenActual = document.querySelector('.screen.active');
         if (screenActual && screenActual.id === 's-tec-home') {
@@ -4117,15 +4138,18 @@ function conectarSocket() {
         }
       });
 
-      // Técnico recibe notificaciones generales
-      socket.on('notif:tecnico_elegido', (data) => {
-        showSuccess('✅ El cliente te eligió. ¡Dirígete al domicilio!');
+      // Cliente eligió a este técnico → ir en camino
+      socket.on('notif:trabajo_confirmado', async (data) => {
+        showSuccess('✅ ¡El cliente te eligió! Dirígete al domicilio 🚗');
         const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
         if (data && data.solicitudId && !sol.id) {
           localStorage.setItem('fx_solicitud_activa', JSON.stringify({
             ...sol, id: data.solicitudId,
           }));
         }
+        // Marcar en camino en backend
+        try { await cambiarEstado('en-camino'); } catch {}
+        go('tec-en-camino');
       });
 
       window._fixya_socket = socket;
@@ -4796,31 +4820,109 @@ async function cambiarEstado(endpoint, method = 'PATCH', body = {}) {
 // ════════════════════════════════════════════════════════════
 // TÉCNICO — Aceptar trabajo y marcar "en camino"
 // ════════════════════════════════════════════════════════════
+// ── Poblar pantalla tec-alerta con datos reales ───────────────
+function poblarTecAlerta(data) {
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+  const el = (id) => document.getElementById(id);
+
+  const trabajo = data.trabajo || 'Trabajo disponible';
+  const urgencia = data.urgencia || 'normal';
+  const mo = data.moBase || data.totalEstimado || 0;
+  const urgMult = urgencia === 'emergencia' ? 1.5 : urgencia === 'urgente' ? 1.1 : 1.0;
+  const moFinal = Math.round(mo * urgMult);
+  const comision = Math.round(moFinal * 0.12);
+
+  if (el('tec-alerta-trabajo')) el('tec-alerta-trabajo').textContent = trabajo;
+
+  // Badge urgencia
+  const badge = el('tec-alerta-urgencia');
+  if (badge) {
+    if (urgencia === 'emergencia') { badge.textContent = '🔴 Emergencia'; badge.className = 'tag tr'; }
+    else if (urgencia === 'urgente') { badge.textContent = '🟠 Urgente'; badge.className = 'tag ta'; }
+    else { badge.textContent = '🟢 Normal'; badge.className = 'tag tg'; badge.style.display = urgencia === 'normal' ? 'none' : ''; }
+  }
+
+  // Descripción
+  if (data.descripcion) {
+    if (el('tec-alerta-desc')) el('tec-alerta-desc').textContent = '"' + data.descripcion + '"';
+  } else {
+    if (el('tec-alerta-desc-wrap')) el('tec-alerta-desc-wrap').style.display = 'none';
+  }
+
+  // Fotos del problema
+  const fotos = data.fotosProblema || [];
+  const fotosWrap = el('tec-alerta-fotos-wrap');
+  const fotosContainer = el('tec-alerta-fotos');
+  if (fotos.length > 0 && fotosContainer) {
+    fotosContainer.innerHTML = '';
+    fotos.forEach(url => {
+      const img = document.createElement('img');
+      img.src = url;
+      img.style.cssText = 'height:90px;width:90px;object-fit:cover;border-radius:9px;flex-shrink:0;border:.5px solid var(--border);';
+      fotosContainer.appendChild(img);
+    });
+    if (fotosWrap) fotosWrap.style.display = 'block';
+  }
+
+  // Distancia
+  if (data.latitud && el('tec-alerta-dist')) {
+    const tecLat = window._tecLatActual;
+    const tecLng = window._tecLngActual;
+    if (tecLat && tecLng) {
+      const R = 6371;
+      const dLat = (data.latitud - tecLat) * Math.PI / 180;
+      const dLng = (data.longitud - tecLng) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(tecLat*Math.PI/180)*Math.cos(data.latitud*Math.PI/180)*Math.sin(dLng/2)**2;
+      const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      el('tec-alerta-dist').textContent = dist < 1 ? Math.round(dist*1000) + ' m' : dist.toFixed(1) + ' km';
+    }
+  }
+
+  // Precios
+  if (el('tec-alerta-total')) el('tec-alerta-total').textContent = fmt(moFinal);
+  if (el('tec-alerta-total2')) el('tec-alerta-total2').textContent = fmt(moFinal);
+  if (el('tec-alerta-mo')) el('tec-alerta-mo').textContent = fmt(mo);
+  if (el('tec-alerta-com')) el('tec-alerta-com').textContent = fmt(comision);
+
+  // Fila urgencia
+  if (urgMult > 1) {
+    const urgExtra = moFinal - mo;
+    const urgRow = el('tec-alerta-urg-row');
+    if (urgRow) urgRow.style.display = '';
+    if (el('tec-alerta-urg-lbl')) el('tec-alerta-urg-lbl').textContent = 'Urgencia ×' + urgMult.toFixed(2);
+    if (el('tec-alerta-urg-val')) el('tec-alerta-urg-val').textContent = '+' + fmt(urgExtra);
+    if (el('tec-alerta-mo-desc')) el('tec-alerta-mo-desc').textContent = 'M.O. ' + fmt(mo) + ' × urgencia ×' + urgMult.toFixed(2);
+  }
+}
+
 async function tecAceptarYPartir() {
   const btn = document.querySelector('#s-tec-alerta .btn-g');
   if (btn) { btn.disabled = true; btn.textContent = 'Confirmando...'; }
 
   const sol = getSolicitudActiva();
   if (!sol.id) {
-    // Sin solicitud real, navegar igual (modo demo)
     go('tec-en-camino'); return;
   }
 
   try {
-    // 1. Postularse si no lo ha hecho
+    // Postularse — el cliente verá la card y elegirá al técnico
     await apiFetch('/postulaciones', {
       method: 'POST',
-      body: JSON.stringify({ solicitudId: sol.id, mensaje: 'En camino', tiempoEta: 15 }),
-    }).catch(() => {}); // ignorar si ya se postuló
-
-    // 2. Marcar en camino (solo si ya fue elegido)
-    await cambiarEstado('en-camino');
-    showSuccess('¡Confirmado! El cliente fue notificado 🚗');
-    go('tec-en-camino');
-  } catch {
-    go('tec-en-camino'); // fallback navegación
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '✓ Aceptar →'; }
+      body: JSON.stringify({ solicitudId: sol.id, mensaje: 'Disponible', tiempoEta: 15 }),
+    });
+    showSuccess('✅ Postulación enviada. Esperando que el cliente te elija...');
+    // No navegar aún — esperar evento notif:tecnico_elegido
+    // El botón queda deshabilitado para evitar doble postulación
+    if (btn) btn.textContent = 'Esperando cliente...';
+  } catch (err) {
+    // Si el error es que ya se postuló, igual esperar
+    if (err.message && err.message.includes('ya')) {
+      showSuccess('Ya estás postulado. Esperando al cliente...');
+      if (btn) btn.textContent = 'Esperando cliente...';
+    } else {
+      showError(err.message || 'Error al postularse');
+      if (btn) { btn.disabled = false; btn.textContent = '✓ Aceptar →'; }
+    }
   }
 }
 

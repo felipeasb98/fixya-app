@@ -1872,6 +1872,7 @@ textarea.inp{resize:none;}
       </div>
     </div>
   </div>
+  <button onclick="cancelarSolicitudActiva()" style="width:100%;margin-top:14px;padding:11px;background:rgba(255,77,109,.08);border:.5px solid rgba(255,77,109,.25);border-radius:10px;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">✕ Cancelar solicitud</button>
 </div>
 </div>
 
@@ -1962,43 +1963,8 @@ textarea.inp{resize:none;}
 <div class="status"><span>10:20</span><span>📋 Historial</span><span>📶</span></div>
 <div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Mis reparaciones</div></div>
 <div class="wrap">
-  <div class="card" style="padding:0;overflow:hidden;">
-    <div class="row" style="padding:11px 13px;cursor:pointer;">
-      <div>
-        <div style="font-size:13px;font-weight:600;">Reparación fuga · Carlos M.</div>
-        <div style="font-size:11px;color:var(--muted);">Hoy · Gasfitería</div>
-      </div>
-      <div style="text-align:right;">
-        <span class="tag ta" style="font-size:9px;">En curso</span>
-      </div>
-    </div>
-    <div class="row" style="padding:11px 13px;cursor:pointer;">
-      <div>
-        <div style="font-size:13px;font-weight:600;">Apertura emergencia · Javier R.</div>
-        <div style="font-size:11px;color:var(--muted);">Ayer · Cerrajería</div>
-      </div>
-      <div style="text-align:right;">
-        <span class="tag tg" style="font-size:9px;">Completado ✓</span>
-      </div>
-    </div>
-    <div class="row" style="padding:11px 13px;cursor:pointer;">
-      <div>
-        <div style="font-size:13px;font-weight:600;">Instalación TV + repisas · Roberto S.</div>
-        <div style="font-size:11px;color:var(--muted);">Hace 2 sem · Handyman</div>
-      </div>
-      <div style="text-align:right;">
-        <span class="tag tg" style="font-size:9px;">Completado ✓</span>
-      </div>
-    </div>
-    <div class="row" style="padding:11px 13px;cursor:pointer;">
-      <div>
-        <div style="font-size:13px;font-weight:600;">Instalación enchufe · Carlos M.</div>
-        <div style="font-size:11px;color:var(--muted);">Hace 1 mes · Electricidad</div>
-      </div>
-      <div style="text-align:right;">
-        <span class="tag tg" style="font-size:9px;">Completado ✓</span>
-      </div>
-    </div>
+  <div id="historial-lista">
+    <div id="historial-loading" style="text-align:center;padding:30px;color:var(--muted);font-size:13px;">Cargando...</div>
   </div>
 </div>
 <div class="nav-bottom">
@@ -2464,6 +2430,7 @@ function go(id) {
   // Timers
   if (fullId === 's-tec-alerta') startTimer('tmr-tec', 5 * 60);
   if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
+  if (fullId === 's-cli-historial') setTimeout(cargarHistorial, 50);
 }
 
 function back() {
@@ -3594,13 +3561,51 @@ function setLoading(btnId, loading, textoOriginal) {
 window.addEventListener('DOMContentLoaded', () => {
   if (Session.existe()) {
     const rol = Session.rol();
-    // Si hay sesión activa, saltar el onboarding e ir directo al home
-    if (rol === 'tecnico') go('tec-home');
-    else if (rol === 'usuario') go('cli-home');
-    // Conectar socket en background (Socket.io se carga dinámicamente)
+    if (rol === 'tecnico') {
+      // Técnico: verificar si tiene trabajo activo
+      const solTec = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      go('tec-home');
+      // Si tiene trabajo en curso, poblar la card
+      if (solTec.id && typeof poblarTecAlerta === 'function') {
+        setTimeout(() => poblarTecAlerta(solTec), 200);
+      }
+    } else if (rol === 'usuario') {
+      go('cli-home');
+      // Restaurar pantalla correcta si había solicitud activa
+      setTimeout(async () => {
+        const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+        if (!sol.id) return;
+        // Verificar estado con backend antes de navegar
+        try {
+          const data = await apiFetch('/solicitudes/' + sol.id);
+          if (!data) { localStorage.removeItem('fx_solicitud_activa'); return; }
+          const s = data.estado;
+          if (s === 'PENDIENTE') {
+            // Aún esperando técnico — volver a cli-tecnicos
+            await cargarTecnicosDisponibles(sol.id);
+            go('cli-tecnicos');
+          } else if (s === 'ACEPTADA' || s === 'EN_CAMINO') {
+            // Técnico en camino
+            localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+              ...sol,
+              tecnicoNombre: data.tecnico?.nombre || sol.tecnicoNombre,
+              tecnicoId: data.tecnicoId || sol.tecnicoId,
+            }));
+            if (typeof actualizarPantallaEnCamino === 'function') actualizarPantallaEnCamino();
+            go('cli-en-camino');
+          } else if (s === 'EN_TRABAJO') {
+            // Técnico llegó — verificar materiales
+            go('cli-verificar-mat');
+          }
+          // COMPLETADA / CANCELADA → limpiar
+          if (['COMPLETADA', 'CANCELADA', 'CANCELADO'].includes(s)) {
+            localStorage.removeItem('fx_solicitud_activa');
+          }
+        } catch {} // sin internet: quedarse en home
+      }, 800);
+    }
     setTimeout(() => { if (typeof conectarSocket === 'function') conectarSocket(); }, 1500);
   }
-  // Mostrar nombre en perfil si hay sesión
   actualizarUIConPerfil();
 });
 
@@ -3997,36 +4002,38 @@ async function actualizarCardSolActiva() {
   const container = document.getElementById('cli-home-sol-activa');
   if (!container) return;
 
-  if (!sol.id) {
-    container.style.display = 'none';
-    return;
-  }
+  if (!sol.id) { container.style.display = 'none'; return; }
 
-  // Verificar con el backend que la solicitud sigue activa
+  // Verificar con el backend
   try {
     const data = await apiFetch('/solicitudes/' + sol.id);
     const estadosActivos = ['PENDIENTE', 'ACEPTADA', 'EN_CAMINO', 'EN_TRABAJO'];
     if (!data || !estadosActivos.includes(data.estado)) {
-      // Solicitud cerrada, cancelada o no existe → limpiar
       localStorage.removeItem('fx_solicitud_activa');
       localStorage.removeItem('fx_fotos_solicitud');
       container.style.display = 'none';
       return;
     }
-  } catch {
-    // Si falla la verificación (sin internet), mostrar igual pero no bloquear
-  }
+    // Enriquecer localStorage con datos del backend
+    localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+      ...sol,
+      trabajo: data.trabajo || sol.trabajo,
+      estado: data.estado,
+      tecnicoId: data.tecnicoId || sol.tecnicoId,
+      tecnicoNombre: data.tecnico?.nombre || sol.tecnicoNombre,
+    }));
+  } catch {} // sin internet: mostrar igual
 
+  const s = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
   container.style.display = '';
   const el = (id) => document.getElementById(id);
+  if (el('cli-home-sol-trabajo')) el('cli-home-sol-trabajo').textContent = s.trabajo || '—';
 
-  if (el('cli-home-sol-trabajo')) el('cli-home-sol-trabajo').textContent = sol.trabajo || '—';
-
-  if (sol.fotoMateriales) {
+  if (s.fotoMateriales) {
     if (el('cli-home-sol-status')) el('cli-home-sol-status').textContent = '📸 Verifica los materiales del técnico';
     if (el('cli-home-sol-estado')) { el('cli-home-sol-estado').textContent = '🔵 Verificando'; el('cli-home-sol-estado').className = 'tag tb'; }
-  } else if (sol.tecnicoId || sol.tecnicoNombre) {
-    if (el('cli-home-sol-tecnico')) el('cli-home-sol-tecnico').textContent = (sol.tecnicoNombre || 'Técnico') + ' · En camino';
+  } else if (s.tecnicoId || s.tecnicoNombre) {
+    if (el('cli-home-sol-tecnico')) el('cli-home-sol-tecnico').textContent = (s.tecnicoNombre || 'Técnico') + ' · En camino';
     if (el('cli-home-sol-status')) el('cli-home-sol-status').textContent = '🚗 El técnico viene en camino';
   } else {
     if (el('cli-home-sol-tecnico')) el('cli-home-sol-tecnico').textContent = 'Buscando técnico...';
@@ -4079,6 +4086,47 @@ document.addEventListener('DOMContentLoaded', () => {
     _go2(id);
   };
 });
+
+// ── Cargar historial de solicitudes del cliente ───────────────
+async function cargarHistorial() {
+  const lista = document.getElementById('historial-lista');
+  const loading = document.getElementById('historial-loading');
+  if (!lista) return;
+  if (loading) loading.style.display = '';
+
+  try {
+    const data = await apiFetch('/solicitudes/mis-solicitudes');
+    const solicitudes = data.solicitudes || data || [];
+    if (loading) loading.style.display = 'none';
+
+    if (!solicitudes.length) {
+      lista.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--muted);"><div style="font-size:32px;margin-bottom:10px;">📋</div><div style="font-size:13px;">Aún no tienes reparaciones</div></div>';
+      return;
+    }
+
+    const estadoTag = (e) => {
+      if (['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO'].includes(e))
+        return '<span class="tag ta" style="font-size:9px;">En curso</span>';
+      if (e === 'COMPLETADA') return '<span class="tag tg" style="font-size:9px;">Completado</span>';
+      return '<span class="tag" style="font-size:9px;background:var(--card2);">Cancelado</span>';
+    };
+
+    const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
+    lista.innerHTML = '<div class="card" style="padding:0;overflow:hidden;">' +
+      solicitudes.map(s => {
+        const fecha = new Date(s.creadoAt || s.createdAt || Date.now()).toLocaleDateString('es-CL',{day:'numeric',month:'short'});
+        const tec = s.tecnico?.nombre ? ' · ' + s.tecnico.nombre.split(' ')[0] : '';
+        const esActivo = activos.includes(s.estado);
+        return '<div class="row" style="padding:11px 13px;cursor:pointer;" onclick="' +
+          (esActivo ? 'irASolicitudActiva()' : '') + '">' +
+          '<div><div style="font-size:13px;font-weight:600;">' + s.trabajo + tec + '</div>' +
+          '<div style="font-size:11px;color:var(--muted);">' + fecha + '</div></div>' +
+          '<div>' + estadoTag(s.estado) + '</div></div>';
+      }).join('') + '</div>';
+  } catch {
+    if (loading) { loading.textContent = 'Error al cargar. Toca para reintentar.'; loading.style.cursor = 'pointer'; loading.onclick = cargarHistorial; }
+  }
+}
 
 function pedirUbicacion() {
   if (!navigator.geolocation) return;
@@ -4782,7 +4830,7 @@ let _mapaCliente = null;
 let _markerTecnicoCliente = null;
 
 function iniciarMapaCliente() {
-  const contenedor = document.getElementById('mapa-cliente-tracking');
+  const contenedor = document.getElementById('mapa-cliente-tracking') || document.getElementById('mapa-cliente-encamino');
   if (!contenedor) return;
 
   cargarGoogleMaps(() => {
@@ -4884,7 +4932,11 @@ window.go = function(id) {
   if (screenActual && screenActual.id === 's-tec-en-camino' && id !== 'tec-en-camino') {
     detenerGPSTecnico();
   }
-  // Cliente en "verificar materiales" → iniciar mapa de tracking
+  // Cliente en "en camino" → iniciar mapa de tracking
+  if (id === 'cli-en-camino') {
+    setTimeout(iniciarMapaCliente, 400);
+  }
+  // Cliente en "verificar materiales" → también iniciar mapa
   if (id === 'cli-verificar-mat') {
     setTimeout(iniciarMapaCliente, 300);
   }

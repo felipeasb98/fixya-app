@@ -842,10 +842,19 @@ textarea.inp{resize:none;}
     <div class="mat-item" id="tm2"><div class="mat-chk" onclick="chkM('tm',2)"></div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">Sellante sanitario</div><div style="font-size:11px;color:var(--muted);">1 un · $4.200</div></div><div class="og"><div class="og-btn on-c" onclick="setOg('tm',2,'c')">🛒</div><div class="og-btn" onclick="setOg('tm',2,'s')">📦</div></div></div>
     <div class="mat-item" id="tm3"><div class="mat-chk" onclick="chkM('tm',3)"></div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">Teflón + uniones</div><div style="font-size:11px;color:var(--muted);">1 set · $1.780</div></div><div class="og"><div class="og-btn" onclick="setOg('tm',3,'c')">🛒</div><div class="og-btn on-s" onclick="setOg('tm',3,'s')">📦</div></div></div>
   </div>
-  <div style="display:flex;gap:8px;margin-top:7px;">
-    <button class="btn btn-ghost btn-sm" onclick="go('tec-faltante')" style="flex:1;">⚠️ Falta algo</button>
-    <button class="btn btn-g" onclick="go('tec-en-trabajo')" style="flex:2;">📸 Subir foto →</button>
+
+  <!-- Preview foto boleta -->
+  <div id="tec-boleta-preview" style="display:none;width:100%;border-radius:11px;overflow:hidden;margin-top:10px;margin-bottom:4px;position:relative;">
+    <img id="tec-boleta-img" src="" style="width:100%;border-radius:11px;display:block;" alt="Foto materiales">
+    <div onclick="tecBorrarFotoBoleta()" style="position:absolute;top:6px;right:6px;width:26px;height:26px;background:rgba(0,0,0,.65);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;">✕</div>
   </div>
+  <div id="tec-boleta-estado" style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px;display:none;"></div>
+
+  <div style="display:flex;gap:8px;margin-top:10px;">
+    <button class="btn btn-ghost btn-sm" onclick="go('tec-faltante')" style="flex:1;">⚠️ Falta algo</button>
+    <button class="btn btn-g" id="btn-tec-subir-boleta" onclick="tecAbrirFotoBoleta()" style="flex:2;">📸 Subir foto →</button>
+  </div>
+  <button class="btn btn-a" id="btn-tec-confirmar-llegada" onclick="tecConfirmarLlegadaConFoto()" style="width:100%;margin-top:8px;display:none;">✅ Confirmar llegada al cliente →</button>
 </div>
 </div>
 
@@ -1212,7 +1221,7 @@ textarea.inp{resize:none;}
 
   <!-- SOLICITUD ACTIVA -->
   <div class="lbl">Solicitud activa</div>
-  <div class="hl-a hl" style="cursor:pointer;" onclick="go('cli-verificar-mat')">
+  <div class="hl-a hl" style="cursor:pointer;" onclick="irASolicitudActiva()">
     <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><div style="font-size:13px;font-weight:700;">Reparación fuga cañería</div><span class="tag ta">🟡 En curso</span></div>
     <div style="font-size:12px;color:var(--muted);">Carlos M. · ⭐4.9 · Llega ~6 min</div>
     <div style="margin-top:7px;padding:7px 9px;background:rgba(255,255,255,.04);border-radius:8px;font-size:12px;color:var(--muted);">⏳ Verificar materiales cuando llegue</div>
@@ -1839,6 +1848,32 @@ textarea.inp{resize:none;}
 </div>
 </div>
 
+<!-- CLIENTE — TÉCNICO EN CAMINO (espera hasta que llegue) -->
+<div class="screen" id="s-cli-en-camino">
+<div class="status"><span id="cli-ec-time">9:55</span><span>🚗 En camino</span><span>📶</span></div>
+<div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Tu técnico viene en camino</div></div>
+<div class="wrap">
+  <div class="status-badge sb-on" style="margin-bottom:14px;">
+    <div style="font-size:16px;">🚗</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--accent);" id="cli-ec-nombre">Técnico en camino</div>
+      <div style="font-size:11px;color:var(--muted);" id="cli-ec-eta">Calculando tiempo de llegada...</div>
+    </div>
+  </div>
+  <div id="mapa-cliente-encamino" style="width:100%;height:200px;border-radius:12px;border:.5px solid var(--border);margin-bottom:12px;overflow:hidden;background:var(--card2);display:flex;align-items:center;justify-content:center;">
+    <div style="text-align:center;font-size:12px;color:var(--muted);">🗺️ Cargando mapa...</div>
+  </div>
+  <div class="card" style="margin-bottom:10px;">
+    <div class="row"><span class="rl">Trabajo</span><span class="rv" id="cli-ec-trabajo">—</span></div>
+    <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg" id="cli-ec-mo">—</span></div>
+    <div class="row"><span class="rl">Estado</span><span class="rv"><span class="tag tg" style="font-size:10px;">✓ Confirmado</span></span></div>
+  </div>
+  <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;">
+    📸 El técnico subirá foto de los materiales al llegar. Tendrás <strong>10 min</strong> para verificar.
+  </div>
+</div>
+</div>
+
 <!-- CLIENTE — VERIFICAR MATERIALES -->
 <div class="screen" id="s-cli-verificar-mat">
 <div class="status"><span>10:05</span><span>📦 Verificar</span><span>📶</span></div>
@@ -1850,12 +1885,15 @@ textarea.inp{resize:none;}
   <div class="sub">Carlos llegó. Confirma que trajo todo antes de que empiece.</div>
   <div class="timer-box">
     <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">⏳ Tiempo para verificar</div>
-    <div class="timer-num" style="color:var(--accent2);" id="tmr-cli">14:59</div>
+    <div class="timer-num" style="color:var(--accent2);" id="tmr-cli">10:00</div>
     <div style="font-size:11px;color:var(--muted);margin-top:2px;">Sin respuesta → aprobación automática</div>
   </div>
-  <div style="width:100%;height:110px;background:linear-gradient(135deg,#1C2333,#111827);border-radius:11px;border:.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;margin-bottom:11px;">
-    <div style="font-size:30px;">📦</div>
-    <div style="font-size:11px;color:var(--muted);">Foto técnico · GPS verificado · 10:04 hrs</div>
+  <div style="width:100%;border-radius:11px;border:.5px solid var(--border);background:var(--card2);margin-bottom:11px;overflow:hidden;">
+    <img id="cli-boleta-foto" src="" style="width:100%;display:none;border-radius:11px;" alt="Foto materiales técnico">
+    <div id="cli-boleta-placeholder" style="height:110px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;">
+      <div style="font-size:30px;">📦</div>
+      <div style="font-size:11px;color:var(--muted);" id="cli-boleta-hora">Foto técnico · GPS verificado</div>
+    </div>
   </div>
   <div class="card" style="margin-bottom:9px;">
     <div style="font-size:10px;color:var(--accent2);font-weight:700;margin-bottom:8px;">📋 ¿Ves todos estos ítems en la foto?</div>
@@ -2398,7 +2436,6 @@ function go(id) {
   }
   // Timers
   if (fullId === 's-tec-alerta') startTimer('tmr-tec', 15);
-  if (fullId === 's-cli-verificar-mat') startTimer('tmr-cli', 15 * 60);
 }
 
 function back() {
@@ -3881,25 +3918,64 @@ function renderizarTecnicos(tecnicos) {
 async function elegirTecnico(tecnicoId) {
   const solicitudId = Solicitud.id || JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}').id;
   if (!solicitudId) {
-    go('cli-verificar-mat'); // Fallback a UI estática
+    go('cli-en-camino');
     return;
   }
 
   try {
-    await apiFetch('/solicitudes/' + solicitudId + '/elegir-tecnico', {
+    const data = await apiFetch('/solicitudes/' + solicitudId + '/elegir-tecnico', {
       method: 'POST',
       body: JSON.stringify({ tecnicoId }),
     });
     localStorage.setItem('fx_tecnico_elegido', tecnicoId);
-    showSuccess('¡Técnico confirmado! En camino pronto 🔧');
-    go('cli-verificar-mat');
+    // Guardar nombre del técnico para mostrar en pantalla de espera
+    const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+    localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+      ...sol,
+      tecnicoNombre: data?.tecnico?.nombre || 'Tu técnico',
+      tecnicoId,
+    }));
+    showSuccess('¡Técnico confirmado! Viene en camino 🚗');
+    actualizarPantallaEnCamino();
+    go('cli-en-camino');
   } catch (err) {
     showError(err.message || 'Error al elegir técnico');
-    go('cli-verificar-mat'); // Fallback
+    go('cli-en-camino');
   }
 }
 
-// ── GPS: Obtener ubicación al entrar a foto-solicitud ─────────
+// ── Actualizar datos de la pantalla cli-en-camino ─────────────
+function actualizarPantallaEnCamino() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const nombre = sol.tecnicoNombre || 'Tu técnico';
+  const trabajo = sol.trabajo || '—';
+  const total = sol.total ? '$' + Number(sol.total).toLocaleString('es-CL') : '—';
+  const el = (id) => document.getElementById(id);
+  if (el('cli-ec-nombre')) el('cli-ec-nombre').textContent = nombre + ' viene en camino';
+  if (el('cli-ec-eta')) el('cli-ec-eta').textContent = 'Llegará en unos minutos';
+  if (el('cli-ec-trabajo')) el('cli-ec-trabajo').textContent = trabajo;
+  if (el('cli-ec-mo')) el('cli-ec-mo').textContent = total;
+}
+
+// ── Navegar a la pantalla correcta según estado de la solicitud activa ─
+function irASolicitudActiva() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  if (!sol.id) return;
+  // Si hay foto de materiales = técnico ya llegó → ir a verificar
+  if (sol.fotoMateriales) {
+    go('cli-verificar-mat');
+    setTimeout(() => startTimer('tmr-cli', 10 * 60), 300);
+    return;
+  }
+  // Si técnico fue elegido = viene en camino
+  if (sol.tecnicoId || sol.tecnicoNombre) {
+    actualizarPantallaEnCamino();
+    go('cli-en-camino');
+    return;
+  }
+  // Si no fue elegido = aún esperando postulantes
+  go('cli-tecnicos');
+}
 document.addEventListener('DOMContentLoaded', () => {
   // Interceptar navegación a foto-solicitud para pedir GPS
   const _go2 = window.go;
@@ -3967,10 +4043,29 @@ function conectarSocketCliente() {
       }
     });
 
-    // Técnico llegó → cliente debe verificar materiales
-    socket.on('notif:trabajo_iniciado', () => {
+    // Técnico llegó → cliente debe verificar materiales (10 min timer)
+    socket.on('notif:trabajo_iniciado', (data) => {
       showSuccess('📍 Tu técnico llegó. Verifica los materiales que trajo.');
-      setTimeout(() => go('cli-verificar-mat'), 800);
+      // Mostrar foto si viene en el payload
+      if (data && data.fotoMateriales) {
+        const img = document.getElementById('cli-boleta-foto');
+        const ph  = document.getElementById('cli-boleta-placeholder');
+        if (img) { img.src = data.fotoMateriales; img.style.display = 'block'; }
+        if (ph) ph.style.display = 'none';
+      }
+      // También revisar localStorage
+      const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      if (sol.fotoMateriales) {
+        const img = document.getElementById('cli-boleta-foto');
+        const ph  = document.getElementById('cli-boleta-placeholder');
+        if (img) { img.src = sol.fotoMateriales; img.style.display = 'block'; }
+        if (ph) ph.style.display = 'none';
+      }
+      // Navegar y arrancar timer de 10 min
+      setTimeout(() => {
+        go('cli-verificar-mat');
+        setTimeout(() => startTimer('tmr-cli', 10 * 60), 300);
+      }, 800);
     });
 
     // Trabajo terminado → pedir confirmación
@@ -4738,11 +4833,81 @@ async function tecLlego() {
 
   detenerGPSTecnico(); // Detener watch GPS continuo
 
-  const res = await cambiarEstado('inicio-trabajo');
-  if (res) showSuccess('✅ Llegada registrada. El cliente fue notificado.');
-  
+  // Solo navegar a mat-verificar — el cliente se notifica cuando tecnico sube la foto
   if (btn) { btn.disabled = false; btn.textContent = '📍 Llegué — verificar materiales →'; }
   go('tec-mat-verificar');
+}
+
+// ════════════════════════════════════════════════════════════
+// TÉCNICO — Subir foto de materiales/boleta
+// ════════════════════════════════════════════════════════════
+let _tecBoleta = null; // archivo de la foto
+
+function tecAbrirFotoBoleta() {
+  abrirCamara('inp-boleta-tec', (file) => {
+    _tecBoleta = file;
+    // Mostrar preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.getElementById('tec-boleta-img');
+      const preview = document.getElementById('tec-boleta-preview');
+      const estado = document.getElementById('tec-boleta-estado');
+      const btnConfirmar = document.getElementById('btn-tec-confirmar-llegada');
+      const btnSubir = document.getElementById('btn-tec-subir-boleta');
+      if (img) { img.src = e.target.result; }
+      if (preview) preview.style.display = 'block';
+      if (estado) { estado.textContent = '✓ Foto lista — presiona confirmar para notificar al cliente'; estado.style.display = 'block'; estado.style.color = 'var(--accent)'; }
+      if (btnConfirmar) btnConfirmar.style.display = 'block';
+      if (btnSubir) btnSubir.textContent = '📸 Cambiar foto';
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function tecBorrarFotoBoleta() {
+  _tecBoleta = null;
+  const img = document.getElementById('tec-boleta-img');
+  const preview = document.getElementById('tec-boleta-preview');
+  const estado = document.getElementById('tec-boleta-estado');
+  const btnConfirmar = document.getElementById('btn-tec-confirmar-llegada');
+  const btnSubir = document.getElementById('btn-tec-subir-boleta');
+  if (preview) preview.style.display = 'none';
+  if (estado) estado.style.display = 'none';
+  if (btnConfirmar) btnConfirmar.style.display = 'none';
+  if (btnSubir) btnSubir.textContent = '📸 Subir foto →';
+}
+
+async function tecConfirmarLlegadaConFoto() {
+  if (!_tecBoleta) {
+    showError('Sube la foto de los materiales primero.');
+    return;
+  }
+  const btn = document.getElementById('btn-tec-confirmar-llegada');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+
+  try {
+    // Subir la foto al backend
+    let fotoUrl = null;
+    try {
+      fotoUrl = await subirFoto(_tecBoleta, 'materiales');
+    } catch {
+      // Si falla la subida, continuar igual con base64 local
+      fotoUrl = document.getElementById('tec-boleta-img')?.src || null;
+    }
+
+    // Guardar url en localStorage para que el cliente la vea
+    const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+    localStorage.setItem('fx_solicitud_activa', JSON.stringify({ ...sol, fotoMateriales: fotoUrl }));
+
+    // Registrar llegada en el backend → dispara notif:trabajo_iniciado al cliente
+    await cambiarEstado('inicio-trabajo');
+
+    showSuccess('✅ Cliente notificado. Tiene 10 min para verificar.');
+    go('tec-en-trabajo');
+  } catch (err) {
+    showError(err.message || 'Error al confirmar llegada');
+    if (btn) { btn.disabled = false; btn.textContent = '✅ Confirmar llegada al cliente →'; }
+  }
 }
 
 // ════════════════════════════════════════════════════════════

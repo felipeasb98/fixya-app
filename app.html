@@ -4038,7 +4038,7 @@ function conectarSocketCliente() {
       const solicitudActiva = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       if (solicitudActiva.id) {
         socket.emit('solicitud:join', solicitudActiva.id);
-        console.log('[FixYa] Joined solicitud room:', solicitudActiva.id);
+        console.log('[FixYa] Joined room:', solicitudActiva.id);
       }
     });
 
@@ -4100,108 +4100,96 @@ function conectarSocketCliente() {
 // ── Función unificada: detecta rol y conecta socket ───────────
 function conectarSocket() {
   const token = Session.token();
-  if (!token || typeof io === 'undefined') {
-    // io no cargó aún — reintentar en 1 segundo
-    setTimeout(conectarSocket, 1000);
+  if (!token) return;
+
+  if (typeof io === 'undefined') {
+    setTimeout(conectarSocket, 500);
     return;
   }
-  if (window._fixya_socket && window._fixya_socket.connected) return;
+
+  const s = window._fixya_socket;
+  if (s && s.connected) return;
+  if (s && !s.connected) { try { s.disconnect(); } catch {} window._fixya_socket = null; }
 
   const rol = Session.rol();
+  console.log('[FixYa] Conectando socket como:', rol);
 
-  if (rol === 'usuario') {
-    conectarSocketCliente();
-    return;
-  }
+  if (rol === 'usuario') { conectarSocketCliente(); return; }
 
   if (rol === 'tecnico') {
-    try {
-      const socket = io('https://fixya-backend-production.up.railway.app', {
-        auth: { token },
-        transports: ['websocket', 'polling'], // fallback a polling si websocket falla
-        reconnection: true,
-        reconnectionAttempts: 10,
-        reconnectionDelay: 2000,
-      });
+    const socket = io('https://fixya-backend-production.up.railway.app', {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
+    });
 
-      socket.on('connect', () => {
-        console.log('[FixYa] Socket técnico conectado:', socket.id);
-        // Anunciar disponibilidad para recibir trabajos
-        socket.emit('tecnico:disponible', true);
-      });
+    socket.on('connect', () => {
+      console.log('[FixYa] Socket tecnico conectado:', socket.id);
+      socket.emit('tecnico:disponible', true);
+    });
 
-      socket.on('connect_error', (err) => {
-        console.warn('[FixYa] Error socket técnico:', err.message);
-      });
+    socket.on('connect_error', (err) => {
+      console.warn('[FixYa] Error socket tecnico:', err.message);
+    });
 
-      // Técnico recibe nueva solicitud → guardar ID y navegar a alerta
-      socket.on('nueva:solicitud', (data) => {
-        console.log('[FixYa] nueva:solicitud recibida', data);
-        if (data && data.solicitudId) {
-          localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-            id: data.solicitudId,
-            trabajo: data.trabajo || '',
-            total: data.totalEstimado || 0,
-            urgencia: data.urgencia || 'normal',
-            moBase: data.moBase || 0,
-            descripcion: data.descripcion || '',
-            fotosProblema: data.fotosProblema || [],
-            latCliente: data.latitud,
-            lngCliente: data.longitud,
-            comuna: data.comuna || '',
-          }));
-        }
+    socket.on('nueva:solicitud', (data) => {
+      console.log('[FixYa] nueva:solicitud recibida', data);
+      if (data && data.solicitudId) {
+        localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+          id: data.solicitudId,
+          trabajo: data.trabajo || '',
+          total: data.totalEstimado || 0,
+          urgencia: data.urgencia || 'normal',
+          moBase: data.moBase || 0,
+          descripcion: data.descripcion || '',
+          fotosProblema: data.fotosProblema || [],
+          latCliente: data.latitud,
+          lngCliente: data.longitud,
+          comuna: data.comuna || '',
+        }));
+      }
+      poblarTecAlerta(data || {});
+      const screenActual = document.querySelector('.screen.active');
+      if (screenActual && screenActual.id === 's-tec-home') {
+        go('tec-alerta');
+      } else {
+        showSuccess('Nueva solicitud disponible');
+      }
+    });
 
-        poblarTecAlerta(data || {});
+    socket.on('notif:trabajo_confirmado', async (data) => {
+      console.log('[FixYa] trabajo_confirmado', data);
+      showSuccess('El cliente te eligio! Dirigete al domicilio');
+      const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      if (data && data.solicitudId && !sol.id) {
+        localStorage.setItem('fx_solicitud_activa', JSON.stringify({ ...sol, id: data.solicitudId }));
+      }
+      try { await cambiarEstado('en-camino'); } catch {}
+      go('tec-en-camino');
+    });
 
-        const screenActual = document.querySelector('.screen.active');
-        if (screenActual && screenActual.id === 's-tec-home') {
-          go('tec-alerta');
-        } else {
-          showSuccess('⚡ Nueva solicitud disponible');
-        }
-      });
-
-      // Cliente eligió a este técnico → ir en camino
-      socket.on('notif:trabajo_confirmado', async (data) => {
-        console.log('[FixYa] trabajo_confirmado', data);
-        showSuccess('✅ ¡El cliente te eligió! Dirígete al domicilio 🚗');
-        const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-        if (data && data.solicitudId && !sol.id) {
-          localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-            ...sol, id: data.solicitudId,
-          }));
-        }
-        try { await cambiarEstado('en-camino'); } catch {}
-        go('tec-en-camino');
-      });
-
-      window._fixya_socket = socket;
-    } catch(e) {
-      console.error('[FixYa] Error conectando socket técnico:', e);
-    }
-    return;
+    window._fixya_socket = socket;
   }
 }
 
-// Cargar Socket.io desde el propio backend (evita bloqueo de CDN por Edge/Safari)
+// Cargar Socket.io desde backend propio (evita bloqueo por Edge/Safari)
 (function loadSocket() {
   if (document.getElementById('socketio-script')) return;
   const script = document.createElement('script');
   script.id = 'socketio-script';
-  // Usar el endpoint del propio backend — no depende de CDN externo
   script.src = 'https://fixya-backend-production.up.railway.app/socket.io/socket.io.js';
   script.onload = function() {
+    console.log('[FixYa] Socket.io cargado desde backend');
     if (typeof conectarSocket === 'function') conectarSocket();
   };
   script.onerror = function() {
-    // Fallback al CDN si el backend no sirve el script
-    const fallback = document.createElement('script');
-    fallback.src = 'https://cdn.socket.io/4.7.4/socket.io.min.js';
-    fallback.onload = function() {
-      if (typeof conectarSocket === 'function') conectarSocket();
-    };
-    document.head.appendChild(fallback);
+    console.warn('[FixYa] Fallback a CDN socket.io');
+    const fb = document.createElement('script');
+    fb.src = 'https://cdn.socket.io/4.7.4/socket.io.min.js';
+    fb.onload = function() { if (typeof conectarSocket === 'function') conectarSocket(); };
+    document.head.appendChild(fb);
   };
   document.head.appendChild(script);
 })();
@@ -4490,25 +4478,6 @@ async function irATecnicos() {
     if (btn) { btn.disabled = true; btn.style.opacity = '.4'; btn.textContent = 'Ver técnicos disponibles →'; }
 
     await cargarTecnicosDisponibles(data.solicitud.id);
-
-    // Unirse a la sala de la solicitud para recibir eventos en tiempo real
-    const socket = window._fixya_socket;
-    if (socket && socket.connected) {
-      socket.emit('solicitud:join', data.solicitud.id);
-    }
-
-    // Polling de respaldo cada 5s mientras espera postulantes
-    // (por si el socket no entrega el evento)
-    let _pollingPostulantes = setInterval(async () => {
-      const screenActual = document.querySelector('.screen.active');
-      if (!screenActual || screenActual.id !== 's-cli-tecnicos') {
-        clearInterval(_pollingPostulantes);
-        return;
-      }
-      await cargarTecnicosDisponibles(data.solicitud.id);
-    }, 5000);
-    window._pollingPostulantes = _pollingPostulantes;
-
     go('cli-tecnicos');
 
   } catch (err) {

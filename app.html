@@ -792,12 +792,6 @@ textarea.inp{resize:none;}
       <div style="font-size:10px;color:var(--accent2);font-weight:700;margin-bottom:6px;">📷 FOTOS DEL PROBLEMA</div>
       <div id="tec-alerta-fotos" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;"></div>
     </div>
-    <!-- Materiales estimados a llevar -->
-    <div id="tec-alerta-mat-wrap" style="display:none;margin-top:9px;">
-      <div style="font-size:10px;color:var(--accent2);font-weight:700;margin-bottom:6px;">🛒 MATERIALES ESTIMADOS</div>
-      <div id="tec-alerta-mat-lista"></div>
-      <div style="font-size:10px;color:var(--muted);margin-top:5px;">Los materiales exactos se confirman al llegar. El cliente verifica con foto.</div>
-    </div>
   </div>
   <div class="hl" style="margin-bottom:9px;">
     <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:5px;">💰 TÚ RECIBES</div>
@@ -830,19 +824,14 @@ textarea.inp{resize:none;}
     <span id="tec-eta-texto">📍 Calculando ruta...</span>
   </div>
   <div class="card" style="margin-bottom:9px;">
-    <div class="row"><span class="rl">Cliente</span><span class="rv" id="tec-ec-cliente">—</span></div>
-    <div class="row"><span class="rl">Dirección</span><span class="rv" id="tec-ec-dir" style="font-size:11px;text-align:right;max-width:60%;">—</span></div>
-    <div class="row"><span class="rl">Trabajo</span><span class="rv" id="tec-ec-trabajo">—</span></div>
-    <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg" id="tec-ec-mo">—</span></div>
-    <div class="row"><span class="rl">Materiales a traer</span><span class="rv ra" id="tec-ec-mat">Ver lista ↓</span></div>
+    <div class="row"><span class="rl">Cliente</span><span class="rv">María González</span></div>
+    <div class="row"><span class="rl">Trabajo</span><span class="rv">Fuga cañería</span></div>
+    <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg">$46.875</span></div>
+    <div class="row"><span class="rl">Materiales a traer</span><span class="rv ra">4 ítems</span></div>
   </div>
-  <!-- Lista de materiales del trabajo -->
-  <div id="tec-ec-mat-lista" style="display:none;margin-bottom:9px;"></div>
-  <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;margin-bottom:10px;">
-    📸 Al llegar: sube foto de todos los materiales. El cliente tiene <strong>10 min</strong> para verificar.
+  <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;margin-bottom:12px;">
+    📸 Al llegar: sube foto de todos los materiales. El cliente tiene <strong>15 min</strong> para verificar.
   </div>
-  <button onclick="toggleMatListaTec()" style="width:100%;padding:9px;background:rgba(255,255,255,.04);border:.5px solid var(--border);border-radius:10px;font-size:12px;color:var(--muted);cursor:pointer;margin-bottom:10px;" id="btn-toggle-mat">📦 Ver materiales a llevar</button>
-  <button onclick="abrirChatTrabajo()" style="width:100%;padding:9px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);cursor:pointer;margin-bottom:10px;">💬 Chatear con el cliente</button>
   <button class="btn btn-g" onclick="tecLlego()">📍 Llegué — verificar materiales →</button>
 </div>
 </div>
@@ -1926,6 +1915,7 @@ textarea.inp{resize:none;}
       </div>
     </div>
   </div>
+  <button onclick="cancelarSolicitudActiva()" style="width:100%;margin-top:14px;padding:11px;background:rgba(255,77,109,.08);border:.5px solid rgba(255,77,109,.25);border-radius:10px;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">✕ Cancelar solicitud</button>
 </div>
 </div>
 
@@ -1952,7 +1942,6 @@ textarea.inp{resize:none;}
   <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;">
     📸 El técnico subirá foto de los materiales al llegar. Tendrás <strong>10 min</strong> para verificar.
   </div>
-  <button onclick="abrirChatTrabajo()" style="width:100%;margin-top:10px;padding:11px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;">💬 Chatear con el técnico</button>
 </div>
 </div>
 
@@ -2025,31 +2014,6 @@ textarea.inp{resize:none;}
   <div class="nb-item" onclick="go('cli-home')"><div class="nb-icon">🏠</div><div class="nb-lbl">Inicio</div></div>
   <div class="nb-item on"><div class="nb-icon">📋</div><div class="nb-lbl">Historial</div></div>
   <div class="nb-item" onclick="go('cli-perfil')"><div class="nb-icon">👤</div><div class="nb-lbl">Perfil</div></div>
-</div>
-</div>
-
-<!-- CHAT CLIENTE-TÉCNICO -->
-<div class="screen" id="s-chat-trabajo">
-<div class="status"><span id="chat-time">10:00</span><span>💬 Chat</span><span>📶</span></div>
-<div class="topbar">
-  <div class="back-btn" onclick="back()">←</div>
-  <div class="topbar-title" id="chat-titulo">Chat del trabajo</div>
-</div>
-<div style="display:flex;flex-direction:column;height:calc(100vh - 100px);">
-  <!-- Mensajes -->
-  <div id="chat-mensajes" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;">
-    <div id="chat-empty" style="text-align:center;padding:30px 20px;color:var(--muted);">
-      <div style="font-size:32px;margin-bottom:8px;">💬</div>
-      <div style="font-size:13px;">Sin mensajes aún.<br>Usa el chat para coordinar la visita.</div>
-    </div>
-  </div>
-  <!-- Input -->
-  <div style="padding:10px 12px;border-top:.5px solid var(--border);background:var(--bg);display:flex;gap:8px;align-items:flex-end;">
-    <textarea id="chat-input" placeholder="Escribe un mensaje..." style="flex:1;padding:9px 12px;background:var(--card2);border:.5px solid var(--border);border-radius:12px;font-size:13px;color:var(--text);resize:none;font-family:'DM Sans',sans-serif;min-height:38px;max-height:100px;outline:none;" rows="1"
-      oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensajeChat();}"></textarea>
-    <button onclick="enviarMensajeChat()" style="width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">↑</button>
-  </div>
 </div>
 </div>
 
@@ -2506,12 +2470,11 @@ function go(id) {
     history.push(fullId);
     window.scrollTo(0, 0);
   }
-  // Timers y acciones al navegar
+  // Timers
   if (fullId === 's-tec-alerta') startTimer('tmr-tec', 5 * 60);
   if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
   if (fullId === 's-cli-historial') setTimeout(cargarHistorial, 50);
-  if (fullId === 's-tec-en-camino') setTimeout(() => { if (typeof poblarTecEnCamino === 'function') poblarTecEnCamino(); }, 100);
-  if (fullId === 's-chat-trabajo') setTimeout(() => { const cont = document.getElementById('chat-mensajes'); if (cont) cont.scrollTop = cont.scrollHeight; }, 200);
+  if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
 }
 
 function back() {
@@ -3934,9 +3897,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // Estado global de la solicitud en curso
 // Expuesto en window para que sea accesible desde todos los scripts
 const Solicitud = window.Solicitud = {
-  id: null,
-  rubroId: null,
-  rubroNombre: null,
+  id: null,          // ID real del backend
+  rubroId: null,     // ID del rubro en BD
+  rubroNombre: null, // "gasfiteria" | "electricidad" etc
   trabajo: null,
   moBase: 0,
   matEstimado: 0,
@@ -3946,7 +3909,6 @@ const Solicitud = window.Solicitud = {
   latitud: null,
   longitud: null,
   comuna: null,
-  direccion: null,
 };
 
 // Mapa de rubros del HTML al nombre en BD
@@ -4169,22 +4131,7 @@ function irASolicitudActiva() {
   }
   go('cli-tecnicos');
 }
-document.addEventListener('DOMContentLoaded', () => {
-  // Interceptar navegación a foto-solicitud para mostrar dirección primero
-  const _go2 = window.go;
-  window.go = function(id) {
-    if (id === 'cli-foto-solicitud' || id === 'foto-solicitud') {
-      // Siempre pasar por dirección primero si no hay coordenadas
-      if (!Solicitud.latitud && !Solicitud.direccion) {
-        renderizarFavoritasDireccion();
-        _go2('cli-direccion');
-        return;
-      }
-      pedirUbicacion();
-    }
-    _go2(id);
-  };
-});
+// (direccion redirect now handled in the GPS go() override below)
 
 // ── Lista de trabajos disponibles en tec-home ────────────────
 const _trabajosDisponibles = {}; // solicitudId → data
@@ -4253,162 +4200,6 @@ function verTrabajoDisponible(solicitudId) {
 }
 
 // ── Técnico rechaza trabajo → quitarlo de la lista ───────────
-// ════════════════════════════════════════════════════════════
-// CHAT CLIENTE-TÉCNICO
-// ════════════════════════════════════════════════════════════
-let _chatMensajes = [];
-let _chatSolicitudId = null;
-
-function abrirChatTrabajo() {
-  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-  _chatSolicitudId = sol.id;
-  const rol = Session.rol();
-  const titulo = rol === 'tecnico' ? 'Chat con el cliente' : 'Chat con el técnico';
-  const el = (id) => document.getElementById(id);
-  if (el('chat-titulo')) el('chat-titulo').textContent = titulo;
-  renderizarMensajesChat();
-  go('chat-trabajo');
-  // Cargar historial de mensajes
-  if (_chatSolicitudId) cargarMensajesChat();
-}
-
-async function cargarMensajesChat() {
-  try {
-    const data = await apiFetch('/solicitudes/' + _chatSolicitudId + '/mensajes');
-    _chatMensajes = data.mensajes || data || [];
-    renderizarMensajesChat();
-  } catch {}
-}
-
-function renderizarMensajesChat() {
-  const cont = document.getElementById('chat-mensajes');
-  const empty = document.getElementById('chat-empty');
-  if (!cont) return;
-  if (_chatMensajes.length === 0) {
-    if (empty) empty.style.display = '';
-    return;
-  }
-  if (empty) empty.style.display = 'none';
-  const miRol = Session.rol();
-  const miBubble = (m) => {
-    const esMio = (miRol === 'tecnico' && m.autorRol === 'tecnico') || (miRol === 'usuario' && m.autorRol === 'usuario');
-    const hora = new Date(m.creadoAt || Date.now()).toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
-    return '<div style="display:flex;justify-content:' + (esMio ? 'flex-end' : 'flex-start') + ';margin-bottom:4px;">' +
-      '<div style="max-width:75%;padding:8px 12px;border-radius:' + (esMio ? '14px 14px 4px 14px' : '14px 14px 14px 4px') + ';background:' + (esMio ? 'var(--accent)' : 'var(--card)') + ';color:' + (esMio ? '#05120A' : 'var(--text)') + ';font-size:13px;line-height:1.4;">' +
-      m.texto +
-      '<div style="font-size:9px;opacity:.6;margin-top:3px;text-align:right;">' + hora + '</div></div></div>';
-  };
-  // Remove existing messages but keep empty state
-  Array.from(cont.children).forEach(c => { if (c.id !== 'chat-empty') c.remove(); });
-  _chatMensajes.forEach(m => {
-    const div = document.createElement('div');
-    div.innerHTML = miBubble(m);
-    cont.appendChild(div.firstChild);
-  });
-  // Scroll to bottom
-  cont.scrollTop = cont.scrollHeight;
-}
-
-async function enviarMensajeChat() {
-  const input = document.getElementById('chat-input');
-  const texto = input?.value?.trim();
-  if (!texto || !_chatSolicitudId) return;
-  input.value = '';
-  input.style.height = 'auto';
-
-  // Agregar mensaje optimista
-  const msj = { texto, autorRol: Session.rol(), creadoAt: new Date().toISOString() };
-  _chatMensajes.push(msj);
-  renderizarMensajesChat();
-
-  try {
-    await apiFetch('/solicitudes/' + _chatSolicitudId + '/mensajes', {
-      method: 'POST',
-      body: JSON.stringify({ texto }),
-    });
-  } catch {}
-}
-
-// Recibir mensajes en tiempo real via socket
-function registrarSocketChat(socket) {
-  socket.on('chat:mensaje', (data) => {
-    if (data.solicitudId !== _chatSolicitudId) return;
-    _chatMensajes.push(data);
-    renderizarMensajesChat();
-    // Si no está en el chat, mostrar badge
-    const screenActual = document.querySelector('.screen.active');
-    if (!screenActual || screenActual.id !== 's-chat-trabajo') {
-      showSuccess('💬 Nuevo mensaje');
-    }
-  });
-}
-
-// ════════════════════════════════════════════════════════════
-// MATERIALES DEL TRABAJO
-// ════════════════════════════════════════════════════════════
-
-// Materiales estándar por rubro (para mostrar al técnico como guía)
-const MATERIALES_RUBRO = {
-  gasfiteria: [
-    { nombre: 'Teflón + uniones', precio: 1780 },
-    { nombre: 'Sellante sanitario', precio: 4200 },
-    { nombre: 'Cañería PVC 1/2" × 2m', precio: 2100 },
-    { nombre: 'Codos 90° PVC × 3un', precio: 2550 },
-  ],
-  electricidad: [
-    { nombre: 'Cinta aislante', precio: 890 },
-    { nombre: 'Conectores eléctricos × 10', precio: 1200 },
-    { nombre: 'Cable dúplex 1.5mm × 3m', precio: 2800 },
-    { nombre: 'Caja plástica salida', precio: 1500 },
-  ],
-  cerrajeria: [
-    { nombre: 'Lubricante cerradura', precio: 2900 },
-    { nombre: 'Tornillos surtidos', precio: 1200 },
-  ],
-  handyman: [
-    { nombre: 'Tornillos y tarugos', precio: 1500 },
-    { nombre: 'Silicona transparente', precio: 3200 },
-    { nombre: 'Lija fina', precio: 890 },
-  ],
-};
-
-function getMaterialesRubro(rubroNombre) {
-  const key = (rubroNombre || '').toLowerCase();
-  return MATERIALES_RUBRO[key] || [];
-}
-
-function toggleMatListaTec() {
-  const lista = document.getElementById('tec-ec-mat-lista');
-  const btn = document.getElementById('btn-toggle-mat');
-  if (!lista) return;
-  const visible = lista.style.display !== 'none';
-  lista.style.display = visible ? 'none' : '';
-  if (btn) btn.textContent = visible ? '📦 Ver materiales a llevar' : '📦 Ocultar materiales';
-}
-
-function poblarTecEnCamino(data) {
-  const el = (id) => document.getElementById(id);
-  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
-  const sol = data || JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-
-  if (el('tec-ec-cliente')) el('tec-ec-cliente').textContent = sol.clienteNombre || '—';
-  if (el('tec-ec-trabajo')) el('tec-ec-trabajo').textContent = sol.trabajo || '—';
-  if (el('tec-ec-mo')) el('tec-ec-mo').textContent = sol.total ? fmt(sol.total) : '—';
-  if (el('tec-ec-dir')) el('tec-ec-dir').textContent = sol.direccion || sol.comuna || '—';
-
-  // Materiales del rubro
-  const mats = getMaterialesRubro(sol.rubroNombre || sol.rubro);
-  const lista = el('tec-ec-mat-lista');
-  if (lista && mats.length > 0) {
-    if (el('tec-ec-mat')) el('tec-ec-mat').textContent = mats.length + ' ítems estimados';
-    lista.innerHTML = '<div class="card" style="padding:0;overflow:hidden;margin-bottom:4px;">' +
-      mats.map(m => '<div class="row" style="padding:8px 12px;"><span class="rl">' + m.nombre + '</span>' +
-        '<span class="rv" style="color:var(--muted);">~' + fmt(m.precio) + '</span></div>').join('') +
-      '</div>' +
-      '<div style="font-size:10px;color:var(--muted);padding:2px 4px;">Precios son referenciales. Sube boleta real al terminar.</div>';
-  }
-}
-
 function tecnicoRechazarTrabajo() {
   const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
   if (sol.id) quitarTrabajoDisponible(sol.id);
@@ -4824,9 +4615,6 @@ function conectarSocket() {
     socket.on('connect_error', (err) => {
       console.warn('[FixYa] Error socket tecnico:', err.message);
     });
-
-    // Chat en tiempo real
-    if (typeof registrarSocketChat === 'function') registrarSocketChat(socket);
 
     socket.on('nueva:solicitud', (data) => {
       console.log('[FixYa] nueva:solicitud recibida', data);
@@ -5485,7 +5273,28 @@ window.pedirUbicacion = function() {
 // ── Interceptar navegación para iniciar/detener GPS ───────────
 const _goGPS = window.go;
 window.go = function(id) {
-  // Restaurar fotos si vuelve a la pantalla
+  // DIRECCIÓN: interceptar antes de foto-solicitud
+  if (id === 'cli-foto-solicitud' || id === 'foto-solicitud') {
+    const sol = window.Solicitud || {};
+    if (!sol.latitud && !sol.direccion) {
+      if (typeof renderizarFavoritasDireccion === 'function') renderizarFavoritasDireccion();
+      // Resetear campos de la pantalla de dirección
+      const inp = document.getElementById('dir-input');
+      const conf = document.getElementById('dir-confirmada');
+      const btn = document.getElementById('btn-dir-continuar');
+      if (inp) inp.value = '';
+      if (conf) conf.style.display = 'none';
+      if (btn) { btn.disabled = true; btn.style.opacity = '.4'; }
+      _goGPS('cli-direccion');
+      return;
+    }
+    setTimeout(restaurarFotosSolicitud, 100);
+    pedirUbicacion();
+    _goGPS(id);
+    return;
+  }
+
+  // Restaurar fotos si vuelve a la pantalla directamente
   if (id === 'cli-foto-solicitud') {
     setTimeout(restaurarFotosSolicitud, 100);
   }
@@ -5737,19 +5546,6 @@ function poblarTecAlerta(data) {
 
   // Agregar/actualizar en lista de trabajos disponibles en tec-home
   agregarTrabajoDisponible(data);
-
-  // Mostrar materiales estimados en tec-alerta
-  const mats = getMaterialesRubro(data.rubroNombre || data.rubro);
-  const matWrap = el('tec-alerta-mat-wrap');
-  const matLista = el('tec-alerta-mat-lista');
-  const fmt2 = (n) => '$' + Math.round(n).toLocaleString('es-CL');
-  if (matWrap && matLista && mats.length > 0) {
-    matLista.innerHTML = mats.map(m =>
-      '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid rgba(255,255,255,.05);font-size:12px;">' +
-      '<span>' + m.nombre + '</span><span style="color:var(--muted);">~' + fmt2(m.precio) + '</span></div>'
-    ).join('');
-    matWrap.style.display = '';
-  }
 }
 
 async function tecAceptarYPartir() {

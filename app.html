@@ -817,9 +817,12 @@ textarea.inp{resize:none;}
 <div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">En camino</div></div>
 <div class="wrap">
   <div class="status-badge sb-on"><div style="font-size:16px;">🚗</div><div><div style="font-size:13px;font-weight:700;color:var(--accent);">En camino al domicilio</div><div style="font-size:11px;color:var(--muted);">Providencia 1234 · 1.2 km · ~6 min</div></div></div>
-  <div id="mapa-tecnico" style="width:100%;height:220px;border-radius:12px;border:.5px solid var(--border);margin-bottom:12px;overflow:hidden;background:var(--card2);display:flex;align-items:center;justify-content:center;">
-    <div style="text-align:center;"><div style="font-size:28px;margin-bottom:6px;">🗺️</div><div style="font-size:12px;color:var(--muted);">Cargando mapa...</div></div>
+  <div id="mapa-tecnico" style="width:100%;height:220px;border-radius:12px;border:.5px solid var(--border);margin-bottom:8px;overflow:hidden;background:var(--card2);">
+    <div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:6px;"><div style="font-size:28px;">🗺️</div><div style="font-size:12px;color:var(--muted);">Cargando mapa...</div></div>
   </div>
+  <button id="btn-abrir-gmaps" onclick="abrirGoogleMapsTecnico()" style="width:100%;padding:10px;background:rgba(0,229,160,.07);border:.5px solid rgba(0,229,160,.25);border-radius:10px;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px;">
+    🧭 Abrir ruta en Google Maps
+  </button>
   <div id="tec-eta-bar" style="display:none;padding:8px 12px;background:rgba(0,229,160,.07);border:.5px solid rgba(0,229,160,.2);border-radius:10px;font-size:12px;color:var(--accent);margin-bottom:12px;display:flex;gap:8px;align-items:center;">
     <span id="tec-eta-texto">📍 Calculando ruta...</span>
   </div>
@@ -1939,9 +1942,10 @@ textarea.inp{resize:none;}
     <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg" id="cli-ec-mo">—</span></div>
     <div class="row"><span class="rl">Estado</span><span class="rv"><span class="tag tg" style="font-size:10px;">✓ Confirmado</span></span></div>
   </div>
-  <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;">
+  <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;margin-bottom:10px;">
     📸 El técnico subirá foto de los materiales al llegar. Tendrás <strong>10 min</strong> para verificar.
   </div>
+  <button onclick="abrirChatTrabajo()" style="width:100%;padding:10px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;">💬 Chatear con el técnico</button>
 </div>
 </div>
 
@@ -3991,6 +3995,9 @@ function renderizarTecnicos(tecnicos) {
     const stars = '⭐'.repeat(Math.min(5, Math.round(tec.ratingPromedio || 5)));
     const div = document.createElement('div');
     div.className = 'tec-card';
+    div.dataset.tecnicoId = tec.id;
+    div.dataset.nombre = tec.nombre;
+    div.dataset.rating = tec.ratingPromedio || '5.0';
     div.onclick = () => elegirTecnico(tec.id);
     div.innerHTML = `
       <div class="tec-av" style="background:rgba(0,229,160,.12);">👷</div>
@@ -4015,31 +4022,81 @@ function renderizarTecnicos(tecnicos) {
 // ── Elegir técnico ────────────────────────────────────────────
 async function elegirTecnico(tecnicoId) {
   const solicitudId = Solicitud.id || JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}').id;
-  if (!solicitudId) {
-    go('cli-en-camino');
-    return;
-  }
+  if (!solicitudId) { go('cli-en-camino'); return; }
 
-  try {
-    const data = await apiFetch('/solicitudes/' + solicitudId + '/elegir-tecnico', {
-      method: 'POST',
-      body: JSON.stringify({ tecnicoId }),
-    });
-    localStorage.setItem('fx_tecnico_elegido', tecnicoId);
-    // Guardar nombre del técnico para mostrar en pantalla de espera
-    const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-    localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-      ...sol,
-      tecnicoNombre: data?.tecnico?.nombre || 'Tu técnico',
-      tecnicoId,
-    }));
-    showSuccess('¡Técnico confirmado! Viene en camino 🚗');
-    actualizarPantallaEnCamino();
-    go('cli-en-camino');
-  } catch (err) {
-    showError(err.message || 'Error al elegir técnico');
-    go('cli-en-camino');
-  }
+  // Buscar datos del técnico en la lista renderizada
+  const tarjeta = document.querySelector('[data-tecnico-id="' + tecnicoId + '"]');
+  const nombre = tarjeta?.dataset?.nombre || 'El técnico';
+  const rating = tarjeta?.dataset?.rating || '5.0';
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const total = sol.total || 0;
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+
+  // Mostrar modal de confirmación + pago
+  mostrarModalConfirmarTecnico({ tecnicoId, nombre, rating, total, solicitudId, fmt });
+}
+
+function mostrarModalConfirmarTecnico({ tecnicoId, nombre, rating, total, solicitudId, fmt }) {
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-confirmar-tec';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;display:flex;align-items:flex-end;justify-content:center;';
+  overlay.innerHTML =
+    '<div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:420px;">' +
+    '<div style="width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:99px;margin:0 auto 18px;"></div>' +
+    '<div style="font-size:18px;font-weight:800;margin-bottom:3px;">Confirmar y pagar</div>' +
+    '<div style="font-size:12px;color:var(--muted);margin-bottom:18px;">El dinero queda retenido hasta que confirmes el trabajo</div>' +
+    '<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--card2);border-radius:12px;margin-bottom:14px;">' +
+    '<div style="width:42px;height:42px;border-radius:50%;background:rgba(0,229,160,.12);display:flex;align-items:center;justify-content:center;font-size:22px;">👷</div>' +
+    '<div><div style="font-size:14px;font-weight:700;">' + nombre + '</div>' +
+    '<div style="font-size:12px;color:var(--accent2);">⭐ ' + rating + '</div></div></div>' +
+    '<div style="background:var(--card2);border-radius:12px;padding:14px;margin-bottom:14px;">' +
+    '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:.5px solid var(--border);"><span style="color:var(--muted);">Total del trabajo</span><span style="font-family:\'JetBrains Mono\';font-weight:700;">' + fmt(total) + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;"><span style="color:var(--muted);">Estado del pago</span><span style="color:var(--accent);font-weight:600;">🔒 En escrow</span></div></div>' +
+    '<div style="padding:9px 12px;background:rgba(0,229,160,.06);border:.5px solid rgba(0,229,160,.2);border-radius:10px;font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">' +
+    '🔒 <strong style="color:var(--text);">Pago protegido.</strong> El técnico recibe el dinero solo cuando confirmas que el trabajo quedó bien.</div>' +
+    '<button id="btn-confirmar-pagar" style="width:100%;padding:14px;border-radius:12px;background:var(--accent2);color:#1A0F00;font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;border:none;cursor:pointer;margin-bottom:8px;">💳 Confirmar y pagar ' + fmt(total) + ' →</button>' +
+    '<button onclick="document.getElementById(\'modal-confirmar-tec\').remove()" style="width:100%;padding:12px;border-radius:12px;background:rgba(255,255,255,.07);border:.5px solid rgba(255,255,255,.1);color:var(--muted);font-size:13px;cursor:pointer;">Cancelar</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+
+  document.getElementById('btn-confirmar-pagar').onclick = async () => {
+    const btn = document.getElementById('btn-confirmar-pagar');
+    btn.disabled = true; btn.textContent = 'Procesando...';
+    try {
+      // 1. Elegir técnico en backend
+      const data = await apiFetch('/solicitudes/' + solicitudId + '/elegir-tecnico', {
+        method: 'POST', body: JSON.stringify({ tecnicoId }),
+      });
+      const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+        ...sol, tecnicoNombre: data?.tecnico?.nombre || nombre, tecnicoId,
+      }));
+
+      // 2. Iniciar pago Flow
+      btn.textContent = 'Generando pago...';
+      const pagoData = await apiFetch('/pagos/iniciar', {
+        method: 'POST', body: JSON.stringify({ solicitudId }),
+      });
+      const sol2 = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      sol2.pagoId = pagoData.pagoId;
+      localStorage.setItem('fx_solicitud_activa', JSON.stringify(sol2));
+
+      // 3. Redirigir a Flow
+      overlay.remove();
+      mostrarModalPago(pagoData);
+    } catch (err) {
+      // Si el estado de la solicitud no permite pago aún, igual navegar
+      if (err.message && err.message.includes('no está lista')) {
+        overlay.remove();
+        showSuccess('Técnico confirmado. El pago se procesará en breve.');
+        actualizarPantallaEnCamino();
+        go('cli-en-camino');
+      } else {
+        showError(err.message || 'Error al confirmar');
+        btn.disabled = false; btn.textContent = '💳 Confirmar y pagar ' + fmt(total) + ' →';
+      }
+    }
+  };
 }
 
 // ── Actualizar datos de la pantalla cli-en-camino ─────────────
@@ -5047,44 +5104,66 @@ function iniciarGPSTecnico() {
   GPS.clienteLat  = solicitudActiva.latCliente;
   GPS.clienteLng  = solicitudActiva.lngCliente;
 
+  // Fix contenedor
+  const mapaEl = document.getElementById('mapa-tecnico');
+  if (mapaEl) { mapaEl.innerHTML = ''; mapaEl.style.display = 'block'; }
+
   cargarGoogleMaps(() => {
-    // Inicializar mapa centrado en Santiago por defecto
-    const centro = { lat: -33.4489, lng: -70.6693 };
-    GPS.map = new google.maps.Map(document.getElementById('mapa-tecnico'), {
+    const destino = (GPS.clienteLat && GPS.clienteLng)
+      ? { lat: GPS.clienteLat, lng: GPS.clienteLng }
+      : { lat: -33.4489, lng: -70.6693 };
+
+    GPS.map = new google.maps.Map(mapaEl, {
       zoom: 14,
-      center: centro,
+      center: destino,
       disableDefaultUI: true,
       zoomControl: true,
       styles: mapStyleOscuro(),
     });
 
-    // Marker del cliente (destino)
+    // Marker destino (cliente)
     if (GPS.clienteLat && GPS.clienteLng) {
       GPS.markerCliente = new google.maps.Marker({
-        position: { lat: GPS.clienteLat, lng: GPS.clienteLng },
+        position: destino,
         map: GPS.map,
         title: 'Domicilio del cliente',
-        icon: {
-          url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-          scaledSize: new google.maps.Size(32, 32),
-        },
+        icon: { url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', scaledSize: new google.maps.Size(36, 36) },
       });
     }
 
-    // Marker del técnico (posición actual)
+    // Marker técnico
     GPS.markerTecnico = new google.maps.Marker({
-      position: centro,
+      position: destino,
       map: GPS.map,
       title: 'Tu posición',
-      icon: {
-        url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-        scaledSize: new google.maps.Size(36, 36),
-      },
+      icon: { url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png', scaledSize: new google.maps.Size(36, 36) },
     });
 
-    // Iniciar tracking GPS del técnico
+    // DirectionsRenderer para dibujar la ruta
+    GPS.directionsRenderer = new google.maps.DirectionsRenderer({
+      map: GPS.map,
+      suppressMarkers: true,
+      polylineOptions: { strokeColor: '#00E5A0', strokeWeight: 4, strokeOpacity: 0.8 },
+    });
+    GPS.directionsService = new google.maps.DirectionsService();
+
     iniciarWatchGPS();
   });
+}
+
+// ── Abrir Google Maps con ruta al cliente ─────────────────────
+function abrirGoogleMapsTecnico() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const lat = sol.latCliente;
+  const lng = sol.lngCliente;
+  const dir = sol.direccion || '';
+  if (lat && lng) {
+    window.open('https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng + '&travelmode=driving', '_blank');
+  } else if (dir) {
+    window.open('https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(dir) + '&travelmode=driving', '_blank');
+  } else {
+    showError('Sin dirección del cliente disponible');
+  }
 }
 
 // ── Watchear GPS del técnico cada 10 segundos ─────────────────
@@ -5111,30 +5190,45 @@ function actualizarPosicionTecnico(lat, lng) {
 
   // Mover marker
   if (GPS.markerTecnico) GPS.markerTecnico.setPosition(pos);
-  if (GPS.map) GPS.map.panTo(pos);
 
-  // Calcular ETA si hay destino
-  if (GPS.clienteLat && GPS.clienteLng) {
+  // Dibujar ruta al destino con DirectionsService (cada 30s para no agotar cuota)
+  if (GPS.directionsService && GPS.directionsRenderer && GPS.clienteLat && GPS.clienteLng) {
+    const ahora = Date.now();
+    if (!GPS._ultimaRuta || ahora - GPS._ultimaRuta > 30000) {
+      GPS._ultimaRuta = ahora;
+      GPS.directionsService.route({
+        origin: pos,
+        destination: { lat: GPS.clienteLat, lng: GPS.clienteLng },
+        travelMode: google.maps.TravelMode.DRIVING,
+      }, (result, status) => {
+        if (status === 'OK') {
+          GPS.directionsRenderer.setDirections(result);
+          // Actualizar ETA desde Directions
+          const leg = result.routes[0]?.legs[0];
+          if (leg) mostrarETA('📍 ' + leg.distance.text + ' · ~' + leg.duration.text);
+        }
+      });
+    }
+  } else if (GPS.map) {
+    GPS.map.panTo(pos);
+  }
+
+  // Calcular ETA simple si no hay DirectionsService
+  if (!GPS.directionsService && GPS.clienteLat && GPS.clienteLng) {
     calcularETA(lat, lng, GPS.clienteLat, GPS.clienteLng);
   }
 
   // Emitir por Socket.io al cliente en tiempo real
   const socket = window._fixya_socket;
   if (socket && GPS.solicitudId) {
-    socket.emit('tecnico:gps', {
-      lat, lng,
-      solicitudId: GPS.solicitudId,
-    });
+    socket.emit('tecnico:gps', { lat, lng, solicitudId: GPS.solicitudId });
   }
 
-  // También actualizar via API REST como respaldo
+  // API REST como respaldo
   if (Session.token()) {
     fetch(API + '/tecnicos/gps', {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + Session.token(),
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + Session.token() },
       body: JSON.stringify({ latitud: lat, longitud: lng, solicitudId: GPS.solicitudId }),
     }).catch(() => {});
   }
@@ -5201,36 +5295,46 @@ function iniciarMapaCliente() {
       styles: mapStyleOscuro(),
     });
 
-    // Marker del domicilio del cliente
+    // Marker del domicilio del cliente (azul = su casa)
     new google.maps.Marker({
       position: centro,
       map: _mapaCliente,
       title: 'Tu domicilio',
-      icon: {
-        url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-        scaledSize: new google.maps.Size(32, 32),
-      },
+      icon: { url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png', scaledSize: new google.maps.Size(32, 32) },
     });
 
-    // Marker del técnico (se actualiza via socket)
+    // Marker del técnico (verde, se mueve)
     _markerTecnicoCliente = new google.maps.Marker({
       position: centro,
       map: _mapaCliente,
       title: 'Técnico en camino',
-      icon: {
-        url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-        scaledSize: new google.maps.Size(36, 36),
-      },
+      icon: { url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png', scaledSize: new google.maps.Size(40, 40) },
     });
 
     // Escuchar actualizaciones GPS del técnico via socket
     const socket = window._fixya_socket;
     if (socket) {
-      socket.off('tecnico:ubicacion'); // evitar duplicados
+      socket.off('tecnico:ubicacion');
       socket.on('tecnico:ubicacion', (data) => {
         const pos = { lat: data.lat, lng: data.lng };
         if (_markerTecnicoCliente) _markerTecnicoCliente.setPosition(pos);
-        if (_mapaCliente) _mapaCliente.panTo(pos);
+        if (_mapaCliente) {
+          // Centrar entre técnico y cliente
+          const bounds = new google.maps.LatLngBounds();
+          bounds.extend(pos);
+          bounds.extend(centro);
+          _mapaCliente.fitBounds(bounds, { padding: 40 });
+        }
+        // Actualizar ETA del cliente
+        const R = 6371;
+        const dLat = (centro.lat - data.lat) * Math.PI / 180;
+        const dLng = (centro.lng - data.lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(data.lat*Math.PI/180)*Math.cos(centro.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+        const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const etaMin = Math.round(dist / 30 * 60); // ~30 km/h en ciudad
+        const distStr = dist < 1 ? Math.round(dist*1000) + ' m' : dist.toFixed(1) + ' km';
+        const etaEl = document.getElementById('cli-ec-eta');
+        if (etaEl) etaEl.textContent = distStr + ' · ~' + etaMin + ' min';
       });
     }
   });

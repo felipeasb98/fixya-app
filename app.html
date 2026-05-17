@@ -813,28 +813,28 @@ textarea.inp{resize:none;}
 
 <!-- TÉCNICO — EN CAMINO -->
 <div class="screen" id="s-tec-en-camino">
-<div class="status"><span>9:58</span><span>🔧 En curso #FY-2847</span><span>📶</span></div>
+<div class="status"><span>9:58</span><span>🔧 En curso</span><span>📶</span></div>
 <div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">En camino</div></div>
 <div class="wrap">
-  <div class="status-badge sb-on"><div style="font-size:16px;">🚗</div><div><div style="font-size:13px;font-weight:700;color:var(--accent);">En camino al domicilio</div><div style="font-size:11px;color:var(--muted);">Providencia 1234 · 1.2 km · ~6 min</div></div></div>
+  <div class="status-badge sb-on"><div style="font-size:16px;">🚗</div><div><div style="font-size:13px;font-weight:700;color:var(--accent);" id="tec-ec-eta-label">En camino al domicilio</div><div style="font-size:11px;color:var(--muted);" id="tec-eta-texto">Calculando ruta...</div></div></div>
   <div id="mapa-tecnico" style="width:100%;height:220px;border-radius:12px;border:.5px solid var(--border);margin-bottom:8px;overflow:hidden;background:var(--card2);">
     <div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:6px;"><div style="font-size:28px;">🗺️</div><div style="font-size:12px;color:var(--muted);">Cargando mapa...</div></div>
   </div>
   <button id="btn-abrir-gmaps" onclick="abrirGoogleMapsTecnico()" style="width:100%;padding:10px;background:rgba(0,229,160,.07);border:.5px solid rgba(0,229,160,.25);border-radius:10px;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px;">
     🧭 Abrir ruta en Google Maps
   </button>
-  <div id="tec-eta-bar" style="display:none;padding:8px 12px;background:rgba(0,229,160,.07);border:.5px solid rgba(0,229,160,.2);border-radius:10px;font-size:12px;color:var(--accent);margin-bottom:12px;display:flex;gap:8px;align-items:center;">
-    <span id="tec-eta-texto">📍 Calculando ruta...</span>
-  </div>
   <div class="card" style="margin-bottom:9px;">
-    <div class="row"><span class="rl">Cliente</span><span class="rv">María González</span></div>
-    <div class="row"><span class="rl">Trabajo</span><span class="rv">Fuga cañería</span></div>
-    <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg">$46.875</span></div>
-    <div class="row"><span class="rl">Materiales a traer</span><span class="rv ra">4 ítems</span></div>
+    <div class="row"><span class="rl">Cliente</span><span class="rv" id="tec-ec-cliente">—</span></div>
+    <div class="row"><span class="rl">Dirección</span><span class="rv" id="tec-ec-dir" style="font-size:11px;text-align:right;max-width:60%;">—</span></div>
+    <div class="row"><span class="rl">Trabajo</span><span class="rv" id="tec-ec-trabajo">—</span></div>
+    <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg" id="tec-ec-mo">—</span></div>
+    <div class="row" style="cursor:pointer;" onclick="toggleMatListaTec()"><span class="rl">Materiales a llevar</span><span class="rv ra" id="tec-ec-mat">Ver lista →</span></div>
   </div>
-  <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;margin-bottom:12px;">
-    📸 Al llegar: sube foto de todos los materiales. El cliente tiene <strong>15 min</strong> para verificar.
+  <div id="tec-ec-mat-lista" style="display:none;margin-bottom:9px;"></div>
+  <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;margin-bottom:8px;">
+    📸 Al llegar: sube foto de todos los materiales. El cliente tiene <strong>10 min</strong> para verificar.
   </div>
+  <button onclick="abrirChatTrabajo()" style="width:100%;padding:9px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;margin-bottom:8px;">💬 Chatear con el cliente</button>
   <button class="btn btn-g" onclick="tecLlego()">📍 Llegué — verificar materiales →</button>
 </div>
 </div>
@@ -935,23 +935,38 @@ textarea.inp{resize:none;}
 <div class="wrap">
   <div class="sub">Sube la foto de término y la boleta para activar el reembolso del mismo día.</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px;">
-    <div style="padding:14px;background:rgba(0,229,160,.07);border:.5px solid rgba(0,229,160,.22);border-radius:12px;text-align:center;cursor:pointer;" onclick="this.style.background='rgba(0,229,160,.18)'">
-      <div style="font-size:26px;margin-bottom:5px;">📸</div><div style="font-size:12px;font-weight:700;color:var(--accent);">Foto terminado</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">GPS + timestamp</div>
+    <div id="btn-foto-terminado" style="padding:14px;background:rgba(0,229,160,.07);border:.5px solid rgba(0,229,160,.22);border-radius:12px;text-align:center;cursor:pointer;" onclick="tecAbrirFotoTerminado()">
+      <div style="font-size:26px;margin-bottom:5px;" id="ico-foto-terminado">📸</div>
+      <div style="font-size:12px;font-weight:700;color:var(--accent);">Foto terminado</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="lbl-foto-terminado">GPS + timestamp</div>
     </div>
-    <div style="padding:14px;background:rgba(244,164,41,.07);border:.5px solid rgba(244,164,41,.22);border-radius:12px;text-align:center;cursor:pointer;" onclick="this.style.background='rgba(244,164,41,.18)'">
-      <div style="font-size:26px;margin-bottom:5px;">🧾</div><div style="font-size:12px;font-weight:700;color:var(--accent2);">Foto boleta</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Reembolso hoy</div>
+    <div id="btn-foto-boleta-cierre" style="padding:14px;background:rgba(244,164,41,.07);border:.5px solid rgba(244,164,41,.22);border-radius:12px;text-align:center;cursor:pointer;" onclick="tecAbrirFotaBoleta_cierre ? tecAbrirFotaBoleta_cierre() : tecAbrirFotoBoleta()">
+      <div style="font-size:26px;margin-bottom:5px;" id="ico-foto-boleta">🧾</div>
+      <div style="font-size:12px;font-weight:700;color:var(--accent2);">Foto boleta</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="lbl-foto-boleta">Reembolso hoy</div>
+    </div>
+  </div>
+  <!-- Previews de fotos -->
+  <div id="cierre-fotos-preview" style="display:none;margin-bottom:12px;">
+    <div style="display:flex;gap:8px;">
+      <div style="flex:1;position:relative;">
+        <img id="cierre-img-terminado" src="" style="width:100%;height:90px;object-fit:cover;border-radius:9px;display:none;">
+      </div>
+      <div style="flex:1;position:relative;">
+        <img id="cierre-img-boleta" src="" style="width:100%;height:90px;object-fit:cover;border-radius:9px;display:none;">
+      </div>
     </div>
   </div>
   <div class="card" style="margin-bottom:9px;">
     <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:9px;">RESUMEN DE PAGO</div>
-    <div class="row"><span class="rl">Técnicos verificados</span><span class="rv ra">$10.630</span></div>
-    <div class="row"><span class="rl">M.O. fija + urgencia</span><span class="rv rg">$46.875</span></div>
-    <div class="row row-total"><span style="font-weight:700;">Tú recibes total</span><span class="rv rg" style="font-size:15px;">$57.505</span></div>
-    <div style="margin-top:7px;padding:7px 9px;background:rgba(0,229,160,.05);border-radius:8px;font-size:11px;color:var(--accent);line-height:1.5;">
-      💸 Materiales $10.630 → hoy<br>💰 M.O. $46.875 → en 24 hrs
+    <div class="row"><span class="rl">Materiales comprados</span><span class="rv ra" id="cierre-monto-mat">—</span></div>
+    <div class="row"><span class="rl">M.O. fija</span><span class="rv rg" id="cierre-mo">—</span></div>
+    <div class="row row-total"><span style="font-weight:700;">Tú recibes total</span><span class="rv rg" style="font-size:15px;" id="cierre-total">—</span></div>
+    <div style="margin-top:7px;padding:7px 9px;background:rgba(0,229,160,.05);border-radius:8px;font-size:11px;color:var(--accent);line-height:1.5;" id="cierre-timing">
+      💸 Materiales → hoy al subir boleta<br>💰 M.O. → 24 hrs tras confirmación del cliente
     </div>
   </div>
-  <button class="btn btn-g" onclick="go('tec-rating')">Enviar y cerrar trabajo →</button>
+  <button class="btn btn-g" id="btn-cerrar-trabajo" onclick="cerrarTrabajo()" style="opacity:.4;" disabled>Enviar y cerrar trabajo →</button>
 </div>
 </div>
 
@@ -1986,6 +2001,32 @@ textarea.inp{resize:none;}
     <button class="btn btn-ghost btn-sm" onclick="go('cli-reporte-faltante')" style="flex:1;">❌ Falta algo</button>
     <button class="btn btn-a" onclick="confMats()" style="flex:2;" id="btn-conf-m">Confirmar ✓</button>
   </div>
+</div>
+</div>
+
+<!-- CLIENTE — TRABAJO EN EJECUCIÓN -->
+<div class="screen" id="s-cli-en-ejecucion">
+<div class="status"><span id="cli-ej-time">10:20</span><span>🔨 En trabajo</span><span>📶</span></div>
+<div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Trabajo en curso</div></div>
+<div class="wrap">
+  <div class="status-badge sb-on" style="margin-bottom:16px;">
+    <div style="font-size:20px;">🔨</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--accent);" id="cli-ej-tecnico">Tu técnico está trabajando</div>
+      <div style="font-size:11px;color:var(--muted);" id="cli-ej-inicio">Inicio: —</div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:12px;">
+    <div class="row"><span class="rl">Trabajo</span><span class="rv" id="cli-ej-trabajo">—</span></div>
+    <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg" id="cli-ej-mo">—</span></div>
+    <div class="row"><span class="rl">Estado</span><span class="rv"><span class="tag tg" style="font-size:10px;">🔨 En ejecución</span></span></div>
+  </div>
+  <div style="padding:12px 14px;background:rgba(0,229,160,.06);border:.5px solid rgba(0,229,160,.2);border-radius:11px;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px;">
+    ✅ Los materiales fueron verificados y el técnico comenzó el trabajo.<br><br>
+    Cuando termine, recibirás una notificación para confirmar el trabajo y liberar el pago.
+  </div>
+  <button onclick="abrirChatTrabajo()" style="width:100%;padding:11px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;margin-bottom:8px;">💬 Chatear con el técnico</button>
+  <button onclick="go('cli-home')" style="width:100%;padding:10px;background:rgba(255,255,255,.04);border:.5px solid var(--border);border-radius:10px;font-size:12px;color:var(--muted);cursor:pointer;">← Volver al inicio</button>
 </div>
 </div>
 
@@ -3662,7 +3703,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (typeof actualizarPantallaEnCamino === 'function') actualizarPantallaEnCamino();
             go('cli-en-camino');
           } else if (data.estado === 'EN_TRABAJO') {
-            go('cli-verificar-mat');
+            go('cli-en-ejecucion');
           }
         } catch {}
       }, 800);
@@ -4627,7 +4668,9 @@ function conectarSocketCliente() {
 
     // Trabajo terminado → pedir confirmación
     socket.on('notif:confirmar_trabajo', () => {
-      showSuccess('✅ El técnico dice que terminó. ¡Confirma el trabajo!');
+      showSuccess('✅ El técnico terminó. ¡Confirma el trabajo!');
+      // Navegar a pantalla de calificación del cliente
+      setTimeout(() => go('cli-rating'), 800);
     });
 
     window._fixya_socket = socket;
@@ -5405,6 +5448,7 @@ window.go = function(id) {
   // Técnico entra a "en camino" → iniciar GPS
   if (id === 'tec-en-camino') {
     setTimeout(iniciarGPSTecnico, 300);
+    setTimeout(() => { if (typeof poblarTecEnCamino === 'function') poblarTecEnCamino(); }, 150);
   }
   // Técnico sale de "en camino" → detener GPS
   const screenActual = document.querySelector('.screen.active');
@@ -5881,10 +5925,141 @@ async function confMats() {
     return;
   }
 
-  const res = await cambiarEstado('inicio-trabajo', 'PATCH').catch(() => null);
+  await cambiarEstado('inicio-trabajo', 'PATCH').catch(() => null);
   showSuccess('✅ Materiales confirmados. El técnico puede comenzar.');
-  go('cli-home');
+
+  // Poblar pantalla de ejecución
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const el = (id) => document.getElementById(id);
+  if (el('cli-ej-tecnico')) el('cli-ej-tecnico').textContent = (sol.tecnicoNombre || 'Tu técnico') + ' está trabajando';
+  if (el('cli-ej-trabajo')) el('cli-ej-trabajo').textContent = sol.trabajo || '—';
+  if (el('cli-ej-mo')) el('cli-ej-mo').textContent = sol.total ? '$' + Number(sol.total).toLocaleString('es-CL') : '—';
+  const hora = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+  if (el('cli-ej-inicio')) el('cli-ej-inicio').textContent = 'Inicio: ' + hora + ' hrs';
+
+  go('cli-en-ejecucion');
 }
+
+// ── Materiales técnico ────────────────────────────────────────
+const MATERIALES_RUBRO = {
+  gasfiteria:    [{ nombre: 'Teflón + uniones', precio: 1780 }, { nombre: 'Sellante sanitario', precio: 4200 }, { nombre: 'Cañería PVC 1/2" × 2m', precio: 2100 }, { nombre: 'Codos 90° PVC × 3un', precio: 2550 }],
+  electricidad:  [{ nombre: 'Cinta aislante', precio: 890 }, { nombre: 'Conectores × 10', precio: 1200 }, { nombre: 'Cable dúplex 1.5mm × 3m', precio: 2800 }, { nombre: 'Caja plástica salida', precio: 1500 }],
+  cerrajeria:    [{ nombre: 'Lubricante cerradura', precio: 2900 }, { nombre: 'Tornillos surtidos', precio: 1200 }],
+  handyman:      [{ nombre: 'Tornillos y tarugos', precio: 1500 }, { nombre: 'Silicona transparente', precio: 3200 }],
+};
+
+function getMaterialesRubro(rubroNombre) {
+  return MATERIALES_RUBRO[(rubroNombre || '').toLowerCase()] || [];
+}
+
+function toggleMatListaTec() {
+  const lista = document.getElementById('tec-ec-mat-lista');
+  const lbl = document.getElementById('tec-ec-mat');
+  if (!lista) return;
+  const visible = lista.style.display !== 'none';
+  lista.style.display = visible ? 'none' : '';
+  if (lbl) lbl.textContent = visible ? 'Ver lista →' : 'Ocultar ↑';
+}
+
+function poblarTecEnCamino() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const el = (id) => document.getElementById(id);
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+
+  if (el('tec-ec-cliente')) el('tec-ec-cliente').textContent = sol.clienteNombre || '—';
+  if (el('tec-ec-trabajo')) el('tec-ec-trabajo').textContent = sol.trabajo || '—';
+  if (el('tec-ec-mo')) el('tec-ec-mo').textContent = sol.total ? fmt(sol.total) : '—';
+  if (el('tec-ec-dir')) el('tec-ec-dir').textContent = sol.direccion || sol.comuna || '—';
+
+  // Materiales del rubro
+  const mats = getMaterialesRubro(sol.rubroNombre || sol.rubro);
+  const lista = el('tec-ec-mat-lista');
+  if (lista && mats.length > 0) {
+    if (el('tec-ec-mat')) el('tec-ec-mat').textContent = mats.length + ' ítems → ver';
+    lista.innerHTML = '<div class="card" style="padding:0;overflow:hidden;margin-bottom:4px;">' +
+      mats.map(m => '<div class="row" style="padding:8px 12px;"><span class="rl">' + m.nombre + '</span>' +
+        '<span class="rv" style="color:var(--muted);">~' + fmt(m.precio) + '</span></div>').join('') +
+      '</div><div style="font-size:10px;color:var(--muted);padding:2px 4px 6px;">Precios referenciales. Sube boleta real al terminar.</div>';
+  }
+}
+
+// ── Fotos del cierre ──────────────────────────────────────────
+let _fotoTerminadoFile = null;
+let _fotoBoleta2File = null;
+
+function tecAbrirFotoTerminado() {
+  abrirCamara('inp-terminado-tec', (file) => {
+    _fotoTerminadoFile = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.getElementById('cierre-img-terminado');
+      const preview = document.getElementById('cierre-fotos-preview');
+      const ico = document.getElementById('ico-foto-terminado');
+      const lbl = document.getElementById('lbl-foto-terminado');
+      if (img) { img.src = e.target.result; img.style.display = 'block'; }
+      if (preview) preview.style.display = '';
+      if (ico) ico.textContent = '✅';
+      if (lbl) lbl.textContent = 'Foto lista';
+      verificarFotosCierre();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function verificarFotosCierre() {
+  const btn = document.getElementById('btn-cerrar-trabajo');
+  if (!btn) return;
+  // Habilitar cuando ambas fotos estén listas
+  if (_fotoTerminadoFile && _fotoBoleta2File) {
+    btn.disabled = false; btn.style.opacity = '1';
+  }
+}
+
+async function cerrarTrabajo() {
+  const btn = document.getElementById('btn-cerrar-trabajo');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+
+  const sol = getSolicitudActiva ? getSolicitudActiva() : JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+
+  try {
+    // Subir fotos si están disponibles
+    let urlTerminado = null, urlBoleta = null;
+    if (_fotoTerminadoFile) try { urlTerminado = await subirFoto(_fotoTerminadoFile, 'cierre'); } catch {}
+    if (_fotoBoleta2File) try { urlBoleta = await subirFoto(_fotoBoleta2File, 'boleta'); } catch {}
+
+    // Terminar trabajo en backend
+    await cambiarEstado('terminar', 'PATCH', {
+      fotosCierre: [urlTerminado, urlBoleta].filter(Boolean),
+    });
+
+    _fotoTerminadoFile = null; _fotoBoleta2File = null;
+    go('tec-rating');
+  } catch (err) {
+    showError(err.message || 'Error al cerrar trabajo');
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar y cerrar trabajo →'; }
+  }
+}
+
+// Reusar tecAbrirFotoBoleta para el cierre - también actualiza cierre-img-boleta
+const _tecAbrirFotaBoleta_original = window.tecAbrirFotoBoleta;
+window.tecAbrirFotaBoleta_cierre = function() {
+  abrirCamara('inp-boleta-cierre', (file) => {
+    _fotoBoleta2File = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.getElementById('cierre-img-boleta');
+      const preview = document.getElementById('cierre-fotos-preview');
+      const ico = document.getElementById('ico-foto-boleta');
+      const lbl = document.getElementById('lbl-foto-boleta');
+      if (img) { img.src = e.target.result; img.style.display = 'block'; }
+      if (preview) preview.style.display = '';
+      if (ico) ico.textContent = '✅';
+      if (lbl) lbl.textContent = 'Boleta lista';
+      verificarFotosCierre();
+    };
+    reader.readAsDataURL(file);
+  });
+};
 
 // ════════════════════════════════════════════════════════════
 // TÉCNICO — Calificación final y cerrar trabajo

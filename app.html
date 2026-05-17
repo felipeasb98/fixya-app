@@ -792,6 +792,12 @@ textarea.inp{resize:none;}
       <div style="font-size:10px;color:var(--accent2);font-weight:700;margin-bottom:6px;">📷 FOTOS DEL PROBLEMA</div>
       <div id="tec-alerta-fotos" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;"></div>
     </div>
+    <!-- Materiales estimados a llevar -->
+    <div id="tec-alerta-mat-wrap" style="display:none;margin-top:9px;">
+      <div style="font-size:10px;color:var(--accent2);font-weight:700;margin-bottom:6px;">🛒 MATERIALES ESTIMADOS</div>
+      <div id="tec-alerta-mat-lista"></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:5px;">Los materiales exactos se confirman al llegar. El cliente verifica con foto.</div>
+    </div>
   </div>
   <div class="hl" style="margin-bottom:9px;">
     <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:5px;">💰 TÚ RECIBES</div>
@@ -824,14 +830,19 @@ textarea.inp{resize:none;}
     <span id="tec-eta-texto">📍 Calculando ruta...</span>
   </div>
   <div class="card" style="margin-bottom:9px;">
-    <div class="row"><span class="rl">Cliente</span><span class="rv">María González</span></div>
-    <div class="row"><span class="rl">Trabajo</span><span class="rv">Fuga cañería</span></div>
-    <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg">$46.875</span></div>
-    <div class="row"><span class="rl">Materiales a traer</span><span class="rv ra">4 ítems</span></div>
+    <div class="row"><span class="rl">Cliente</span><span class="rv" id="tec-ec-cliente">—</span></div>
+    <div class="row"><span class="rl">Dirección</span><span class="rv" id="tec-ec-dir" style="font-size:11px;text-align:right;max-width:60%;">—</span></div>
+    <div class="row"><span class="rl">Trabajo</span><span class="rv" id="tec-ec-trabajo">—</span></div>
+    <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg" id="tec-ec-mo">—</span></div>
+    <div class="row"><span class="rl">Materiales a traer</span><span class="rv ra" id="tec-ec-mat">Ver lista ↓</span></div>
   </div>
-  <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;margin-bottom:12px;">
-    📸 Al llegar: sube foto de todos los materiales. El cliente tiene <strong>15 min</strong> para verificar.
+  <!-- Lista de materiales del trabajo -->
+  <div id="tec-ec-mat-lista" style="display:none;margin-bottom:9px;"></div>
+  <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;margin-bottom:10px;">
+    📸 Al llegar: sube foto de todos los materiales. El cliente tiene <strong>10 min</strong> para verificar.
   </div>
+  <button onclick="toggleMatListaTec()" style="width:100%;padding:9px;background:rgba(255,255,255,.04);border:.5px solid var(--border);border-radius:10px;font-size:12px;color:var(--muted);cursor:pointer;margin-bottom:10px;" id="btn-toggle-mat">📦 Ver materiales a llevar</button>
+  <button onclick="abrirChatTrabajo()" style="width:100%;padding:9px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);cursor:pointer;margin-bottom:10px;">💬 Chatear con el cliente</button>
   <button class="btn btn-g" onclick="tecLlego()">📍 Llegué — verificar materiales →</button>
 </div>
 </div>
@@ -1716,6 +1727,57 @@ textarea.inp{resize:none;}
 </div>
 </div>
 
+<!-- CLIENTE — DIRECCIÓN DEL TRABAJO -->
+<div class="screen" id="s-cli-direccion">
+<div class="status"><span>9:42</span><span>📍 Dirección</span><span>📶</span></div>
+<div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">¿Dónde necesitas el servicio?</div></div>
+<div class="wrap">
+
+  <!-- Búsqueda de dirección -->
+  <div class="lbl">Dirección del trabajo</div>
+  <div style="position:relative;margin-bottom:10px;">
+    <input id="dir-input" type="text" class="inp" placeholder="Ej: Av. Providencia 1234, Santiago"
+      style="padding-right:40px;"
+      oninput="buscarDireccion(this.value)"
+      onfocus="mostrarSugerencias()"
+      autocomplete="off">
+    <div onclick="usarUbicacionActual()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:18px;cursor:pointer;opacity:.7;">📍</div>
+  </div>
+
+  <!-- Sugerencias de Google Places -->
+  <div id="dir-sugerencias" style="display:none;background:var(--card);border:.5px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;"></div>
+
+  <!-- Depto / Piso / Referencia -->
+  <div class="lbl">Depto / Piso / Referencia <span style="color:var(--muted);font-weight:400;">(opcional)</span></div>
+  <input id="dir-depto" type="text" class="inp" placeholder="Ej: Depto 4B, piso 3, portón azul" style="margin-bottom:14px;">
+
+  <!-- Dirección seleccionada confirmada -->
+  <div id="dir-confirmada" style="display:none;padding:10px 12px;background:rgba(0,229,160,.06);border:.5px solid rgba(0,229,160,.2);border-radius:10px;margin-bottom:14px;">
+    <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:3px;">📍 Dirección confirmada</div>
+    <div id="dir-confirmada-text" style="font-size:13px;font-weight:600;"></div>
+  </div>
+
+  <!-- Guardar como favorita -->
+  <div id="dir-guardar-wrap" style="display:none;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <input type="checkbox" id="dir-guardar-check" style="width:16px;height:16px;cursor:pointer;" onchange="toggleGuardarFavorita()">
+      <label for="dir-guardar-check" style="font-size:13px;cursor:pointer;">Guardar como dirección favorita</label>
+    </div>
+    <div id="dir-apodo-wrap" style="display:none;">
+      <input id="dir-apodo" type="text" class="inp" placeholder='Ej: "Casa", "Trabajo", "Casa mamá"' style="font-size:13px;">
+    </div>
+  </div>
+
+  <!-- Direcciones favoritas -->
+  <div id="dir-favoritas-wrap">
+    <div class="lbl">Mis direcciones</div>
+    <div id="dir-favoritas-lista"></div>
+  </div>
+
+  <button class="btn btn-a" id="btn-dir-continuar" onclick="confirmarDireccion()" style="opacity:.4;" disabled>Continuar →</button>
+</div>
+</div>
+
 <!-- CLIENTE — FOTO DE SOLICITUD -->
 <div class="screen" id="s-cli-foto-solicitud">
 <div class="status"><span>9:43</span><span>📸 Solicitud</span><span>📶</span></div>
@@ -1890,6 +1952,7 @@ textarea.inp{resize:none;}
   <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;">
     📸 El técnico subirá foto de los materiales al llegar. Tendrás <strong>10 min</strong> para verificar.
   </div>
+  <button onclick="abrirChatTrabajo()" style="width:100%;margin-top:10px;padding:11px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;">💬 Chatear con el técnico</button>
 </div>
 </div>
 
@@ -1962,6 +2025,31 @@ textarea.inp{resize:none;}
   <div class="nb-item" onclick="go('cli-home')"><div class="nb-icon">🏠</div><div class="nb-lbl">Inicio</div></div>
   <div class="nb-item on"><div class="nb-icon">📋</div><div class="nb-lbl">Historial</div></div>
   <div class="nb-item" onclick="go('cli-perfil')"><div class="nb-icon">👤</div><div class="nb-lbl">Perfil</div></div>
+</div>
+</div>
+
+<!-- CHAT CLIENTE-TÉCNICO -->
+<div class="screen" id="s-chat-trabajo">
+<div class="status"><span id="chat-time">10:00</span><span>💬 Chat</span><span>📶</span></div>
+<div class="topbar">
+  <div class="back-btn" onclick="back()">←</div>
+  <div class="topbar-title" id="chat-titulo">Chat del trabajo</div>
+</div>
+<div style="display:flex;flex-direction:column;height:calc(100vh - 100px);">
+  <!-- Mensajes -->
+  <div id="chat-mensajes" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;">
+    <div id="chat-empty" style="text-align:center;padding:30px 20px;color:var(--muted);">
+      <div style="font-size:32px;margin-bottom:8px;">💬</div>
+      <div style="font-size:13px;">Sin mensajes aún.<br>Usa el chat para coordinar la visita.</div>
+    </div>
+  </div>
+  <!-- Input -->
+  <div style="padding:10px 12px;border-top:.5px solid var(--border);background:var(--bg);display:flex;gap:8px;align-items:flex-end;">
+    <textarea id="chat-input" placeholder="Escribe un mensaje..." style="flex:1;padding:9px 12px;background:var(--card2);border:.5px solid var(--border);border-radius:12px;font-size:13px;color:var(--text);resize:none;font-family:'DM Sans',sans-serif;min-height:38px;max-height:100px;outline:none;" rows="1"
+      oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensajeChat();}"></textarea>
+    <button onclick="enviarMensajeChat()" style="width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">↑</button>
+  </div>
 </div>
 </div>
 
@@ -2418,11 +2506,12 @@ function go(id) {
     history.push(fullId);
     window.scrollTo(0, 0);
   }
-  // Timers
+  // Timers y acciones al navegar
   if (fullId === 's-tec-alerta') startTimer('tmr-tec', 5 * 60);
   if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
   if (fullId === 's-cli-historial') setTimeout(cargarHistorial, 50);
-  if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
+  if (fullId === 's-tec-en-camino') setTimeout(() => { if (typeof poblarTecEnCamino === 'function') poblarTecEnCamino(); }, 100);
+  if (fullId === 's-chat-trabajo') setTimeout(() => { const cont = document.getElementById('chat-mensajes'); if (cont) cont.scrollTop = cont.scrollHeight; }, 200);
 }
 
 function back() {
@@ -3845,9 +3934,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // Estado global de la solicitud en curso
 // Expuesto en window para que sea accesible desde todos los scripts
 const Solicitud = window.Solicitud = {
-  id: null,          // ID real del backend
-  rubroId: null,     // ID del rubro en BD
-  rubroNombre: null, // "gasfiteria" | "electricidad" etc
+  id: null,
+  rubroId: null,
+  rubroNombre: null,
   trabajo: null,
   moBase: 0,
   matEstimado: 0,
@@ -3857,6 +3946,7 @@ const Solicitud = window.Solicitud = {
   latitud: null,
   longitud: null,
   comuna: null,
+  direccion: null,
 };
 
 // Mapa de rubros del HTML al nombre en BD
@@ -4080,10 +4170,16 @@ function irASolicitudActiva() {
   go('cli-tecnicos');
 }
 document.addEventListener('DOMContentLoaded', () => {
-  // Interceptar navegación a foto-solicitud para pedir GPS
+  // Interceptar navegación a foto-solicitud para mostrar dirección primero
   const _go2 = window.go;
   window.go = function(id) {
     if (id === 'cli-foto-solicitud' || id === 'foto-solicitud') {
+      // Siempre pasar por dirección primero si no hay coordenadas
+      if (!Solicitud.latitud && !Solicitud.direccion) {
+        renderizarFavoritasDireccion();
+        _go2('cli-direccion');
+        return;
+      }
       pedirUbicacion();
     }
     _go2(id);
@@ -4157,6 +4253,162 @@ function verTrabajoDisponible(solicitudId) {
 }
 
 // ── Técnico rechaza trabajo → quitarlo de la lista ───────────
+// ════════════════════════════════════════════════════════════
+// CHAT CLIENTE-TÉCNICO
+// ════════════════════════════════════════════════════════════
+let _chatMensajes = [];
+let _chatSolicitudId = null;
+
+function abrirChatTrabajo() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  _chatSolicitudId = sol.id;
+  const rol = Session.rol();
+  const titulo = rol === 'tecnico' ? 'Chat con el cliente' : 'Chat con el técnico';
+  const el = (id) => document.getElementById(id);
+  if (el('chat-titulo')) el('chat-titulo').textContent = titulo;
+  renderizarMensajesChat();
+  go('chat-trabajo');
+  // Cargar historial de mensajes
+  if (_chatSolicitudId) cargarMensajesChat();
+}
+
+async function cargarMensajesChat() {
+  try {
+    const data = await apiFetch('/solicitudes/' + _chatSolicitudId + '/mensajes');
+    _chatMensajes = data.mensajes || data || [];
+    renderizarMensajesChat();
+  } catch {}
+}
+
+function renderizarMensajesChat() {
+  const cont = document.getElementById('chat-mensajes');
+  const empty = document.getElementById('chat-empty');
+  if (!cont) return;
+  if (_chatMensajes.length === 0) {
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  const miRol = Session.rol();
+  const miBubble = (m) => {
+    const esMio = (miRol === 'tecnico' && m.autorRol === 'tecnico') || (miRol === 'usuario' && m.autorRol === 'usuario');
+    const hora = new Date(m.creadoAt || Date.now()).toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
+    return '<div style="display:flex;justify-content:' + (esMio ? 'flex-end' : 'flex-start') + ';margin-bottom:4px;">' +
+      '<div style="max-width:75%;padding:8px 12px;border-radius:' + (esMio ? '14px 14px 4px 14px' : '14px 14px 14px 4px') + ';background:' + (esMio ? 'var(--accent)' : 'var(--card)') + ';color:' + (esMio ? '#05120A' : 'var(--text)') + ';font-size:13px;line-height:1.4;">' +
+      m.texto +
+      '<div style="font-size:9px;opacity:.6;margin-top:3px;text-align:right;">' + hora + '</div></div></div>';
+  };
+  // Remove existing messages but keep empty state
+  Array.from(cont.children).forEach(c => { if (c.id !== 'chat-empty') c.remove(); });
+  _chatMensajes.forEach(m => {
+    const div = document.createElement('div');
+    div.innerHTML = miBubble(m);
+    cont.appendChild(div.firstChild);
+  });
+  // Scroll to bottom
+  cont.scrollTop = cont.scrollHeight;
+}
+
+async function enviarMensajeChat() {
+  const input = document.getElementById('chat-input');
+  const texto = input?.value?.trim();
+  if (!texto || !_chatSolicitudId) return;
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Agregar mensaje optimista
+  const msj = { texto, autorRol: Session.rol(), creadoAt: new Date().toISOString() };
+  _chatMensajes.push(msj);
+  renderizarMensajesChat();
+
+  try {
+    await apiFetch('/solicitudes/' + _chatSolicitudId + '/mensajes', {
+      method: 'POST',
+      body: JSON.stringify({ texto }),
+    });
+  } catch {}
+}
+
+// Recibir mensajes en tiempo real via socket
+function registrarSocketChat(socket) {
+  socket.on('chat:mensaje', (data) => {
+    if (data.solicitudId !== _chatSolicitudId) return;
+    _chatMensajes.push(data);
+    renderizarMensajesChat();
+    // Si no está en el chat, mostrar badge
+    const screenActual = document.querySelector('.screen.active');
+    if (!screenActual || screenActual.id !== 's-chat-trabajo') {
+      showSuccess('💬 Nuevo mensaje');
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// MATERIALES DEL TRABAJO
+// ════════════════════════════════════════════════════════════
+
+// Materiales estándar por rubro (para mostrar al técnico como guía)
+const MATERIALES_RUBRO = {
+  gasfiteria: [
+    { nombre: 'Teflón + uniones', precio: 1780 },
+    { nombre: 'Sellante sanitario', precio: 4200 },
+    { nombre: 'Cañería PVC 1/2" × 2m', precio: 2100 },
+    { nombre: 'Codos 90° PVC × 3un', precio: 2550 },
+  ],
+  electricidad: [
+    { nombre: 'Cinta aislante', precio: 890 },
+    { nombre: 'Conectores eléctricos × 10', precio: 1200 },
+    { nombre: 'Cable dúplex 1.5mm × 3m', precio: 2800 },
+    { nombre: 'Caja plástica salida', precio: 1500 },
+  ],
+  cerrajeria: [
+    { nombre: 'Lubricante cerradura', precio: 2900 },
+    { nombre: 'Tornillos surtidos', precio: 1200 },
+  ],
+  handyman: [
+    { nombre: 'Tornillos y tarugos', precio: 1500 },
+    { nombre: 'Silicona transparente', precio: 3200 },
+    { nombre: 'Lija fina', precio: 890 },
+  ],
+};
+
+function getMaterialesRubro(rubroNombre) {
+  const key = (rubroNombre || '').toLowerCase();
+  return MATERIALES_RUBRO[key] || [];
+}
+
+function toggleMatListaTec() {
+  const lista = document.getElementById('tec-ec-mat-lista');
+  const btn = document.getElementById('btn-toggle-mat');
+  if (!lista) return;
+  const visible = lista.style.display !== 'none';
+  lista.style.display = visible ? 'none' : '';
+  if (btn) btn.textContent = visible ? '📦 Ver materiales a llevar' : '📦 Ocultar materiales';
+}
+
+function poblarTecEnCamino(data) {
+  const el = (id) => document.getElementById(id);
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+  const sol = data || JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+
+  if (el('tec-ec-cliente')) el('tec-ec-cliente').textContent = sol.clienteNombre || '—';
+  if (el('tec-ec-trabajo')) el('tec-ec-trabajo').textContent = sol.trabajo || '—';
+  if (el('tec-ec-mo')) el('tec-ec-mo').textContent = sol.total ? fmt(sol.total) : '—';
+  if (el('tec-ec-dir')) el('tec-ec-dir').textContent = sol.direccion || sol.comuna || '—';
+
+  // Materiales del rubro
+  const mats = getMaterialesRubro(sol.rubroNombre || sol.rubro);
+  const lista = el('tec-ec-mat-lista');
+  if (lista && mats.length > 0) {
+    if (el('tec-ec-mat')) el('tec-ec-mat').textContent = mats.length + ' ítems estimados';
+    lista.innerHTML = '<div class="card" style="padding:0;overflow:hidden;margin-bottom:4px;">' +
+      mats.map(m => '<div class="row" style="padding:8px 12px;"><span class="rl">' + m.nombre + '</span>' +
+        '<span class="rv" style="color:var(--muted);">~' + fmt(m.precio) + '</span></div>').join('') +
+      '</div>' +
+      '<div style="font-size:10px;color:var(--muted);padding:2px 4px;">Precios son referenciales. Sube boleta real al terminar.</div>';
+  }
+}
+
 function tecnicoRechazarTrabajo() {
   const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
   if (sol.id) quitarTrabajoDisponible(sol.id);
@@ -4244,6 +4496,198 @@ function verSolicitudHistorial(id, estado) {
   } else if (estado === 'EN_TRABAJO') {
     go('cli-verificar-mat');
   }
+}
+
+// ════════════════════════════════════════════════════════════
+// SISTEMA DE DIRECCIÓN Y FAVORITAS
+// ════════════════════════════════════════════════════════════
+
+let _autocompleteService = null;
+let _geocoderService = null;
+let _dirSeleccionada = null; // { address, lat, lng }
+let _buscarTimeout = null;
+
+// Inicializar servicios de Places cuando cargue Maps
+function initPlacesServices() {
+  if (typeof google === 'undefined') return;
+  if (!_autocompleteService) _autocompleteService = new google.maps.places.AutocompleteService();
+  if (!_geocoderService) _geocoderService = new google.maps.Geocoder();
+}
+
+function buscarDireccion(query) {
+  clearTimeout(_buscarTimeout);
+  if (!query || query.length < 4) { ocultarSugerencias(); return; }
+  _buscarTimeout = setTimeout(() => {
+    cargarGoogleMaps(() => {
+      initPlacesServices();
+      if (!_autocompleteService) return;
+      _autocompleteService.getPlacePredictions({
+        input: query,
+        componentRestrictions: { country: 'CL' },
+        types: ['address'],
+      }, (predictions, status) => {
+        if (status !== 'OK' || !predictions) { ocultarSugerencias(); return; }
+        mostrarSugerenciasLista(predictions);
+      });
+    });
+  }, 350);
+}
+
+function mostrarSugerenciasLista(predictions) {
+  const cont = document.getElementById('dir-sugerencias');
+  if (!cont) return;
+  cont.innerHTML = predictions.map((p, i) =>
+    '<div style="padding:10px 13px;font-size:13px;cursor:pointer;border-bottom:.5px solid var(--border);" ' +
+    'onclick="seleccionarSugerencia(\'' + p.place_id + '\',\'' + p.description.replace(/'/g, "\\'") + '\')">' +
+    '<div style="font-weight:600;">' + p.structured_formatting.main_text + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);">' + (p.structured_formatting.secondary_text || '') + '</div></div>'
+  ).join('');
+  cont.style.display = '';
+}
+
+function ocultarSugerencias() {
+  const cont = document.getElementById('dir-sugerencias');
+  if (cont) cont.style.display = 'none';
+}
+
+function mostrarSugerencias() {
+  const val = document.getElementById('dir-input')?.value;
+  if (val && val.length >= 4) buscarDireccion(val);
+}
+
+function seleccionarSugerencia(placeId, description) {
+  ocultarSugerencias();
+  cargarGoogleMaps(() => {
+    initPlacesServices();
+    if (!_geocoderService) return;
+    _geocoderService.geocode({ placeId }, (results, status) => {
+      if (status !== 'OK' || !results[0]) return;
+      const loc = results[0].geometry.location;
+      _dirSeleccionada = { address: description, lat: loc.lat(), lng: loc.lng() };
+      const input = document.getElementById('dir-input');
+      if (input) input.value = description;
+      // Mostrar confirmación
+      const conf = document.getElementById('dir-confirmada');
+      const confTxt = document.getElementById('dir-confirmada-text');
+      if (conf) conf.style.display = '';
+      if (confTxt) confTxt.textContent = description;
+      // Mostrar opción de guardar
+      const gw = document.getElementById('dir-guardar-wrap');
+      if (gw) gw.style.display = '';
+      // Habilitar botón
+      const btn = document.getElementById('btn-dir-continuar');
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+    });
+  });
+}
+
+function usarUbicacionActual() {
+  if (!navigator.geolocation) { showError('GPS no disponible'); return; }
+  navigator.geolocation.getCurrentPosition((pos) => {
+    cargarGoogleMaps(() => {
+      initPlacesServices();
+      if (!_geocoderService) return;
+      const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      _geocoderService.geocode({ location: latlng }, (results, status) => {
+        const addr = (status === 'OK' && results[0]) ? results[0].formatted_address : 'Ubicación actual';
+        _dirSeleccionada = { address: addr, lat: latlng.lat, lng: latlng.lng };
+        const input = document.getElementById('dir-input');
+        if (input) input.value = addr;
+        const conf = document.getElementById('dir-confirmada');
+        const confTxt = document.getElementById('dir-confirmada-text');
+        if (conf) conf.style.display = '';
+        if (confTxt) confTxt.textContent = addr;
+        const gw = document.getElementById('dir-guardar-wrap');
+        if (gw) gw.style.display = '';
+        const btn = document.getElementById('btn-dir-continuar');
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      });
+    });
+  }, () => showError('No se pudo obtener tu ubicación'));
+}
+
+function toggleGuardarFavorita() {
+  const checked = document.getElementById('dir-guardar-check')?.checked;
+  const apodoWrap = document.getElementById('dir-apodo-wrap');
+  if (apodoWrap) apodoWrap.style.display = checked ? '' : 'none';
+}
+
+function confirmarDireccion() {
+  if (!_dirSeleccionada) return;
+
+  // Guardar en Solicitud y localStorage
+  Solicitud.latitud = _dirSeleccionada.lat;
+  Solicitud.longitud = _dirSeleccionada.lng;
+  Solicitud.direccion = _dirSeleccionada.address;
+  const depto = document.getElementById('dir-depto')?.value?.trim();
+  if (depto) Solicitud.direccion += ', ' + depto;
+
+  // Guardar favorita si aplica
+  const guardar = document.getElementById('dir-guardar-check')?.checked;
+  if (guardar) {
+    const apodo = document.getElementById('dir-apodo')?.value?.trim() || _dirSeleccionada.address.split(',')[0];
+    guardarFavorita({ apodo, address: _dirSeleccionada.address, lat: _dirSeleccionada.lat, lng: _dirSeleccionada.lng });
+  }
+
+  // Resetear para próxima vez
+  _dirSeleccionada = null;
+  go('cli-foto-solicitud');
+  pedirUbicacion();
+}
+
+// ── Favoritas ─────────────────────────────────────────────────
+function getFavoritas() {
+  try { return JSON.parse(localStorage.getItem('fx_dir_favoritas') || '[]'); } catch { return []; }
+}
+
+function guardarFavorita(dir) {
+  const favs = getFavoritas();
+  const existente = favs.findIndex(f => f.address === dir.address);
+  if (existente >= 0) favs.splice(existente, 1);
+  favs.unshift(dir);
+  if (favs.length > 10) favs.pop();
+  localStorage.setItem('fx_dir_favoritas', JSON.stringify(favs));
+  renderizarFavoritasDireccion();
+}
+
+function eliminarFavorita(idx) {
+  const favs = getFavoritas();
+  favs.splice(idx, 1);
+  localStorage.setItem('fx_dir_favoritas', JSON.stringify(favs));
+  renderizarFavoritasDireccion();
+}
+
+function renderizarFavoritasDireccion() {
+  const lista = document.getElementById('dir-favoritas-lista');
+  if (!lista) return;
+  const favs = getFavoritas();
+  if (favs.length === 0) {
+    lista.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Aún no tienes direcciones guardadas.</div>';
+    return;
+  }
+  lista.innerHTML = favs.map((f, i) =>
+    '<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:.5px solid var(--border);">' +
+    '<div onclick="usarFavorita(' + i + ')" style="flex:1;cursor:pointer;">' +
+    '<div style="font-size:13px;font-weight:700;">📍 ' + f.apodo + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);">' + f.address + '</div></div>' +
+    '<div onclick="eliminarFavorita(' + i + ')" style="font-size:18px;cursor:pointer;color:var(--muted);padding:4px;">✕</div>' +
+    '</div>'
+  ).join('');
+}
+
+function usarFavorita(idx) {
+  const favs = getFavoritas();
+  const f = favs[idx];
+  if (!f) return;
+  _dirSeleccionada = { address: f.address, lat: f.lat, lng: f.lng };
+  const input = document.getElementById('dir-input');
+  if (input) input.value = f.address;
+  const conf = document.getElementById('dir-confirmada');
+  const confTxt = document.getElementById('dir-confirmada-text');
+  if (conf) conf.style.display = '';
+  if (confTxt) confTxt.textContent = f.apodo + ' — ' + f.address;
+  const btn = document.getElementById('btn-dir-continuar');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
 }
 
 function pedirUbicacion() {
@@ -4380,6 +4824,9 @@ function conectarSocket() {
     socket.on('connect_error', (err) => {
       console.warn('[FixYa] Error socket tecnico:', err.message);
     });
+
+    // Chat en tiempo real
+    if (typeof registrarSocketChat === 'function') registrarSocketChat(socket);
 
     socket.on('nueva:solicitud', (data) => {
       console.log('[FixYa] nueva:solicitud recibida', data);
@@ -4710,6 +5157,7 @@ async function irATecnicos() {
         totalEstimado: total,
         latitud: Solicitud.latitud,
         longitud: Solicitud.longitud,
+        direccion: Solicitud.direccion || null,
         comuna: Solicitud.comuna,
         agendado: (window.schedModo||null) === 'agenda',
         fotosProblema: [],
@@ -4780,7 +5228,7 @@ function cargarGoogleMaps(callback) {
   if (document.getElementById('gmaps-script')) return;
   const script = document.createElement('script');
   script.id = 'gmaps-script';
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&callback=_gmapsReady&language=es&region=CL`;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&callback=_gmapsReady&libraries=places&language=es&region=CL`;
   script.async = true;
   document.head.appendChild(script);
 }
@@ -4945,15 +5393,20 @@ function iniciarMapaCliente() {
   const contenedor = document.getElementById('mapa-cliente-tracking') || document.getElementById('mapa-cliente-encamino');
   if (!contenedor) return;
 
+  // Limpiar el placeholder antes de inicializar el mapa
+  contenedor.innerHTML = '';
+  contenedor.style.display = 'block';
+  contenedor.style.background = 'var(--card2)';
+
   cargarGoogleMaps(() => {
     const solicitudActiva = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
     const centro = {
-      lat: solicitudActiva.latCliente || -33.4489,
-      lng: solicitudActiva.lngCliente || -70.6693,
+      lat: solicitudActiva.latCliente || solicitudActiva.latitud || -33.4489,
+      lng: solicitudActiva.lngCliente || solicitudActiva.longitud || -70.6693,
     };
 
     _mapaCliente = new google.maps.Map(contenedor, {
-      zoom: 14,
+      zoom: 15,
       center: centro,
       disableDefaultUI: true,
       zoomControl: true,
@@ -4985,6 +5438,7 @@ function iniciarMapaCliente() {
     // Escuchar actualizaciones GPS del técnico via socket
     const socket = window._fixya_socket;
     if (socket) {
+      socket.off('tecnico:ubicacion'); // evitar duplicados
       socket.on('tecnico:ubicacion', (data) => {
         const pos = { lat: data.lat, lng: data.lng };
         if (_markerTecnicoCliente) _markerTecnicoCliente.setPosition(pos);
@@ -5247,7 +5701,7 @@ function poblarTecAlerta(data) {
     if (fotosWrap) fotosWrap.style.display = 'none';
   }
 
-  // Distancia
+  // Distancia y dirección
   let distStr = '—';
   if (data.latitud) {
     const tecLat = window._tecLatActual;
@@ -5261,7 +5715,10 @@ function poblarTecAlerta(data) {
       distStr = dist < 1 ? Math.round(dist*1000) + ' m' : dist.toFixed(1) + ' km';
     }
   }
-  if (el('tec-alerta-dist')) el('tec-alerta-dist').textContent = distStr;
+  if (el('tec-alerta-dist')) {
+    const dirText = data.direccion || data.comuna || '';
+    el('tec-alerta-dist').textContent = (dirText ? dirText + (distStr !== '—' ? '  ·  ' + distStr : '') : distStr);
+  }
 
   // Precios
   if (el('tec-alerta-total')) el('tec-alerta-total').textContent = fmt(moFinal);
@@ -5280,6 +5737,19 @@ function poblarTecAlerta(data) {
 
   // Agregar/actualizar en lista de trabajos disponibles en tec-home
   agregarTrabajoDisponible(data);
+
+  // Mostrar materiales estimados en tec-alerta
+  const mats = getMaterialesRubro(data.rubroNombre || data.rubro);
+  const matWrap = el('tec-alerta-mat-wrap');
+  const matLista = el('tec-alerta-mat-lista');
+  const fmt2 = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+  if (matWrap && matLista && mats.length > 0) {
+    matLista.innerHTML = mats.map(m =>
+      '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid rgba(255,255,255,.05);font-size:12px;">' +
+      '<span>' + m.nombre + '</span><span style="color:var(--muted);">~' + fmt2(m.precio) + '</span></div>'
+    ).join('');
+    matWrap.style.display = '';
+  }
 }
 
 async function tecAceptarYPartir() {

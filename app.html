@@ -796,7 +796,7 @@ textarea.inp{resize:none;}
   <div class="hl" style="margin-bottom:9px;">
     <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:5px;">💰 TÚ RECIBES</div>
     <div class="big-n" id="tec-alerta-total">$46.875</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:4px;" id="tec-alerta-mo-desc">M.O. $37.500 × urgencia ×1.10</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;" id="tec-alerta-mo-desc">M.O. fija garantizada</div>
     <div class="desglose">
       <div class="dr"><span class="dl">M.O. fija</span><span class="dv rg" id="tec-alerta-mo">$37.500</span></div>
       <div class="dr" id="tec-alerta-urg-row" style="display:none;"><span class="dl" id="tec-alerta-urg-lbl">Urgencia ×1.10</span><span class="dv ra" id="tec-alerta-urg-val">+$0</span></div>
@@ -4113,7 +4113,6 @@ async function elegirTecnico(tecnicoId) {
   const solicitudId = Solicitud.id || JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}').id;
   if (!solicitudId) { go('cli-en-camino'); return; }
 
-  // Buscar datos del técnico en la lista renderizada
   const tarjeta = document.querySelector('[data-tecnico-id="' + tecnicoId + '"]');
   const nombre = tarjeta?.dataset?.nombre || 'El técnico';
   const rating = tarjeta?.dataset?.rating || '5.0';
@@ -4121,7 +4120,6 @@ async function elegirTecnico(tecnicoId) {
   const total = sol.total || 0;
   const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
 
-  // Mostrar modal de confirmación + pago
   mostrarModalConfirmarTecnico({ tecnicoId, nombre, rating, total, solicitudId, fmt });
 }
 
@@ -4150,34 +4148,29 @@ function mostrarModalConfirmarTecnico({ tecnicoId, nombre, rating, total, solici
 
   document.getElementById('btn-confirmar-pagar').onclick = async () => {
     const btn = document.getElementById('btn-confirmar-pagar');
-    btn.disabled = true; btn.textContent = 'Procesando...';
+    btn.disabled = true; btn.textContent = 'Confirmando...';
     try {
-      // 1. Elegir técnico en backend
+      // PASO 1: Elegir técnico en backend
       const data = await apiFetch('/solicitudes/' + solicitudId + '/elegir-tecnico', {
         method: 'POST', body: JSON.stringify({ tecnicoId }),
       });
       const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-        ...sol, tecnicoNombre: data?.tecnico?.nombre || nombre, tecnicoId,
+        ...sol,
+        tecnicoNombre: data?.tecnico?.nombre || nombre,
+        tecnicoId,
       }));
 
-      // 2. Iniciar pago Flow
+      // PASO 2: Iniciar pago Flow (ahora que el técnico ya está asignado)
       btn.textContent = 'Generando pago...';
-      const pagoData = await apiFetch('/pagos/iniciar', {
-        method: 'POST', body: JSON.stringify({ solicitudId }),
-      });
-      const sol2 = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-      sol2.pagoId = pagoData.pagoId;
-      localStorage.setItem('fx_solicitud_activa', JSON.stringify(sol2));
-
-      // 3. Redirigir a Flow
       overlay.remove();
-      mostrarModalPago(pagoData);
+      await iniciarPago(solicitudId);
+
     } catch (err) {
-      // Si el estado de la solicitud no permite pago aún, igual navegar
-      if (err.message && err.message.includes('no está lista')) {
+      // Si el error es 409 (conflicto) ya está pagado — ir directo
+      if (err.message && (err.message.includes('409') || err.message.includes('Conflict') || err.message.includes('ya existe'))) {
         overlay.remove();
-        showSuccess('Técnico confirmado. El pago se procesará en breve.');
+        showSuccess('Técnico confirmado. El pago ya fue procesado.');
         actualizarPantallaEnCamino();
         go('cli-en-camino');
       } else {

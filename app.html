@@ -4154,17 +4154,20 @@ function mostrarModalConfirmarTecnico({ tecnicoId, nombre, rating, total, solici
       const data = await apiFetch('/solicitudes/' + solicitudId + '/elegir-tecnico', {
         method: 'POST', body: JSON.stringify({ tecnicoId }),
       });
-      const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      // Preservar id y total explícitamente — NO depender del spread
+      const solActual = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       localStorage.setItem('fx_solicitud_activa', JSON.stringify({
-        ...sol,
+        ...solActual,
+        id: solicitudId,                                    // siempre del scope, nunca del localStorage
+        total: solActual.total || total,                    // preservar total original
         tecnicoNombre: data?.tecnico?.nombre || nombre,
         tecnicoId,
       }));
 
-      // PASO 2: Iniciar pago Flow (ahora que el técnico ya está asignado)
+      // PASO 2: Iniciar pago Flow — pasar solicitudId explícito
       btn.textContent = 'Generando pago...';
       overlay.remove();
-      await iniciarPago(solicitudId);
+      await iniciarPago(solicitudId);                       // solicitudId del scope, no del localStorage
 
     } catch (err) {
       // Si el error es 409 (conflicto) ya está pagado — ir directo
@@ -4214,6 +4217,7 @@ async function actualizarCardSolActiva() {
       ...sol,
       trabajo: data.trabajo || sol.trabajo,
       estado: data.estado,
+      total: sol.total || data.totalEstimado || 0,          // preservar total original
       tecnicoId: data.tecnicoId || sol.tecnicoId,
       tecnicoNombre: data.tecnico?.nombre || sol.tecnicoNombre,
     }));
@@ -6325,8 +6329,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pago === 'ok') {
       showSuccess('✅ Pago recibido. El dinero está en escrow hasta confirmar el trabajo.');
       const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-      if (sol.id) go('cli-verificar-mat');
-      else go('cli-home');
+      if (sol.id) {
+        // Técnico aún no llegó — mostrar pantalla de seguimiento
+        if (typeof actualizarPantallaEnCamino === 'function') actualizarPantallaEnCamino();
+        go('cli-en-camino');
+      } else go('cli-home');
     } else if (pago === 'fallido') {
       showError('El pago fue rechazado. Intenta de nuevo.');
     } else {
@@ -6361,6 +6368,17 @@ async function iniciarPago(solicitudId) {
     mostrarModalPago(data);
 
   } catch (err) {
+    console.error('[FixYa] Error pagos/iniciar:', err.message);
+    // 422 = solicitudId faltante o inválido
+    if (err.message && err.message.includes('422')) {
+      showError('Error: ID de solicitud inválido. Intenta crear una nueva solicitud.');
+      return;
+    }
+    // 500 = error del servidor (posiblemente estado incorrecto de la solicitud)
+    if (err.message && err.message.includes('500')) {
+      showError('Error del servidor al iniciar el pago. Intenta de nuevo en unos segundos.');
+      return;
+    }
     showError(err.message || 'Error al iniciar el pago');
     if (btn) { btn.disabled = false; btn.textContent = 'Pagar ahora'; }
   }

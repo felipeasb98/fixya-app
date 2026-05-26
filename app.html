@@ -4657,8 +4657,7 @@ function conectarSocketCliente() {
     const socket = io('https://fixya-backend-production.up.railway.app', {
       auth: { token },
       transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: 10,
+      reconnection: false, // manejamos reconexión manual para poder refrescar token
     });
 
     socket.on('connect', () => {
@@ -4682,14 +4681,28 @@ function conectarSocketCliente() {
       if (esTokenError && localStorage.getItem('fx_refresh')) {
         try {
           console.log('[FixYa] Refrescando token para socket cliente...');
-          const newToken = await _doRefresh();
-          socket.auth.token = newToken;
-          socket.connect();
+          await _doRefresh();
+          try { socket.disconnect(); } catch {}
+          window._fixya_socket = null;
+          setTimeout(conectarSocketCliente, 300);
           console.log('[FixYa] Socket cliente reconectando con token nuevo');
         } catch {
           console.warn('[FixYa] Refresh fallido cliente — sesión expirada');
           mostrarModalLogin();
         }
+      } else {
+        setTimeout(() => {
+          if (!window._fixya_socket?.connected) conectarSocketCliente();
+        }, 5000);
+      }
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.warn('[FixYa] Socket cliente desconectado:', reason);
+      if (reason !== 'io client disconnect') {
+        setTimeout(() => {
+          if (!window._fixya_socket?.connected) conectarSocketCliente();
+        }, 3000);
       }
     });
 
@@ -4770,21 +4783,17 @@ function conectarSocket() {
     const socket = io('https://fixya-backend-production.up.railway.app', {
       auth: { token },
       transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
+      reconnection: false, // manejamos reconexión manual para poder refrescar token
     });
 
     socket.on('connect', () => {
       console.log('[FixYa] Socket tecnico conectado:', socket.id);
       socket.emit('tecnico:disponible', true);
-      // Mostrar badge vacío al conectar
       actualizarBadgeNotif('tec', 0);
     });
 
     socket.on('connect_error', async (err) => {
       console.warn('[FixYa] Error socket tecnico:', err.message);
-      // Si el error es de token expirado, refrescar y reconectar
       const esTokenError = err.message && (
         err.message.toLowerCase().includes('token') ||
         err.message.toLowerCase().includes('unauthorized') ||
@@ -4795,15 +4804,30 @@ function conectarSocket() {
         try {
           console.log('[FixYa] Refrescando token para socket tecnico...');
           const newToken = await _doRefresh();
-          // Actualizar auth del socket y reconectar
-          socket.auth.token = newToken;
-          socket.connect();
+          // Desconectar instancia vieja y crear nueva con token fresco
+          try { socket.disconnect(); } catch {}
+          window._fixya_socket = null;
+          setTimeout(conectarSocket, 300); // reconectar con token nuevo del localStorage
           console.log('[FixYa] Socket tecnico reconectando con token nuevo');
         } catch {
           console.warn('[FixYa] Refresh fallido — sesión expirada');
-          // Forzar re-login si el refresh también falló
           mostrarModalLogin();
         }
+      } else {
+        // Error no relacionado con token — reintentar en 5s
+        setTimeout(() => {
+          if (!window._fixya_socket?.connected) conectarSocket();
+        }, 5000);
+      }
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.warn('[FixYa] Socket tecnico desconectado:', reason);
+      // Reconectar automáticamente si no fue intencional
+      if (reason !== 'io client disconnect') {
+        setTimeout(() => {
+          if (!window._fixya_socket?.connected) conectarSocket();
+        }, 3000);
       }
     });
 

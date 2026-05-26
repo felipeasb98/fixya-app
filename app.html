@@ -1523,8 +1523,8 @@ textarea.inp{resize:none;}
   <div class="urg-opt" id="modo-agenda" onclick="setModo('agenda')" style="padding:11px 14px;text-align:left;display:flex;align-items:center;gap:12px;margin-bottom:14px;opacity:.85;">
     <div style="font-size:20px;flex-shrink:0;">📅</div>
     <div style="flex:1;">
-      <div style="font-size:13px;font-weight:700;color:var(--accent);">Agendar para otro momento</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:1px;">Eliges día y bloque horario · Sin recargo</div>
+      <div style="font-size:13px;font-weight:700;color:var(--accent);">Agendar</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:1px;">Elige el día y bloque horario que más te acomode</div>
     </div>
     <div style="text-align:right;flex-shrink:0;">
       <div style="font-size:9px;color:var(--muted);letter-spacing:.2px;">PAGAS</div>
@@ -2247,7 +2247,7 @@ textarea.inp{resize:none;}
 function getUrgencia() {
   if (typeof schedModo === 'undefined') return 'normal';
   if (schedModo === 'emergencia') return 'emergencia';
-  if (schedModo === 'asap') return 'urgente';
+  if (schedModo === 'emer') return 'emergencia';
   return 'normal';
 }
 
@@ -2620,12 +2620,12 @@ let schedModo = 'agenda', schedDia = 'Hoy', schedBloque = '08:00–12:00';
 
 function setModo(m) {
   schedModo = m;
-  const mults = { agenda: 1.0, asap: 1.10, emer: 1.35 };
+  const mults = { agenda: 1.0, asap: 1.0, emer: 1.35 };
   cliUrg = mults[m];
 
   // Full mode elements
   const opts = { agenda:'modo-agenda', asap:'modo-asap', emer:'modo-emer' };
-  const selClass = { agenda:'on-n', asap:'on-u', emer:'on-r' };
+  const selClass = { agenda:'on-n', asap:'on-n', emer:'on-r' };
   Object.entries(opts).forEach(([k, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -2790,7 +2790,7 @@ function updCot() {
   setV('cot-total', fmt(active.total));
   setV('cot-total2', fmt(active.total));
   setV('on-p', fmt(totalA));
-  setV('ou-p', fmt(totalU));
+  setV('ou-p', fmt(totalA));
   setV('oe-p', fmt(totalE));
 
   const subEl = document.getElementById('cot-urg-sub');
@@ -2862,7 +2862,7 @@ function calcPintura() {
   }
   totalM2 = Math.round(totalM2 * 100) / 100;
   const moBase = Math.max(totalM2 * MO_M2, MO_MIN_PINTURA);
-  const moAsap = Math.round(moBase * 1.10);
+  const moAsap = moBase;
   const totalAsap = Math.round(moAsap * 1.12);
   const totalAgenda = Math.round(moBase * 1.12);
   const fixAsap = Math.round(moAsap * 0.12);
@@ -2934,7 +2934,7 @@ function confirmPintura() {
   const { totalM2 } = calcPintura();
   cotNombre = 'Pintura de muros (' + totalM2.toFixed(1) + ' m²)';
   cotMO = Math.max(totalM2 * MO_M2, MO_MIN_PINTURA);
-  if (pinModo === 'asap') cotMO = Math.round(cotMO * 1.10);
+  if (pinModo === 'asap') cotMO = cotMO;
   cotMat = 0; cotPlazo = 48; cotDur = '2–4 hrs'; cliUrg = 1.0; schedModo = 'agenda';
   pinDesgloseAbierto = false;
   const pb = document.getElementById('pin-desglose-body');
@@ -2970,7 +2970,7 @@ function selTrabajo(nombre, mo, mat, plazo, dur, modoUrg) {
   const modo = modoUrg || 'full';
   const defaultModo = modo === 'agenda' ? 'agenda' : 'asap';
   schedModo = defaultModo;
-  cliUrg = defaultModo === 'agenda' ? 1.0 : 1.10;
+  cliUrg = 1.0;
 
   // Mostrar grid correcto según el trabajo
   setTimeout(() => {
@@ -4261,10 +4261,10 @@ function renderizarTrabajosDisponibles() {
 
   lista.innerHTML = items.map(d => {
     const mo = d.moBase || d.totalEstimado || 0;
-    const urgMult = d.urgencia === 'emergencia' ? 1.5 : d.urgencia === 'urgente' ? 1.1 : 1.0;
+    const urgMult = d.urgencia === 'emergencia' ? 1.5 : 1.0;
     const moFinal = Math.round(mo * urgMult);
-    const urgLabel = d.urgencia === 'emergencia' ? '🔴 Emergencia' : d.urgencia === 'urgente' ? '🟠 Urgente' : '🟢 Normal';
-    const urgClass = d.urgencia === 'emergencia' ? 'tag tr' : d.urgencia === 'urgente' ? 'tag ta' : 'tag tg';
+    const urgLabel = d.urgencia === 'emergencia' ? '🔴 Emergencia' : '🟢 Normal';
+    const urgClass = d.urgencia === 'emergencia' ? 'tag tr' : 'tag tg';
     return '<div class="hl-a hl" style="margin-bottom:8px;cursor:pointer;" onclick="verTrabajoDisponible(\'' + d.solicitudId + '\')">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
       '<div style="font-size:13px;font-weight:700;">' + (d.trabajo || 'Trabajo disponible') + '</div>' +
@@ -5024,10 +5024,8 @@ async function irATecnicos() {
   const btn = document.getElementById('btn-ir-tecnicos');
   if (btn) { btn.disabled = true; btn.textContent = 'Buscando técnicos...'; }
   try {
-    const urgencia = (!window.schedModo || window.schedModo === 'normal') ? 'normal' :
-      window.schedModo === 'emergencia' ? 'emergencia' :
-      window.schedModo === 'asap' ? 'urgente' : 'normal';
-    const urgMult = urgencia === 'emergencia' ? 1.5 : urgencia === 'urgente' ? 1.1 : 1.0;
+    const urgencia = window.schedModo === 'emer' || window.schedModo === 'emergencia' ? 'emergencia' : 'normal';
+    const urgMult = urgencia === 'emergencia' ? 1.5 : 1.0;
     const moFinal = Math.round(((typeof cotMO!=="undefined"?cotMO:window.cotMO) || 30000) * urgMult);
     const matFinal = (typeof cotMat!=="undefined"?cotMat:window.cotMat) || 0;
     const comision = Math.round((moFinal + matFinal) * 0.12);
@@ -5611,7 +5609,7 @@ function poblarTecAlerta(data) {
   const trabajo = data.trabajo || 'Trabajo disponible';
   const urgencia = data.urgencia || 'normal';
   const mo = data.moBase || data.totalEstimado || 0;
-  const urgMult = urgencia === 'emergencia' ? 1.5 : urgencia === 'urgente' ? 1.1 : 1.0;
+  const urgMult = urgencia === 'emergencia' ? 1.5 : 1.0;
   const moFinal = Math.round(mo * urgMult);
   const comision = Math.round(moFinal * 0.12);
 
@@ -5621,7 +5619,6 @@ function poblarTecAlerta(data) {
   const badge = el('tec-alerta-urgencia');
   if (badge) {
     if (urgencia === 'emergencia') { badge.textContent = '🔴 Emergencia'; badge.className = 'tag tr'; }
-    else if (urgencia === 'urgente') { badge.textContent = '🟠 Urgente'; badge.className = 'tag ta'; }
     else { badge.textContent = '🟢 Normal'; badge.className = 'tag tg'; }
   }
 

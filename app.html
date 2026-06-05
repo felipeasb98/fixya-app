@@ -4242,7 +4242,12 @@ async function actualizarCardSolActiva() {
 // ── Cancelar solicitud activa ─────────────────────────────────
 async function cancelarSolicitudActiva() {
   const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-  if (!sol.id) { localStorage.removeItem('fx_solicitud_activa'); actualizarCardSolActiva(); return; }
+  if (!sol.id) {
+    localStorage.removeItem('fx_solicitud_activa');
+    localStorage.removeItem('fx_fotos_solicitud');
+    go('cli-home');
+    return;
+  }
 
   const confirmar = confirm('¿Cancelar la solicitud?\n\nSi ya hay un técnico en camino se aplicará la política de cancelación.');
   if (!confirmar) return;
@@ -4254,8 +4259,8 @@ async function cancelarSolicitudActiva() {
   localStorage.removeItem('fx_solicitud_activa');
   localStorage.removeItem('fx_fotos_solicitud');
   clearInterval(window._pollingPostulantes);
-  actualizarCardSolActiva();
   showSuccess('Solicitud cancelada');
+  go('cli-home');
 }
 
 // ── Navegar a la pantalla correcta según estado de la solicitud activa ─
@@ -4402,14 +4407,14 @@ async function cancelarDesdeHistorial(solicitudId) {
   if (!confirm('¿Cancelar esta solicitud?')) return;
   try {
     await apiFetch('/solicitudes/' + solicitudId + '/cancelar', { method: 'PATCH', body: JSON.stringify({ motivo: 'Cancelado por el cliente' }) });
-    // Si era la solicitud activa en localStorage, limpiarla
     const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
     if (sol.id === solicitudId) {
       localStorage.removeItem('fx_solicitud_activa');
       localStorage.removeItem('fx_fotos_solicitud');
+      clearInterval(window._pollingPostulantes);
     }
     showSuccess('Solicitud cancelada');
-    cargarHistorial(); // recargar lista
+    cargarHistorial();
   } catch(e) {
     showError(e.message || 'No se pudo cancelar');
   }

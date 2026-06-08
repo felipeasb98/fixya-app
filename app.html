@@ -805,7 +805,7 @@ textarea.inp{resize:none;}
       <div class="dr"><span class="dl">M.O. fija</span><span class="dv rg" id="tec-alerta-mo">$37.500</span></div>
       <div class="dr" id="tec-alerta-urg-row" style="display:none;"><span class="dl" id="tec-alerta-urg-lbl">Urgencia ×1.10</span><span class="dv ra" id="tec-alerta-urg-val">+$0</span></div>
       <div class="dr" style="border-top:.5px solid rgba(255,255,255,.07);margin-top:3px;padding-top:3px;"><span class="dl" style="color:var(--text);font-weight:600;">Total</span><span class="dv rg" id="tec-alerta-total2">$46.875</span></div>
-      <div class="dr"><span class="dl" style="font-size:10px;">Comisión FixYa 12% (paga el cliente)</span><span class="dv" style="font-size:10px;color:var(--muted);" id="tec-alerta-com">$6.750</span></div>
+      <div class="dr"><span class="dl" style="font-size:10px;color:var(--muted);">Tú recibes garantizado</span><span class="dv rg" style="font-size:10px;" id="tec-alerta-com"></span></div>
     </div>
   </div>
   <div style="display:flex;gap:8px;">
@@ -1595,7 +1595,7 @@ textarea.inp{resize:none;}
     <div class="card" style="padding:12px 14px;border-top-left-radius:0;border-top-right-radius:0;border-top:none;border-color:rgba(244,164,41,.2);">
       <div class="row" style="padding:6px 0;"><span class="rl">Materiales estimados</span><span class="rv ra" id="cot-mat">$6.500</span></div>
       <div class="row" style="padding:6px 0;"><span class="rl" id="cot-mo-desc">Mano de obra</span><span class="rv rg" id="cot-tec">$37.500</span></div>
-      <div class="row" style="padding:6px 0;"><span class="rl" style="color:var(--muted);font-size:12px;">Comisión plataforma (12%)</span><span class="rv" style="color:var(--muted);font-size:12px;" id="cot-fix">$5.040</span></div>
+      <div class="row" style="padding:6px 0;display:none;"><span class="rl" style="color:var(--muted);font-size:12px;">Costo de servicio (12%)</span><span class="rv" style="color:var(--muted);font-size:12px;" id="cot-fix">$5.040</span></div>
       <div class="row row-total" style="padding-top:8px;"><span style="font-weight:700;">Total</span><span style="font-family:'JetBrains Mono';font-weight:800;color:var(--accent2);" id="cot-total2">$49.280</span></div>
     </div>
   </div>
@@ -1723,7 +1723,7 @@ textarea.inp{resize:none;}
   <div id="pin-desglose-body" style="display:none;margin-bottom:9px;">
     <div class="card" style="padding:12px 14px;border-top-left-radius:0;border-top-right-radius:0;border-top:none;border-color:rgba(244,164,41,.2);">
       <div class="row" style="padding:6px 0;"><span class="rl">M.O. pintura (<span id="p-desc-m2">7.20</span> m²)</span><span class="rv rg" id="p-mo-val">—</span></div>
-      <div class="row" style="padding:6px 0;"><span class="rl" style="color:var(--muted);font-size:12px;">Comisión plataforma (12%)</span><span class="rv" style="color:var(--muted);font-size:12px;" id="p-fix-val">—</span></div>
+      <div class="row" style="padding:6px 0;display:none;"><span class="rl" style="color:var(--muted);font-size:12px;">Costo de servicio (12%)</span><span class="rv" style="color:var(--muted);font-size:12px;" id="p-fix-val">—</span></div>
       <div class="row row-total" style="padding-top:8px;"><span style="font-weight:700;">Total</span><span style="font-family:'JetBrains Mono';font-weight:800;color:var(--accent2);" id="p-total-val">—</span></div>
     </div>
   </div>
@@ -4133,9 +4133,14 @@ async function elegirTecnico(tecnicoId) {
   const nombre = tarjeta?.dataset?.nombre || 'El técnico';
   const rating = tarjeta?.dataset?.rating || '5.0';
   const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-  const total = sol.total || 0;
-  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
 
+  // Leer total desde múltiples fuentes en orden de prioridad
+  const total = sol.total ||
+    window._lastTotal ||
+    (typeof cotizacion !== 'undefined' ? cotizacion.total : 0) ||
+    0;
+
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
   mostrarModalConfirmarTecnico({ tecnicoId, nombre, rating, total, solicitudId, fmt });
 }
 
@@ -5184,6 +5189,7 @@ async function irATecnicos() {
     });
 
     Solicitud.id = data.solicitud.id;
+    window._lastTotal = total; // fallback para elegirTecnico
 
     // Incluir fotos en localStorage para que el técnico las pueda ver
     let _fotosParaGuardar = [];
@@ -5584,6 +5590,21 @@ window.go = function(id) {
   if (id === 'tec-en-camino') {
     setTimeout(iniciarGPSTecnico, 300);
     setTimeout(() => { if (typeof poblarTecEnCamino === 'function') poblarTecEnCamino(); }, 150);
+  }
+  if (id === 'tec-cierre') {
+    setTimeout(() => {
+      const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      const fmt = (n) => n ? '$' + Math.round(n).toLocaleString('es-CL') : '—';
+      const el = (id) => document.getElementById(id);
+      const mo = sol.total || 0;
+      const mat = sol.matEstimado || 0;
+      if (el('cierre-mo')) el('cierre-mo').textContent = fmt(mo);
+      if (el('cierre-monto-mat')) el('cierre-monto-mat').textContent = mat > 0 ? fmt(mat) : 'Según boleta';
+      if (el('cierre-total')) el('cierre-total').textContent = fmt(mo + mat);
+      // Actualizar timing text
+      const timing = el('cierre-timing');
+      if (timing && mat > 0) timing.innerHTML = '💸 Materiales ' + fmt(mat) + ' → hoy al subir boleta<br>💰 M.O. ' + fmt(mo) + ' → 24 hrs tras confirmación del cliente';
+    }, 100);
   }
   // Técnico sale de "en camino" → detener GPS
   const screenActual = document.querySelector('.screen.active');
@@ -6359,11 +6380,27 @@ async function enviarMensajeChat() {
 function registrarSocketChat(socket) {
   socket.off('chat:mensaje');
   socket.on('chat:mensaje', (data) => {
-    if (data.solicitudId !== _chatSolicitudId) return;
-    _chatMensajes.push(data);
-    renderizarMensajesChat();
+    // Obtener solicitudId activa aunque el chat no esté abierto
+    const solActiva = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+    const solId = _chatSolicitudId || solActiva.id;
+
+    // Si el mensaje no es de la solicitud activa, ignorar
+    if (solId && data.solicitudId !== solId) return;
+
+    // Si es el mismo rol (echo propio), ignorar
+    if (data.autorRol === Session.rol()) return;
+
+    // Actualizar chat si está abierto
+    if (_chatSolicitudId && data.solicitudId === _chatSolicitudId) {
+      _chatMensajes.push(data);
+      renderizarMensajesChat();
+    }
+
+    // Notificar siempre si no está en el chat
     const screen = document.querySelector('.screen.active');
-    if (!screen || screen.id !== 's-chat-trabajo') showSuccess('💬 Nuevo mensaje');
+    if (!screen || screen.id !== 's-chat-trabajo') {
+      showSuccess('💬 Nuevo mensaje del ' + (data.autorRol === 'tecnico' ? 'técnico' : 'cliente'));
+    }
   });
 }
 
@@ -6500,8 +6537,8 @@ function mostrarModalPago(data) {
           <span style="font-family:'JetBrains Mono';font-weight:700;">$${Math.round(desglose.materiales).toLocaleString('es-CL')}</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:0.5px solid var(--border);">
-          <span style="color:var(--muted);">Comisión FixYa</span>
-          <span style="font-family:'JetBrains Mono';font-weight:700;">$${Math.round(desglose.comision).toLocaleString('es-CL')}</span>
+          <span style="color:var(--muted);">Tú recibes (M.O.)</span>
+          <span style="font-family:'JetBrains Mono';font-weight:700;">$${Math.round(desglose.mo || desglose.manoObra || monto).toLocaleString('es-CL')}</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;padding:10px 0 0;">
           <span>Total</span>
@@ -6525,40 +6562,7 @@ function mostrarModalPago(data) {
   document.body.appendChild(overlay);
 }
 
-// ── Agregar botón de pago en pantalla de técnicos ─────────────
-document.addEventListener('DOMContentLoaded', () => {
-  // Cuando el cliente está en la pantalla de técnicos disponibles
-  // y ya eligió uno, mostrar botón de pago
-  const screenTecnicos = document.getElementById('s-cli-tecnicos');
-  if (screenTecnicos) {
-    const wrap = screenTecnicos.querySelector('.wrap');
-    if (wrap) {
-      const btnPago = document.createElement('button');
-      btnPago.id = 'btn-pagar';
-      btnPago.className = 'btn btn-a';
-      btnPago.style.cssText = 'margin-top:12px;display:none;';
-      btnPago.textContent = '💳 Pagar y confirmar trabajo →';
-      btnPago.onclick = () => iniciarPago();
-      wrap.appendChild(btnPago);
-    }
-  }
-
-  // Detectar cuando se elige técnico para mostrar botón de pago
-  const _elegirOriginal = window.elegirTecnico;
-  if (_elegirOriginal) {
-    window.elegirTecnico = async function(tecnicoId) {
-      await _elegirOriginal(tecnicoId);
-      const btn = document.getElementById('btn-pagar');
-      if (btn) btn.style.display = 'block';
-    };
-  }
-
-  // Manejar parámetro ?pago= en URL al volver de Flow
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('pago') === 'ok') {
-    // Ya manejado por el IIFE arriba
-  }
-});
+// El pago se inicia desde elegirTecnico → mostrarModalConfirmarTecnico (flujo correcto)
 
 
 // ── Funciones críticas movidas al último script ──

@@ -187,8 +187,12 @@ textarea.inp{resize:none;}
 
 /* RATING */
 .stars{display:flex;gap:6px;justify-content:center;font-size:30px;margin:8px 0;}
-.star{cursor:pointer;transition:transform .1s;user-select:none;}
+.star{cursor:pointer;transition:transform .1s;user-select:none;position:relative;display:inline-block;}
 .star:active{transform:scale(1.2);}
+/* Estrella con relleno parcial */
+.star-partial{display:inline-block;position:relative;font-size:28px;line-height:1;}
+.star-partial .star-empty{color:#555;}
+.star-partial .star-fill{position:absolute;top:0;left:0;overflow:hidden;color:#F4A429;white-space:nowrap;}
 
 /* NOTIF */
 .notif{background:var(--card);border:.5px solid var(--border);border-radius:13px;padding:13px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start;}
@@ -728,7 +732,7 @@ textarea.inp{resize:none;}
         <div class="ttl" style="font-size:19px;">Hola, Carlos 👋</div>
         <span onclick="go('s0')" style="font-size:11px;color:var(--muted);cursor:pointer;padding:3px 8px;border-radius:99px;border:.5px solid var(--border);transition:all .15s;">← Salir</span>
       </div>
-      <div style="font-size:12px;color:var(--muted);">Gasfitero · 4.9⭐ · 127 trabajos</div>
+      <div style="font-size:12px;color:var(--muted);">Gasfitero · <span id="tec-home-rating">4.9⭐</span> · <span id="tec-home-trabajos">127</span> trabajos</div>
     </div>
     <div style="position:relative;cursor:pointer;" onclick="go('tec-notif')"><div style="font-size:26px;">🔔</div><div id="tec-notif-badge" style="position:absolute;top:-2px;right:-2px;width:13px;height:13px;background:var(--red);border-radius:50%;font-size:8px;font-weight:700;display:none;align-items:center;justify-content:center;">0</div></div>
   </div>
@@ -867,6 +871,7 @@ textarea.inp{resize:none;}
     <button class="btn btn-ghost btn-sm" onclick="go('tec-faltante')" style="flex:1;">⚠️ Falta algo</button>
     <button class="btn btn-g" id="btn-tec-subir-boleta" onclick="tecAbrirFotoBoleta()" style="flex:2;">📸 Subir foto →</button>
   </div>
+  <button onclick="marcarTodosTecMats()" style="width:100%;margin-top:8px;padding:9px;background:rgba(77,158,255,.06);border:.5px solid rgba(77,158,255,.2);border-radius:9px;font-size:12px;color:var(--blue);cursor:pointer;">☑ Marcar todos como traídos</button>
   <button class="btn btn-a" id="btn-tec-confirmar-llegada" onclick="tecConfirmarLlegadaConFoto()" style="width:100%;margin-top:8px;display:none;">✅ Confirmar llegada al cliente →</button>
 </div>
 </div>
@@ -2017,16 +2022,10 @@ textarea.inp{resize:none;}
       <div style="font-size:11px;color:var(--muted);" id="cli-ej-inicio">Inicio: —</div>
     </div>
   </div>
-  <div class="card" style="margin-bottom:12px;">
-    <div class="row"><span class="rl">Trabajo</span><span class="rv" id="cli-ej-trabajo">—</span></div>
-    <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg" id="cli-ej-mo">—</span></div>
-    <div class="row"><span class="rl">Estado</span><span class="rv"><span class="tag tg" style="font-size:10px;">🔨 En ejecución</span></span></div>
-  </div>
   <div style="padding:12px 14px;background:rgba(0,229,160,.06);border:.5px solid rgba(0,229,160,.2);border-radius:11px;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px;">
     ✅ Los materiales fueron verificados y el técnico comenzó el trabajo.<br><br>
     Cuando termine, recibirás una notificación para confirmar el trabajo y liberar el pago.
   </div>
-  <button onclick="abrirChatTrabajo()" style="width:100%;padding:11px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;margin-bottom:8px;">💬 Chatear con el técnico</button>
   <button onclick="go('cli-home')" style="width:100%;padding:10px;background:rgba(255,255,255,.04);border:.5px solid var(--border);border-radius:10px;font-size:12px;color:var(--muted);cursor:pointer;">← Volver al inicio</button>
 </div>
 </div>
@@ -2055,7 +2054,7 @@ textarea.inp{resize:none;}
   <div style="text-align:center;padding:14px 0 18px;">
     <div style="font-size:42px;margin-bottom:9px;">🎉</div>
     <div class="ttl">¡Trabajo completado!</div>
-    <div class="sub" id="cli-rating-desc">¿Cómo fue el técnico?</div>
+    <div class="sub" id="cli-rating-desc">Tu opinión es importante para nosotros</div>
   </div>
   <div style="text-align:center;margin-bottom:8px;font-size:13px;font-weight:700;">¿Cómo fue el técnico?</div>
   <div class="stars" id="stars-cli">
@@ -3765,13 +3764,22 @@ function actualizarUIConPerfil() {
   const perfil = Session.perfil();
   if (!perfil) return;
 
-  // Actualizar nombre en perfil de cliente
   const elNombreCli = document.getElementById('cli-perfil-nombre');
   if (elNombreCli) elNombreCli.textContent = perfil.nombre || '';
 
-  // Actualizar nombre en perfil de técnico
   const elNombreTec = document.getElementById('tec-perfil-nombre');
   if (elNombreTec) elNombreTec.textContent = perfil.nombre || '';
+
+  // Mostrar rating con decimal y estrellas parciales en tec-home
+  if (perfil.ratingPromedio !== undefined) {
+    const r = parseFloat(perfil.ratingPromedio || 0).toFixed(1);
+    const elRating = document.getElementById('tec-home-rating');
+    if (elRating) elRating.textContent = r + '⭐';
+  }
+  if (perfil.trabajosCompletados !== undefined) {
+    const elTrab = document.getElementById('tec-home-trabajos');
+    if (elTrab) elTrab.textContent = perfil.trabajosCompletados || 0;
+  }
 }
 
 // ── LOGIN desde pantalla s0 ───────────────────────────────────
@@ -4081,18 +4089,26 @@ function renderizarTecnicos(tecnicos) {
   lista.innerHTML = '';
 
   tecnicos.forEach(tec => {
-    const stars = '⭐'.repeat(Math.min(5, Math.round(tec.ratingPromedio || 5)));
+    const rating = parseFloat(tec.ratingPromedio || 5).toFixed(1);
+    const ratingNum = parseFloat(rating);
+    const llenas = Math.floor(ratingNum);
+    const decimal = Math.round((ratingNum - llenas) * 10);
+    let starsHtml = '';
+    for (let i = 0; i < llenas; i++) starsHtml += '<span style="color:#F4A429;">★</span>';
+    if (decimal > 0) starsHtml += '<span style="position:relative;display:inline-block;"><span style="color:#555;">★</span><span style="position:absolute;top:0;left:0;overflow:hidden;width:' + (decimal * 10) + '%;color:#F4A429;">★</span></span>';
+    for (let i = 0; i < (5 - llenas - (decimal > 0 ? 1 : 0)); i++) starsHtml += '<span style="color:#555;">★</span>';
+
     const div = document.createElement('div');
     div.className = 'tec-card';
     div.dataset.tecnicoId = tec.id;
     div.dataset.nombre = tec.nombre;
-    div.dataset.rating = tec.ratingPromedio || '5.0';
+    div.dataset.rating = rating;
     div.onclick = () => elegirTecnico(tec.id);
     div.innerHTML = `
       <div class="tec-av" style="background:rgba(0,229,160,.12);">👷</div>
       <div style="flex:1;">
         <div style="font-size:13px;font-weight:700;">${tec.nombre}</div>
-        <div style="font-size:11px;color:var(--accent2);">${stars} ${tec.ratingPromedio || '5.0'} · ${tec.trabajosCompletados || 0} trabajos</div>
+        <div style="font-size:11px;color:var(--muted);">${starsHtml} <span style="color:var(--accent2);font-weight:700;">${rating}</span> · ${tec.trabajosCompletados || 0} trabajos</div>
         <div style="display:flex;gap:4px;margin-top:4px;">
           <span class="tag tg" style="font-size:9px;">✓ Verificado</span>
           ${tec.plan === 'fundador' ? '<span class="tag ta" style="font-size:9px;">⭐ Fundador</span>' : ''}
@@ -5178,6 +5194,10 @@ async function irATecnicos() {
       codigo: data.solicitud.codigo,
       trabajo: data.solicitud.trabajo,
       total,
+      agendado: (window.schedModo || 'asap') === 'agenda',
+      schedModo: window.schedModo || 'asap',
+      fechaAgendada: window.schedFechaCompleta || null,
+      bloqueAgendado: window.schedBloque || null,
       fotosProblema: _fotosParaGuardar,
     }));
 
@@ -6045,6 +6065,22 @@ function marcarTodosCliMats() {
   if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
 }
 
+// Fix 3: Marcar todos en pantalla del técnico
+function marcarTodosTecMats() {
+  const items = document.querySelectorAll('#mat-list-tec .mat-item');
+  items.forEach((el, i) => {
+    const box = el.querySelector('.mat-chk');
+    if (box && !el.classList.contains('verified')) {
+      el.classList.add('verified');
+      box.textContent = '✓';
+    }
+  });
+  // Mostrar botón de subir foto si aún no está visible
+  const btnSubir = document.getElementById('btn-tec-subir-boleta');
+  if (btnSubir) btnSubir.style.opacity = '1';
+  showSuccess('Todos los materiales marcados');
+}
+
 async function confMats() {
   if (typeof cliMats !== 'undefined' && cliMats.size < 4) {
     showError('Marca todos los materiales que puedes ver. Si falta algo, usa "Falta algo".');
@@ -6146,19 +6182,27 @@ async function cerrarTrabajo() {
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
 
   const sol = getSolicitudActiva ? getSolicitudActiva() : JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const fmt = (n) => n ? '$' + Math.round(n).toLocaleString('es-CL') : '—';
 
   try {
-    // Subir fotos si están disponibles
     let urlTerminado = null, urlBoleta = null;
     if (_fotoTerminadoFile) try { urlTerminado = await subirFoto(_fotoTerminadoFile, 'cierre'); } catch {}
     if (_fotoBoleta2File) try { urlBoleta = await subirFoto(_fotoBoleta2File, 'boleta'); } catch {}
 
-    // Terminar trabajo en backend
     await cambiarEstado('terminar', 'PATCH', {
       fotosCierre: [urlTerminado, urlBoleta].filter(Boolean),
     });
 
     _fotoTerminadoFile = null; _fotoBoleta2File = null;
+
+    // Poblar montos en pantalla de cierre con datos reales
+    const mo = sol.total || 0;
+    const mat = sol.matEstimado || 0;
+    const el = (id) => document.getElementById(id);
+    if (el('cierre-mo')) el('cierre-mo').textContent = fmt(mo);
+    if (el('cierre-monto-mat')) el('cierre-monto-mat').textContent = mat > 0 ? fmt(mat) : 'Según boleta';
+    if (el('cierre-total')) el('cierre-total').textContent = fmt(mo + mat);
+
     go('tec-rating');
   } catch (err) {
     showError(err.message || 'Error al cerrar trabajo');
@@ -6210,9 +6254,46 @@ function omitirCalificacionTec() {
 
 // ── Calificación del cliente ──────────────────────────────────
 let _cliRating = 0;
+// ── Estrellas con relleno parcial ────────────────────────────
+// Renderiza N estrellas con relleno parcial según promedio decimal
+// Ej: 4.3 → 4 llenas + 1 al 30%
+function renderStarsPromedio(promedio, containerId) {
+  const cont = document.getElementById(containerId);
+  if (!cont) return;
+  const val = Math.max(0, Math.min(5, parseFloat(promedio) || 0));
+  const llenas = Math.floor(val);
+  const decimal = Math.round((val - llenas) * 10) / 10; // 0.0 a 0.9
+  const vacias = 5 - llenas - (decimal > 0 ? 1 : 0);
+
+  let html = '<div style="display:flex;gap:3px;align-items:center;">';
+  // Estrellas llenas
+  for (let i = 0; i < llenas; i++) {
+    html += '<span style="font-size:22px;color:#F4A429;">★</span>';
+  }
+  // Estrella parcial
+  if (decimal > 0) {
+    const pct = Math.round(decimal * 100);
+    html += '<span class="star-partial">' +
+      '<span class="star-empty">★</span>' +
+      '<span class="star-fill" style="width:' + pct + '%;">★</span>' +
+      '</span>';
+  }
+  // Estrellas vacías
+  for (let i = 0; i < vacias; i++) {
+    html += '<span style="font-size:22px;color:#555;">★</span>';
+  }
+  html += '<span style="font-size:13px;color:var(--muted);margin-left:5px;font-weight:700;">' +
+    val.toFixed(1) + '</span></div>';
+
+  cont.innerHTML = html;
+}
+
+// rateCli: n=1 → 1 estrella, n=5 → 5 estrellas
 function rateCli(n) {
-  _cliRating = n;
-  document.querySelectorAll('#stars-cli .star').forEach((s, i) => { s.textContent = i < n ? '⭐' : '☆'; });
+  _cliRating = n; // 1 a 5
+  document.querySelectorAll('#stars-cli .star').forEach((s, i) => {
+    s.textContent = i < n ? '⭐' : '☆';
+  });
 }
 
 async function enviarCalificacionCliente() {
@@ -6334,17 +6415,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pago === 'ok') {
       showSuccess('✅ Pago recibido. El dinero está en escrow hasta confirmar el trabajo.');
       const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-      if (sol.id) {
-        // Técnico aún no llegó — mostrar pantalla de seguimiento
+      if (!sol.id) { go('cli-home'); return; }
+
+      if (sol.agendado) {
+        // Agendado → volver al inicio, mostrar card con fecha
+        showSuccess('Trabajo agendado. Te avisaremos cuando el técnico vaya en camino.');
+        go('cli-home');
+      } else {
+        // Lo antes posible → pantalla técnico en camino
         if (typeof actualizarPantallaEnCamino === 'function') actualizarPantallaEnCamino();
         go('cli-en-camino');
-      } else go('cli-home');
+      }
     } else if (pago === 'fallido') {
       showError('El pago fue rechazado. Intenta de nuevo.');
     } else {
       showError('Hubo un error con el pago. Intenta de nuevo.');
     }
-  }, 500);
+  }, 1200);
 })();
 
 // ── Iniciar pago Flow ─────────────────────────────────────────

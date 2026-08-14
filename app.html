@@ -3758,6 +3758,8 @@ window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { if (typeof conectarSocket === 'function') conectarSocket(); }, 1500);
   }
   actualizarUIConPerfil();
+  // Procesar retorno de Flow si hay ?pago= en la URL
+  if (typeof detectarRetornoPago === 'function') detectarRetornoPago();
 });
 
 function actualizarUIConPerfil() {

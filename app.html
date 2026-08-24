@@ -4885,12 +4885,20 @@ function conectarSocket() {
 
     socket.on('notif:trabajo_confirmado', async (data) => {
       console.log('[FixYa] trabajo_confirmado', data);
-      agregarNotif('tec', { icono: '✅', color: 'var(--accent)', titulo: 'El cliente te eligio', desc: 'Dirigete al domicilio' });
-      showSuccess('El cliente te eligio! Dirigete al domicilio');
+      agregarNotif('tec', { icono: '✅', color: 'var(--accent)', titulo: 'El cliente te eligio', desc: 'Esperando confirmación de pago' });
+      showSuccess('El cliente te eligio! Esperando que confirme el pago.');
       const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       if (data && data.solicitudId && !sol.id) {
         localStorage.setItem('fx_solicitud_activa', JSON.stringify({ ...sol, id: data.solicitudId }));
       }
+      // No navegar todavía — la dirección del cliente solo se revela
+      // cuando el pago está confirmado (ver notif:pago_recibido)
+    });
+
+    socket.on('notif:pago_recibido', async (data) => {
+      console.log('[FixYa] pago_recibido', data);
+      agregarNotif('tec', { icono: '💰', color: 'var(--accent)', titulo: 'Pago recibido', desc: 'Dirigete al domicilio' });
+      showSuccess('Pago recibido! Dirigete al domicilio.');
       try { await cambiarEstado('en-camino'); } catch {}
       go('tec-en-camino');
     });

@@ -5193,7 +5193,8 @@ async function irATecnicos() {
     Solicitud.id = data.solicitud.id;
     window._lastTotal = total; // fallback para elegirTecnico
 
-    // Incluir fotos en localStorage para que el técnico las pueda ver
+    // Fotos ya están guardadas en fx_fotos_solicitud — NO duplicar en fx_solicitud_activa
+    // (guardar las imágenes base64 dos veces agota la cuota de localStorage)
     let _fotosParaGuardar = [];
     try { _fotosParaGuardar = JSON.parse(localStorage.getItem('fx_fotos_solicitud') || '[]').filter(Boolean); } catch {}
 
@@ -5206,7 +5207,8 @@ async function irATecnicos() {
       schedModo: window.schedModo || 'asap',
       fechaAgendada: window.schedFechaCompleta || null,
       bloqueAgendado: window.schedBloque || null,
-      fotosProblema: _fotosParaGuardar,
+      fotosProblema: [],
+      tieneFotos: _fotosParaGuardar.length,
     }));
 
     fotoSolSubida = false;

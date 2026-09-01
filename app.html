@@ -13,7 +13,7 @@ html,body{min-height:100%;background:var(--bg);transition:background .3s,color .
 body{font-family:'DM Sans',sans-serif;color:var(--text);overflow-x:hidden;}
 .screen{display:none;flex-direction:column;min-height:100vh;animation:fu .22s ease;}
 .screen.active{display:flex;}
-@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}} @keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
 
 /* STATUS BAR */
 .status{display:flex;justify-content:space-between;align-items:center;padding:10px 16px 0;font-size:11px;color:var(--muted);flex-shrink:0;}
@@ -187,8 +187,12 @@ textarea.inp{resize:none;}
 
 /* RATING */
 .stars{display:flex;gap:6px;justify-content:center;font-size:30px;margin:8px 0;}
-.star{cursor:pointer;transition:transform .1s;user-select:none;}
+.star{cursor:pointer;transition:transform .1s;user-select:none;position:relative;display:inline-block;}
 .star:active{transform:scale(1.2);}
+/* Estrella con relleno parcial */
+.star-partial{display:inline-block;position:relative;font-size:28px;line-height:1;}
+.star-partial .star-empty{color:#555;}
+.star-partial .star-fill{position:absolute;top:0;left:0;overflow:hidden;color:#F4A429;white-space:nowrap;}
 
 /* NOTIF */
 .notif{background:var(--card);border:.5px solid var(--border);border-radius:13px;padding:13px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start;}
@@ -728,9 +732,9 @@ textarea.inp{resize:none;}
         <div class="ttl" style="font-size:19px;">Hola, Carlos 👋</div>
         <span onclick="go('s0')" style="font-size:11px;color:var(--muted);cursor:pointer;padding:3px 8px;border-radius:99px;border:.5px solid var(--border);transition:all .15s;">← Salir</span>
       </div>
-      <div style="font-size:12px;color:var(--muted);">Gasfitero · 4.9⭐ · 127 trabajos</div>
+      <div style="font-size:12px;color:var(--muted);">Gasfitero · <span id="tec-home-rating">4.9⭐</span> · <span id="tec-home-trabajos">127</span> trabajos</div>
     </div>
-    <div style="position:relative;cursor:pointer;" onclick="go('tec-notif')"><div style="font-size:26px;">🔔</div><div style="position:absolute;top:-2px;right:-2px;width:13px;height:13px;background:var(--red);border-radius:50%;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;">2</div></div>
+    <div style="position:relative;cursor:pointer;" onclick="go('tec-notif')"><div style="font-size:26px;">🔔</div><div id="tec-notif-badge" style="position:absolute;top:-2px;right:-2px;width:13px;height:13px;background:var(--red);border-radius:50%;font-size:8px;font-weight:700;display:none;align-items:center;justify-content:center;">0</div></div>
   </div>
   <div class="toggle-wrap">
     <div><div style="font-size:13px;font-weight:700;" id="tog-lbl">🟢 Disponible para trabajos</div><div style="font-size:11px;color:var(--muted);">Los clientes pueden encontrarte</div></div>
@@ -741,14 +745,13 @@ textarea.inp{resize:none;}
     <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:16px;font-weight:800;color:var(--accent2);">$112K</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Esta semana</div></div>
     <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--purple);">0</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Pendientes</div></div>
   </div>
-  <div class="hl-a hl" style="margin-bottom:12px;cursor:pointer;" onclick="go('tec-alerta')">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;"><div style="font-size:12px;font-weight:700;color:var(--accent2);">⚡ NUEVO TRABAJO</div><span class="tag tr">🔴 Urgente</span></div>
-    <div style="font-size:14px;font-weight:700;margin-bottom:3px;">Reparación fuga cañería</div>
-    <div style="font-size:12px;color:var(--muted);">📍 Providencia 1234 · 1.2 km</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px;">
-      <div><div style="font-size:10px;color:var(--muted);">Tú recibes</div><div style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--accent);">$46.875</div></div>
-      <button class="btn btn-g btn-sm">Ver trabajo →</button>
+  <!-- Lista de trabajos disponibles — se puebla dinámicamente -->
+  <div id="tec-trabajos-disponibles" style="display:none;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.5px;">⚡ Trabajos disponibles</div>
+      <div id="tec-trabajos-count" style="font-size:11px;color:var(--muted);"></div>
     </div>
+    <div id="tec-trabajos-lista"></div>
   </div>
   <div class="lbl">Trabajos recientes</div>
   <div class="card" style="padding:0;overflow:hidden;">
@@ -772,57 +775,71 @@ textarea.inp{resize:none;}
 <div class="wrap">
   <div class="timer-box">
     <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">⏳ Tiempo para decidir</div>
-    <div class="timer-num" id="tmr-tec">0:15</div>
+    <div class="timer-num" id="tmr-tec">5:00</div>
     <div style="font-size:11px;color:var(--muted);margin-top:2px;">Si no respondes, pasa al siguiente técnico</div>
   </div>
   <div class="card" style="margin-bottom:9px;">
-    <div style="display:flex;justify-content:space-between;margin-bottom:9px;"><div style="font-size:14px;font-weight:700;">Reparación fuga cañería</div><span class="tag tr">🔴 Urgente</span></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px;">
-      <div style="padding:8px;background:var(--card2);border-radius:9px;font-size:12px;"><div style="color:var(--muted);">📍 Distancia</div><div style="font-weight:700;margin-top:1px;">1.2 km</div></div>
-      <div style="padding:8px;background:var(--card2);border-radius:9px;font-size:12px;"><div style="color:var(--muted);">⏱️ Duración est.</div><div style="font-weight:700;margin-top:1px;">1–2 hrs</div></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:9px;">
+      <div style="font-size:14px;font-weight:700;" id="tec-alerta-trabajo">Reparación fuga cañería</div>
+      <span class="tag tr" id="tec-alerta-urgencia">🔴 Urgente</span>
     </div>
-    <div style="font-size:12px;color:var(--muted);line-height:1.5;padding:9px;background:var(--card2);border-radius:9px;">"Fuga en cañería PVC bajo el lavaplatos. Chorreando hace 2 horas."</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px;">
+      <div style="padding:8px;background:var(--card2);border-radius:9px;font-size:12px;"><div style="color:var(--muted);">📍 Distancia</div><div style="font-weight:700;margin-top:1px;" id="tec-alerta-dist">1.2 km</div></div>
+      <div style="padding:8px;background:var(--card2);border-radius:9px;font-size:12px;"><div style="color:var(--muted);">⏱️ Duración est.</div><div style="font-weight:700;margin-top:1px;" id="tec-alerta-dur">1–2 hrs</div></div>
+    </div>
+    <!-- Descripción del cliente -->
+    <div id="tec-alerta-desc-wrap" style="font-size:12px;color:var(--muted);line-height:1.5;padding:9px;background:var(--card2);border-radius:9px;margin-bottom:9px;">
+      <span id="tec-alerta-desc">"Fuga en cañería PVC bajo el lavaplatos. Chorreando hace 2 horas."</span>
+    </div>
+    <!-- Fotos del problema -->
+    <div id="tec-alerta-fotos-wrap" style="display:none;">
+      <div style="font-size:10px;color:var(--accent2);font-weight:700;margin-bottom:6px;">📷 FOTOS DEL PROBLEMA</div>
+      <div id="tec-alerta-fotos" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;"></div>
+    </div>
   </div>
   <div class="hl" style="margin-bottom:9px;">
     <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:5px;">💰 TÚ RECIBES</div>
-    <div class="big-n">$46.875</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:4px;">M.O. $37.500 × urgencia ×1.10</div>
+    <div class="big-n" id="tec-alerta-total">$46.875</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;" id="tec-alerta-mo-desc">M.O. fija garantizada</div>
     <div class="desglose">
-      <div class="dr"><span class="dl">M.O. fija</span><span class="dv rg">$37.500</span></div>
-      <div class="dr"><span class="dl">Urgencia ×1.10</span><span class="dv ra">+$9.375</span></div>
-      <div class="dr" style="border-top:.5px solid rgba(255,255,255,.07);margin-top:3px;padding-top:3px;"><span class="dl" style="color:var(--text);font-weight:600;">Total</span><span class="dv rg">$46.875</span></div>
-      <div class="dr"><span class="dl" style="font-size:10px;">Comisión FixYa 12% (paga el cliente)</span><span class="dv" style="font-size:10px;color:var(--muted);">$6.750</span></div>
+      <div class="dr"><span class="dl">M.O. fija</span><span class="dv rg" id="tec-alerta-mo">$37.500</span></div>
+      <div class="dr" id="tec-alerta-urg-row" style="display:none;"><span class="dl" id="tec-alerta-urg-lbl">Urgencia ×1.10</span><span class="dv ra" id="tec-alerta-urg-val">+$0</span></div>
+      <div class="dr" style="border-top:.5px solid rgba(255,255,255,.07);margin-top:3px;padding-top:3px;"><span class="dl" style="color:var(--text);font-weight:600;">Total</span><span class="dv rg" id="tec-alerta-total2">$46.875</span></div>
+      <div class="dr"><span class="dl" style="font-size:10px;color:var(--muted);">Tú recibes garantizado</span><span class="dv rg" style="font-size:10px;" id="tec-alerta-com"></span></div>
     </div>
   </div>
   <div style="display:flex;gap:8px;">
-    <button class="btn btn-ghost btn-sm" onclick="back()" style="flex:1;">✗ Rechazar</button>
-    <button class="btn btn-g" onclick="go('tec-en-camino')" style="flex:2;">✓ Aceptar →</button>
+    <button class="btn btn-ghost btn-sm" onclick="tecnicoRechazarTrabajo()" style="flex:1;">✗ Rechazar</button>
+    <button class="btn btn-g" id="btn-tec-aceptar" onclick="tecAceptarYPartir()" style="flex:2;">✓ Aceptar →</button>
   </div>
 </div>
 </div>
 
 <!-- TÉCNICO — EN CAMINO -->
 <div class="screen" id="s-tec-en-camino">
-<div class="status"><span>9:58</span><span>🔧 En curso #FY-2847</span><span>📶</span></div>
+<div class="status"><span>9:58</span><span>🔧 En curso</span><span>📶</span></div>
 <div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">En camino</div></div>
 <div class="wrap">
-  <div class="status-badge sb-on"><div style="font-size:16px;">🚗</div><div><div style="font-size:13px;font-weight:700;color:var(--accent);">En camino al domicilio</div><div style="font-size:11px;color:var(--muted);">Providencia 1234 · 1.2 km · ~6 min</div></div></div>
-  <div id="mapa-tecnico" style="width:100%;height:220px;border-radius:12px;border:.5px solid var(--border);margin-bottom:12px;overflow:hidden;background:var(--card2);display:flex;align-items:center;justify-content:center;">
-    <div style="text-align:center;"><div style="font-size:28px;margin-bottom:6px;">🗺️</div><div style="font-size:12px;color:var(--muted);">Cargando mapa...</div></div>
+  <div class="status-badge sb-on"><div style="font-size:16px;">🚗</div><div><div style="font-size:13px;font-weight:700;color:var(--accent);" id="tec-ec-eta-label">En camino al domicilio</div><div style="font-size:11px;color:var(--muted);" id="tec-eta-texto">Calculando ruta...</div></div></div>
+  <div id="mapa-tecnico" style="width:100%;height:220px;border-radius:12px;border:.5px solid var(--border);margin-bottom:8px;overflow:hidden;background:var(--card2);">
+    <div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:6px;"><div style="font-size:28px;">🗺️</div><div style="font-size:12px;color:var(--muted);">Cargando mapa...</div></div>
   </div>
-  <div id="tec-eta-bar" style="display:none;padding:8px 12px;background:rgba(0,229,160,.07);border:.5px solid rgba(0,229,160,.2);border-radius:10px;font-size:12px;color:var(--accent);margin-bottom:12px;display:flex;gap:8px;align-items:center;">
-    <span id="tec-eta-texto">📍 Calculando ruta...</span>
-  </div>
+  <button id="btn-abrir-gmaps" onclick="abrirGoogleMapsTecnico()" style="width:100%;padding:10px;background:rgba(0,229,160,.07);border:.5px solid rgba(0,229,160,.25);border-radius:10px;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px;">
+    🧭 Abrir ruta en Google Maps
+  </button>
   <div class="card" style="margin-bottom:9px;">
-    <div class="row"><span class="rl">Cliente</span><span class="rv">María González</span></div>
-    <div class="row"><span class="rl">Trabajo</span><span class="rv">Fuga cañería</span></div>
-    <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg">$46.875</span></div>
-    <div class="row"><span class="rl">Materiales a traer</span><span class="rv ra">4 ítems</span></div>
+    <div class="row"><span class="rl">Cliente</span><span class="rv" id="tec-ec-cliente">—</span></div>
+    <div class="row"><span class="rl">Dirección</span><span class="rv" id="tec-ec-dir" style="font-size:11px;text-align:right;max-width:60%;">—</span></div>
+    <div class="row"><span class="rl">Trabajo</span><span class="rv" id="tec-ec-trabajo">—</span></div>
+    <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg" id="tec-ec-mo">—</span></div>
+    <div class="row" style="cursor:pointer;" onclick="toggleMatListaTec()"><span class="rl">Materiales a llevar</span><span class="rv ra" id="tec-ec-mat">Ver lista →</span></div>
   </div>
-  <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;margin-bottom:12px;">
-    📸 Al llegar: sube foto de todos los materiales. El cliente tiene <strong>15 min</strong> para verificar.
+  <div id="tec-ec-mat-lista" style="display:none;margin-bottom:9px;"></div>
+  <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;margin-bottom:8px;">
+    📸 Al llegar: sube foto de todos los materiales. El cliente tiene <strong>10 min</strong> para verificar.
   </div>
-  <button class="btn btn-g" onclick="go('tec-mat-verificar')">📍 Llegué — verificar materiales →</button>
+  <button onclick="abrirChatTrabajo()" style="width:100%;padding:9px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;margin-bottom:8px;">💬 Chatear con el cliente</button>
+  <button class="btn btn-g" onclick="tecLlego()">📍 Llegué — verificar materiales →</button>
 </div>
 </div>
 
@@ -842,10 +859,20 @@ textarea.inp{resize:none;}
     <div class="mat-item" id="tm2"><div class="mat-chk" onclick="chkM('tm',2)"></div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">Sellante sanitario</div><div style="font-size:11px;color:var(--muted);">1 un · $4.200</div></div><div class="og"><div class="og-btn on-c" onclick="setOg('tm',2,'c')">🛒</div><div class="og-btn" onclick="setOg('tm',2,'s')">📦</div></div></div>
     <div class="mat-item" id="tm3"><div class="mat-chk" onclick="chkM('tm',3)"></div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">Teflón + uniones</div><div style="font-size:11px;color:var(--muted);">1 set · $1.780</div></div><div class="og"><div class="og-btn" onclick="setOg('tm',3,'c')">🛒</div><div class="og-btn on-s" onclick="setOg('tm',3,'s')">📦</div></div></div>
   </div>
-  <div style="display:flex;gap:8px;margin-top:7px;">
-    <button class="btn btn-ghost btn-sm" onclick="go('tec-faltante')" style="flex:1;">⚠️ Falta algo</button>
-    <button class="btn btn-g" onclick="go('tec-en-trabajo')" style="flex:2;">📸 Subir foto →</button>
+
+  <!-- Preview foto boleta -->
+  <div id="tec-boleta-preview" style="display:none;width:100%;border-radius:11px;overflow:hidden;margin-top:10px;margin-bottom:4px;position:relative;">
+    <img id="tec-boleta-img" src="" style="width:100%;border-radius:11px;display:block;" alt="Foto materiales">
+    <div onclick="tecBorrarFotoBoleta()" style="position:absolute;top:6px;right:6px;width:26px;height:26px;background:rgba(0,0,0,.65);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;">✕</div>
   </div>
+  <div id="tec-boleta-estado" style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px;display:none;"></div>
+
+  <div style="display:flex;gap:8px;margin-top:10px;">
+    <button class="btn btn-ghost btn-sm" onclick="go('tec-faltante')" style="flex:1;">⚠️ Falta algo</button>
+    <button class="btn btn-g" id="btn-tec-subir-boleta" onclick="tecAbrirFotoBoleta()" style="flex:2;">📸 Subir foto →</button>
+  </div>
+  <button onclick="marcarTodosTecMats()" style="width:100%;margin-top:8px;padding:9px;background:rgba(77,158,255,.06);border:.5px solid rgba(77,158,255,.2);border-radius:9px;font-size:12px;color:var(--blue);cursor:pointer;">☑ Marcar todos como traídos</button>
+  <button class="btn btn-a" id="btn-tec-confirmar-llegada" onclick="tecConfirmarLlegadaConFoto()" style="width:100%;margin-top:8px;display:none;">✅ Confirmar llegada al cliente →</button>
 </div>
 </div>
 
@@ -913,23 +940,38 @@ textarea.inp{resize:none;}
 <div class="wrap">
   <div class="sub">Sube la foto de término y la boleta para activar el reembolso del mismo día.</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px;">
-    <div style="padding:14px;background:rgba(0,229,160,.07);border:.5px solid rgba(0,229,160,.22);border-radius:12px;text-align:center;cursor:pointer;" onclick="this.style.background='rgba(0,229,160,.18)'">
-      <div style="font-size:26px;margin-bottom:5px;">📸</div><div style="font-size:12px;font-weight:700;color:var(--accent);">Foto terminado</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">GPS + timestamp</div>
+    <div id="btn-foto-terminado" style="padding:14px;background:rgba(0,229,160,.07);border:.5px solid rgba(0,229,160,.22);border-radius:12px;text-align:center;cursor:pointer;" onclick="tecAbrirFotoTerminado()">
+      <div style="font-size:26px;margin-bottom:5px;" id="ico-foto-terminado">📸</div>
+      <div style="font-size:12px;font-weight:700;color:var(--accent);">Foto terminado</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="lbl-foto-terminado">GPS + timestamp</div>
     </div>
-    <div style="padding:14px;background:rgba(244,164,41,.07);border:.5px solid rgba(244,164,41,.22);border-radius:12px;text-align:center;cursor:pointer;" onclick="this.style.background='rgba(244,164,41,.18)'">
-      <div style="font-size:26px;margin-bottom:5px;">🧾</div><div style="font-size:12px;font-weight:700;color:var(--accent2);">Foto boleta</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Reembolso hoy</div>
+    <div id="btn-foto-boleta-cierre" style="padding:14px;background:rgba(244,164,41,.07);border:.5px solid rgba(244,164,41,.22);border-radius:12px;text-align:center;cursor:pointer;" onclick="tecAbrirFotaBoleta_cierre ? tecAbrirFotaBoleta_cierre() : tecAbrirFotoBoleta()">
+      <div style="font-size:26px;margin-bottom:5px;" id="ico-foto-boleta">🧾</div>
+      <div style="font-size:12px;font-weight:700;color:var(--accent2);">Foto boleta</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="lbl-foto-boleta">Reembolso hoy</div>
+    </div>
+  </div>
+  <!-- Previews de fotos -->
+  <div id="cierre-fotos-preview" style="display:none;margin-bottom:12px;">
+    <div style="display:flex;gap:8px;">
+      <div style="flex:1;position:relative;">
+        <img id="cierre-img-terminado" src="" style="width:100%;height:90px;object-fit:cover;border-radius:9px;display:none;">
+      </div>
+      <div style="flex:1;position:relative;">
+        <img id="cierre-img-boleta" src="" style="width:100%;height:90px;object-fit:cover;border-radius:9px;display:none;">
+      </div>
     </div>
   </div>
   <div class="card" style="margin-bottom:9px;">
     <div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:9px;">RESUMEN DE PAGO</div>
-    <div class="row"><span class="rl">Técnicos verificados</span><span class="rv ra">$10.630</span></div>
-    <div class="row"><span class="rl">M.O. fija + urgencia</span><span class="rv rg">$46.875</span></div>
-    <div class="row row-total"><span style="font-weight:700;">Tú recibes total</span><span class="rv rg" style="font-size:15px;">$57.505</span></div>
-    <div style="margin-top:7px;padding:7px 9px;background:rgba(0,229,160,.05);border-radius:8px;font-size:11px;color:var(--accent);line-height:1.5;">
-      💸 Materiales $10.630 → hoy<br>💰 M.O. $46.875 → en 24 hrs
+    <div class="row"><span class="rl">Materiales comprados</span><span class="rv ra" id="cierre-monto-mat">—</span></div>
+    <div class="row"><span class="rl">M.O. fija</span><span class="rv rg" id="cierre-mo">—</span></div>
+    <div class="row row-total"><span style="font-weight:700;">Tú recibes total</span><span class="rv rg" style="font-size:15px;" id="cierre-total">—</span></div>
+    <div style="margin-top:7px;padding:7px 9px;background:rgba(0,229,160,.05);border-radius:8px;font-size:11px;color:var(--accent);line-height:1.5;" id="cierre-timing">
+      💸 Materiales → hoy al subir boleta<br>💰 M.O. → 24 hrs tras confirmación del cliente
     </div>
   </div>
-  <button class="btn btn-g" onclick="go('tec-rating')">Enviar y cerrar trabajo →</button>
+  <button class="btn btn-g" id="btn-cerrar-trabajo" onclick="cerrarTrabajo()" style="opacity:.4;" disabled>Enviar y cerrar trabajo →</button>
 </div>
 </div>
 
@@ -1135,11 +1177,14 @@ textarea.inp{resize:none;}
 
 <div class="screen" id="s-tec-notif">
 <div class="status"><span>9:41</span><span>🔔 Notificaciones</span><span>📶</span></div>
-<div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Notificaciones</div></div>
+<div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Notificaciones</div><button onclick="limpiarNotifs('tec')" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:4px 8px;">Limpiar</button></div>
 <div class="wrap">
-  <div class="notif"><div class="notif-dot" style="background:var(--red);"></div><div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">⚡ Nuevo trabajo urgente</div><div style="font-size:12px;color:var(--muted);">Reparación fuga · 1.2km · $46.875</div><div style="font-size:10px;color:var(--muted);margin-top:3px;">Hace 2 min</div></div></div>
-  <div class="notif"><div class="notif-dot" style="background:var(--accent);"></div><div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">💸 Pago liberado</div><div style="font-size:12px;color:var(--muted);">$68.750 · Instalación calefont #FY-2844</div><div style="font-size:10px;color:var(--muted);margin-top:3px;">Hace 1 hora</div></div></div>
-  <div class="notif"><div class="notif-dot" style="background:var(--accent2);"></div><div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">⭐ Nueva calificación</div><div style="font-size:12px;color:var(--muted);">María González te dio 5 estrellas</div><div style="font-size:10px;color:var(--muted);margin-top:3px;">Hace 2 horas</div></div></div>
+  <div id="tec-notif-lista">
+    <div id="tec-notif-empty" style="text-align:center;padding:40px 20px;color:var(--muted);">
+      <div style="font-size:32px;margin-bottom:10px;">🔔</div>
+      <div style="font-size:13px;">Sin notificaciones</div>
+    </div>
+  </div>
 </div>
 </div>
 
@@ -1210,12 +1255,18 @@ textarea.inp{resize:none;}
   </div>
 
 
-  <!-- SOLICITUD ACTIVA -->
-  <div class="lbl">Solicitud activa</div>
-  <div class="hl-a hl" style="cursor:pointer;" onclick="go('cli-verificar-mat')">
-    <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><div style="font-size:13px;font-weight:700;">Reparación fuga cañería</div><span class="tag ta">🟡 En curso</span></div>
-    <div style="font-size:12px;color:var(--muted);">Carlos M. · ⭐4.9 · Llega ~6 min</div>
-    <div style="margin-top:7px;padding:7px 9px;background:rgba(255,255,255,.04);border-radius:8px;font-size:12px;color:var(--muted);">⏳ Verificar materiales cuando llegue</div>
+  <!-- SOLICITUD ACTIVA — dinámica, oculta si no hay solicitud -->
+  <div id="cli-home-sol-activa" style="display:none;">
+    <div class="lbl">Solicitud activa</div>
+    <div class="hl-a hl" style="cursor:pointer;" onclick="irASolicitudActiva()">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+        <div style="font-size:13px;font-weight:700;" id="cli-home-sol-trabajo">—</div>
+        <span class="tag ta" id="cli-home-sol-estado">🟡 En curso</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);" id="cli-home-sol-tecnico">Buscando técnico...</div>
+      <div style="margin-top:7px;padding:7px 9px;background:rgba(255,255,255,.04);border-radius:8px;font-size:12px;color:var(--muted);" id="cli-home-sol-status">⏳ Esperando técnico</div>
+    </div>
+    <button onclick="cancelarSolicitudActiva()" style="width:100%;margin-top:6px;padding:9px;background:rgba(255,77,109,.08);border:.5px solid rgba(255,77,109,.25);border-radius:10px;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">✕ Cancelar solicitud</button>
   </div>
 </div>
 <div class="nav-bottom">
@@ -1477,8 +1528,8 @@ textarea.inp{resize:none;}
   <div class="urg-opt" id="modo-agenda" onclick="setModo('agenda')" style="padding:11px 14px;text-align:left;display:flex;align-items:center;gap:12px;margin-bottom:14px;opacity:.85;">
     <div style="font-size:20px;flex-shrink:0;">📅</div>
     <div style="flex:1;">
-      <div style="font-size:13px;font-weight:700;color:var(--accent);">Agendar para otro momento</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:1px;">Eliges día y bloque horario · Sin recargo</div>
+      <div style="font-size:13px;font-weight:700;color:var(--accent);">Agendar</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:1px;">Elige el día y bloque horario que más te acomode</div>
     </div>
     <div style="text-align:right;flex-shrink:0;">
       <div style="font-size:9px;color:var(--muted);letter-spacing:.2px;">PAGAS</div>
@@ -1544,7 +1595,7 @@ textarea.inp{resize:none;}
     <div class="card" style="padding:12px 14px;border-top-left-radius:0;border-top-right-radius:0;border-top:none;border-color:rgba(244,164,41,.2);">
       <div class="row" style="padding:6px 0;"><span class="rl">Materiales estimados</span><span class="rv ra" id="cot-mat">$6.500</span></div>
       <div class="row" style="padding:6px 0;"><span class="rl" id="cot-mo-desc">Mano de obra</span><span class="rv rg" id="cot-tec">$37.500</span></div>
-      <div class="row" style="padding:6px 0;"><span class="rl" style="color:var(--muted);font-size:12px;">Comisión plataforma (12%)</span><span class="rv" style="color:var(--muted);font-size:12px;" id="cot-fix">$5.040</span></div>
+      <div class="row" style="padding:6px 0;display:none;"><span class="rl" style="color:var(--muted);font-size:12px;">Costo de servicio (12%)</span><span class="rv" style="color:var(--muted);font-size:12px;" id="cot-fix">$5.040</span></div>
       <div class="row row-total" style="padding-top:8px;"><span style="font-weight:700;">Total</span><span style="font-family:'JetBrains Mono';font-weight:800;color:var(--accent2);" id="cot-total2">$49.280</span></div>
     </div>
   </div>
@@ -1672,7 +1723,7 @@ textarea.inp{resize:none;}
   <div id="pin-desglose-body" style="display:none;margin-bottom:9px;">
     <div class="card" style="padding:12px 14px;border-top-left-radius:0;border-top-right-radius:0;border-top:none;border-color:rgba(244,164,41,.2);">
       <div class="row" style="padding:6px 0;"><span class="rl">M.O. pintura (<span id="p-desc-m2">7.20</span> m²)</span><span class="rv rg" id="p-mo-val">—</span></div>
-      <div class="row" style="padding:6px 0;"><span class="rl" style="color:var(--muted);font-size:12px;">Comisión plataforma (12%)</span><span class="rv" style="color:var(--muted);font-size:12px;" id="p-fix-val">—</span></div>
+      <div class="row" style="padding:6px 0;display:none;"><span class="rl" style="color:var(--muted);font-size:12px;">Costo de servicio (12%)</span><span class="rv" style="color:var(--muted);font-size:12px;" id="p-fix-val">—</span></div>
       <div class="row row-total" style="padding-top:8px;"><span style="font-weight:700;">Total</span><span style="font-family:'JetBrains Mono';font-weight:800;color:var(--accent2);" id="p-total-val">—</span></div>
     </div>
   </div>
@@ -1685,6 +1736,57 @@ textarea.inp{resize:none;}
   </div>
 
   <button class="btn btn-a" id="btn-confirm-pintura" onclick="confirmPintura()">Continuar →</button>
+</div>
+</div>
+
+<!-- CLIENTE — DIRECCIÓN DEL TRABAJO -->
+<div class="screen" id="s-cli-direccion">
+<div class="status"><span>9:42</span><span>📍 Dirección</span><span>📶</span></div>
+<div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">¿Dónde necesitas el servicio?</div></div>
+<div class="wrap">
+
+  <!-- Búsqueda de dirección -->
+  <div class="lbl">Dirección del trabajo</div>
+  <div style="position:relative;margin-bottom:10px;">
+    <input id="dir-input" type="text" class="inp" placeholder="Ej: Av. Providencia 1234, Santiago"
+      style="padding-right:40px;"
+      oninput="buscarDireccion(this.value)"
+      onfocus="mostrarSugerencias()"
+      autocomplete="off">
+    <div onclick="usarUbicacionActual()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:18px;cursor:pointer;opacity:.7;">📍</div>
+  </div>
+
+  <!-- Sugerencias de Google Places -->
+  <div id="dir-sugerencias" style="display:none;background:var(--card);border:.5px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;"></div>
+
+  <!-- Depto / Piso / Referencia -->
+  <div class="lbl">Depto / Piso / Referencia <span style="color:var(--muted);font-weight:400;">(opcional)</span></div>
+  <input id="dir-depto" type="text" class="inp" placeholder="Ej: Depto 4B, piso 3, portón azul" style="margin-bottom:14px;">
+
+  <!-- Dirección seleccionada confirmada -->
+  <div id="dir-confirmada" style="display:none;padding:10px 12px;background:rgba(0,229,160,.06);border:.5px solid rgba(0,229,160,.2);border-radius:10px;margin-bottom:14px;">
+    <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:3px;">📍 Dirección confirmada</div>
+    <div id="dir-confirmada-text" style="font-size:13px;font-weight:600;"></div>
+  </div>
+
+  <!-- Guardar como favorita -->
+  <div id="dir-guardar-wrap" style="display:none;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <input type="checkbox" id="dir-guardar-check" style="width:16px;height:16px;cursor:pointer;" onchange="toggleGuardarFavorita()">
+      <label for="dir-guardar-check" style="font-size:13px;cursor:pointer;">Guardar como dirección favorita</label>
+    </div>
+    <div id="dir-apodo-wrap" style="display:none;">
+      <input id="dir-apodo" type="text" class="inp" placeholder='Ej: "Casa", "Trabajo", "Casa mamá"' style="font-size:13px;">
+    </div>
+  </div>
+
+  <!-- Direcciones favoritas -->
+  <div id="dir-favoritas-wrap">
+    <div class="lbl">Mis direcciones</div>
+    <div id="dir-favoritas-lista"></div>
+  </div>
+
+  <button class="btn btn-a" id="btn-dir-continuar" onclick="confirmarDireccion()" style="opacity:.4;" disabled>Continuar →</button>
 </div>
 </div>
 
@@ -1823,22 +1925,47 @@ textarea.inp{resize:none;}
 <div class="status"><span>9:44</span><span>👷 Técnicos</span><span>📶</span></div>
 <div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Técnicos disponibles</div></div>
 <div class="wrap">
-  <div class="sub">3 técnicos verificados cerca tuyo ahora mismo.</div>
-  <div class="tec-card" onclick="go('cli-verificar-mat')">
-    <div class="tec-av" style="background:rgba(0,229,160,.12);">👷</div>
-    <div style="flex:1;"><div style="font-size:13px;font-weight:700;">Carlos Mendoza</div><div style="font-size:11px;color:var(--accent2);">⭐⭐⭐⭐⭐ 4.9 · 127 trabajos</div><div style="display:flex;gap:4px;margin-top:4px;"><span class="tag tg" style="font-size:9px;">✓ Verificado</span><span class="tag ta" style="font-size:9px;">⭐ Fundador</span><span class="tag tb" style="font-size:9px;">1.2 km</span></div></div>
-    <div style="text-align:right;"><div style="font-family:'JetBrains Mono';font-size:12px;font-weight:700;color:var(--accent);" id="tec1-price">$37.500</div><div style="font-size:10px;color:var(--muted);">~15 min</div></div>
+  <div class="sub" id="tec-sub">Buscando técnicos verificados cerca tuyo...</div>
+  <div id="tec-lista">
+    <div style="text-align:center;padding:40px 20px;">
+      <div style="font-size:36px;margin-bottom:12px;">🔍</div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:6px;">Notificando técnicos</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;">Los técnicos disponibles recibirán tu solicitud ahora mismo. Aparecerán aquí en cuanto se postulen.</div>
+      <div style="margin-top:20px;display:flex;gap:6px;justify-content:center;">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite;"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite .4s;"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite .8s;"></div>
+      </div>
+    </div>
   </div>
-  <div class="tec-card">
-    <div class="tec-av" style="background:rgba(244,164,41,.12);">👷</div>
-    <div style="flex:1;"><div style="font-size:13px;font-weight:700;">Roberto Silva</div><div style="font-size:11px;color:var(--accent2);">⭐⭐⭐⭐ 4.7 · 89 trabajos</div><div style="display:flex;gap:4px;margin-top:4px;"><span class="tag tg" style="font-size:9px;">✓ Verificado</span><span class="tag tb" style="font-size:9px;">2.1 km</span></div></div>
-    <div style="text-align:right;"><div style="font-family:'JetBrains Mono';font-size:12px;font-weight:700;color:var(--accent);" id="tec2-price">$37.500</div><div style="font-size:10px;color:var(--muted);">~22 min</div></div>
+  <button onclick="cancelarSolicitudActiva()" style="width:100%;margin-top:14px;padding:11px;background:rgba(255,77,109,.08);border:.5px solid rgba(255,77,109,.25);border-radius:10px;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">✕ Cancelar solicitud</button>
+</div>
+</div>
+
+<!-- CLIENTE — TÉCNICO EN CAMINO (espera hasta que llegue) -->
+<div class="screen" id="s-cli-en-camino">
+<div class="status"><span id="cli-ec-time">9:55</span><span>🚗 En camino</span><span>📶</span></div>
+<div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Tu técnico viene en camino</div></div>
+<div class="wrap">
+  <div class="status-badge sb-on" style="margin-bottom:14px;">
+    <div style="font-size:16px;">🚗</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--accent);" id="cli-ec-nombre">Técnico en camino</div>
+      <div style="font-size:11px;color:var(--muted);" id="cli-ec-eta">Calculando tiempo de llegada...</div>
+    </div>
   </div>
-  <div class="tec-card">
-    <div class="tec-av" style="background:rgba(77,158,255,.12);">👷</div>
-    <div style="flex:1;"><div style="font-size:13px;font-weight:700;">Javier Rojas</div><div style="font-size:11px;color:var(--accent2);">⭐⭐⭐⭐⭐ 4.8 · 203 trabajos</div><div style="display:flex;gap:4px;margin-top:4px;"><span class="tag tg" style="font-size:9px;">✓ Verificado</span><span class="tag tb" style="font-size:9px;">3.4 km</span></div></div>
-    <div style="text-align:right;"><div style="font-family:'JetBrains Mono';font-size:12px;font-weight:700;color:var(--accent);" id="tec3-price">$37.500</div><div style="font-size:10px;color:var(--muted);">~28 min</div></div>
+  <div id="mapa-cliente-encamino" style="width:100%;height:200px;border-radius:12px;border:.5px solid var(--border);margin-bottom:12px;overflow:hidden;background:var(--card2);display:flex;align-items:center;justify-content:center;">
+    <div style="text-align:center;font-size:12px;color:var(--muted);">🗺️ Cargando mapa...</div>
   </div>
+  <div class="card" style="margin-bottom:10px;">
+    <div class="row"><span class="rl">Trabajo</span><span class="rv" id="cli-ec-trabajo">—</span></div>
+    <div class="row"><span class="rl">M.O. garantizada</span><span class="rv rg" id="cli-ec-mo">—</span></div>
+    <div class="row"><span class="rl">Estado</span><span class="rv"><span class="tag tg" style="font-size:10px;">✓ Confirmado</span></span></div>
+  </div>
+  <div style="padding:10px 12px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.5;margin-bottom:10px;">
+    📸 El técnico subirá foto de los materiales al llegar. Tendrás <strong>10 min</strong> para verificar.
+  </div>
+  <button onclick="abrirChatTrabajo()" style="width:100%;padding:10px;background:rgba(77,158,255,.07);border:.5px solid rgba(77,158,255,.2);border-radius:10px;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;">💬 Chatear con el técnico</button>
 </div>
 </div>
 
@@ -1853,12 +1980,15 @@ textarea.inp{resize:none;}
   <div class="sub">Carlos llegó. Confirma que trajo todo antes de que empiece.</div>
   <div class="timer-box">
     <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">⏳ Tiempo para verificar</div>
-    <div class="timer-num" style="color:var(--accent2);" id="tmr-cli">14:59</div>
+    <div class="timer-num" style="color:var(--accent2);" id="tmr-cli">10:00</div>
     <div style="font-size:11px;color:var(--muted);margin-top:2px;">Sin respuesta → aprobación automática</div>
   </div>
-  <div style="width:100%;height:110px;background:linear-gradient(135deg,#1C2333,#111827);border-radius:11px;border:.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;margin-bottom:11px;">
-    <div style="font-size:30px;">📦</div>
-    <div style="font-size:11px;color:var(--muted);">Foto técnico · GPS verificado · 10:04 hrs</div>
+  <div style="width:100%;border-radius:11px;border:.5px solid var(--border);background:var(--card2);margin-bottom:11px;overflow:hidden;">
+    <img id="cli-boleta-foto" src="" style="width:100%;display:none;border-radius:11px;" alt="Foto materiales técnico">
+    <div id="cli-boleta-placeholder" style="height:110px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;">
+      <div style="font-size:30px;">📦</div>
+      <div style="font-size:11px;color:var(--muted);" id="cli-boleta-hora">Foto técnico · GPS verificado</div>
+    </div>
   </div>
   <div class="card" style="margin-bottom:9px;">
     <div style="font-size:10px;color:var(--accent2);font-weight:700;margin-bottom:8px;">📋 ¿Ves todos estos ítems en la foto?</div>
@@ -1869,13 +1999,34 @@ textarea.inp{resize:none;}
       <div class="mat-item" id="cm3" onclick="chkCli(3)"><div class="mat-chk"></div><div style="flex:1;font-size:13px;font-weight:600;">Teflón + uniones</div><div class="rv ra" style="font-size:12px;">$1.780</div></div>
     </div>
   </div>
-  <div id="cli-mat-status" style="padding:9px 12px;background:rgba(255,255,255,.04);border-radius:9px;font-size:12px;color:var(--muted);text-align:center;margin-bottom:11px;">
+  <div id="cli-mat-status" style="padding:9px 12px;background:rgba(255,255,255,.04);border-radius:9px;font-size:12px;color:var(--muted);text-align:center;margin-bottom:8px;">
     Marca cada ítem que puedes ver en la foto ↑
   </div>
+  <button onclick="marcarTodosCliMats()" style="width:100%;padding:8px;background:rgba(77,158,255,.06);border:.5px solid rgba(77,158,255,.2);border-radius:9px;font-size:12px;color:var(--blue);cursor:pointer;margin-bottom:9px;">☑ Marcar todos como presentes</button>
   <div style="display:flex;gap:7px;">
     <button class="btn btn-ghost btn-sm" onclick="go('cli-reporte-faltante')" style="flex:1;">❌ Falta algo</button>
     <button class="btn btn-a" onclick="confMats()" style="flex:2;" id="btn-conf-m">Confirmar ✓</button>
   </div>
+</div>
+</div>
+
+<!-- CLIENTE — TRABAJO EN EJECUCIÓN -->
+<div class="screen" id="s-cli-en-ejecucion">
+<div class="status"><span id="cli-ej-time">10:20</span><span>🔨 En trabajo</span><span>📶</span></div>
+<div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Trabajo en curso</div></div>
+<div class="wrap">
+  <div class="status-badge sb-on" style="margin-bottom:16px;">
+    <div style="font-size:20px;">🔨</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--accent);" id="cli-ej-tecnico">Tu técnico está trabajando</div>
+      <div style="font-size:11px;color:var(--muted);" id="cli-ej-inicio">Inicio: —</div>
+    </div>
+  </div>
+  <div style="padding:12px 14px;background:rgba(0,229,160,.06);border:.5px solid rgba(0,229,160,.2);border-radius:11px;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px;">
+    ✅ Los materiales fueron verificados y el técnico comenzó el trabajo.<br><br>
+    Cuando termine, recibirás una notificación para confirmar el trabajo y liberar el pago.
+  </div>
+  <button onclick="go('cli-home')" style="width:100%;padding:10px;background:rgba(255,255,255,.04);border:.5px solid var(--border);border-radius:10px;font-size:12px;color:var(--muted);cursor:pointer;">← Volver al inicio</button>
 </div>
 </div>
 
@@ -1895,48 +2046,60 @@ textarea.inp{resize:none;}
 </div>
 </div>
 
+<!-- CLIENTE — CALIFICACIÓN -->
+<div class="screen" id="s-cli-rating">
+<div class="status"><span>11:45</span><span>⭐ Calificar</span><span>📶</span></div>
+<div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Calificar al técnico</div></div>
+<div class="wrap">
+  <div style="text-align:center;padding:14px 0 18px;">
+    <div style="font-size:42px;margin-bottom:9px;">🎉</div>
+    <div class="ttl">¡Trabajo completado!</div>
+    <div class="sub" id="cli-rating-desc">Tu opinión es importante para nosotros</div>
+  </div>
+  <div style="text-align:center;margin-bottom:8px;font-size:13px;font-weight:700;">¿Cómo fue el técnico?</div>
+  <div class="stars" id="stars-cli">
+    <div class="star" onclick="rateCli(1)">☆</div>
+    <div class="star" onclick="rateCli(2)">☆</div>
+    <div class="star" onclick="rateCli(3)">☆</div>
+    <div class="star" onclick="rateCli(4)">☆</div>
+    <div class="star" onclick="rateCli(5)">☆</div>
+  </div>
+  <textarea class="inp" id="cli-rating-comment" style="height:75px;resize:none;margin-bottom:12px;" placeholder="Comentario opcional..."></textarea>
+  <button class="btn btn-g" onclick="enviarCalificacionCliente()">Enviar calificación →</button>
+  <div style="text-align:center;padding:12px 0 4px;cursor:pointer;font-size:12px;color:var(--muted);text-decoration:underline;" onclick="omitirCalificacionCliente()">Omitir</div>
+</div>
+</div>
+
+<!-- CHAT CLIENTE-TÉCNICO -->
+<div class="screen" id="s-chat-trabajo">
+<div class="status"><span>10:00</span><span>💬 Chat</span><span>📶</span></div>
+<div class="topbar">
+  <div class="back-btn" onclick="back()">←</div>
+  <div class="topbar-title" id="chat-titulo">Chat del trabajo</div>
+</div>
+<div style="display:flex;flex-direction:column;height:calc(100vh - 100px);">
+  <div id="chat-mensajes" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;">
+    <div id="chat-empty" style="text-align:center;padding:30px 20px;color:var(--muted);">
+      <div style="font-size:32px;margin-bottom:8px;">💬</div>
+      <div style="font-size:13px;">Sin mensajes aún. Usa el chat para coordinar.</div>
+    </div>
+  </div>
+  <div style="padding:10px 12px;border-top:.5px solid var(--border);background:var(--bg);display:flex;gap:8px;align-items:flex-end;">
+    <textarea id="chat-input" placeholder="Escribe un mensaje..." style="flex:1;padding:9px 12px;background:var(--card2);border:.5px solid var(--border);border-radius:12px;font-size:13px;color:var(--text);resize:none;font-family:'DM Sans',sans-serif;min-height:38px;max-height:100px;outline:none;" rows="1"
+      oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensajeChat();}"></textarea>
+    <button onclick="enviarMensajeChat()" style="width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;font-size:18px;flex-shrink:0;">↑</button>
+  </div>
+</div>
+</div>
+
 <!-- CLIENTE — HISTORIAL -->
 <div class="screen" id="s-cli-historial">
 <div class="status"><span>10:20</span><span>📋 Historial</span><span>📶</span></div>
 <div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Mis reparaciones</div></div>
 <div class="wrap">
-  <div class="card" style="padding:0;overflow:hidden;">
-    <div class="row" style="padding:11px 13px;cursor:pointer;">
-      <div>
-        <div style="font-size:13px;font-weight:600;">Reparación fuga · Carlos M.</div>
-        <div style="font-size:11px;color:var(--muted);">Hoy · Gasfitería</div>
-      </div>
-      <div style="text-align:right;">
-        <span class="tag ta" style="font-size:9px;">En curso</span>
-      </div>
-    </div>
-    <div class="row" style="padding:11px 13px;cursor:pointer;">
-      <div>
-        <div style="font-size:13px;font-weight:600;">Apertura emergencia · Javier R.</div>
-        <div style="font-size:11px;color:var(--muted);">Ayer · Cerrajería</div>
-      </div>
-      <div style="text-align:right;">
-        <span class="tag tg" style="font-size:9px;">Completado ✓</span>
-      </div>
-    </div>
-    <div class="row" style="padding:11px 13px;cursor:pointer;">
-      <div>
-        <div style="font-size:13px;font-weight:600;">Instalación TV + repisas · Roberto S.</div>
-        <div style="font-size:11px;color:var(--muted);">Hace 2 sem · Handyman</div>
-      </div>
-      <div style="text-align:right;">
-        <span class="tag tg" style="font-size:9px;">Completado ✓</span>
-      </div>
-    </div>
-    <div class="row" style="padding:11px 13px;cursor:pointer;">
-      <div>
-        <div style="font-size:13px;font-weight:600;">Instalación enchufe · Carlos M.</div>
-        <div style="font-size:11px;color:var(--muted);">Hace 1 mes · Electricidad</div>
-      </div>
-      <div style="text-align:right;">
-        <span class="tag tg" style="font-size:9px;">Completado ✓</span>
-      </div>
-    </div>
+  <div id="historial-lista">
+    <div id="historial-loading" style="text-align:center;padding:30px;color:var(--muted);font-size:13px;">Cargando...</div>
   </div>
 </div>
 <div class="nav-bottom">
@@ -2131,7 +2294,7 @@ textarea.inp{resize:none;}
 function getUrgencia() {
   if (typeof schedModo === 'undefined') return 'normal';
   if (schedModo === 'emergencia') return 'emergencia';
-  if (schedModo === 'asap') return 'urgente';
+  if (schedModo === 'emer') return 'emergencia';
   return 'normal';
 }
 
@@ -2400,8 +2563,10 @@ function go(id) {
     window.scrollTo(0, 0);
   }
   // Timers
-  if (fullId === 's-tec-alerta') startTimer('tmr-tec', 15);
-  if (fullId === 's-cli-verificar-mat') startTimer('tmr-cli', 15 * 60);
+  if (fullId === 's-tec-alerta') startTimer('tmr-tec', 5 * 60);
+  if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
+  if (fullId === 's-cli-historial') setTimeout(cargarHistorial, 50);
+  if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
 }
 
 function back() {
@@ -2427,6 +2592,12 @@ function startTimer(id, secs) {
     s--;
   }
   tick(); timerI = setInterval(tick, 1000);
+}
+
+function stopTimer(id, mensaje) {
+  if (timerI) { clearInterval(timerI); timerI = null; }
+  const el = id ? document.getElementById(id) : null;
+  if (el) el.textContent = mensaje || '✓';
 }
 
 // ── TOGGLE DISPONIBILIDAD ─────────────────────────────────────────────────────
@@ -2496,12 +2667,12 @@ let schedModo = 'agenda', schedDia = 'Hoy', schedBloque = '08:00–12:00';
 
 function setModo(m) {
   schedModo = m;
-  const mults = { agenda: 1.0, asap: 1.10, emer: 1.35 };
+  const mults = { agenda: 1.0, asap: 1.0, emer: 1.35 };
   cliUrg = mults[m];
 
   // Full mode elements
   const opts = { agenda:'modo-agenda', asap:'modo-asap', emer:'modo-emer' };
-  const selClass = { agenda:'on-n', asap:'on-u', emer:'on-r' };
+  const selClass = { agenda:'on-n', asap:'on-n', emer:'on-r' };
   Object.entries(opts).forEach(([k, id]) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -2666,7 +2837,7 @@ function updCot() {
   setV('cot-total', fmt(active.total));
   setV('cot-total2', fmt(active.total));
   setV('on-p', fmt(totalA));
-  setV('ou-p', fmt(totalU));
+  setV('ou-p', fmt(totalA));
   setV('oe-p', fmt(totalE));
 
   const subEl = document.getElementById('cot-urg-sub');
@@ -2738,7 +2909,7 @@ function calcPintura() {
   }
   totalM2 = Math.round(totalM2 * 100) / 100;
   const moBase = Math.max(totalM2 * MO_M2, MO_MIN_PINTURA);
-  const moAsap = Math.round(moBase * 1.10);
+  const moAsap = moBase;
   const totalAsap = Math.round(moAsap * 1.12);
   const totalAgenda = Math.round(moBase * 1.12);
   const fixAsap = Math.round(moAsap * 0.12);
@@ -2810,7 +2981,7 @@ function confirmPintura() {
   const { totalM2 } = calcPintura();
   cotNombre = 'Pintura de muros (' + totalM2.toFixed(1) + ' m²)';
   cotMO = Math.max(totalM2 * MO_M2, MO_MIN_PINTURA);
-  if (pinModo === 'asap') cotMO = Math.round(cotMO * 1.10);
+  if (pinModo === 'asap') cotMO = cotMO;
   cotMat = 0; cotPlazo = 48; cotDur = '2–4 hrs'; cliUrg = 1.0; schedModo = 'agenda';
   pinDesgloseAbierto = false;
   const pb = document.getElementById('pin-desglose-body');
@@ -2846,7 +3017,7 @@ function selTrabajo(nombre, mo, mat, plazo, dur, modoUrg) {
   const modo = modoUrg || 'full';
   const defaultModo = modo === 'agenda' ? 'agenda' : 'asap';
   schedModo = defaultModo;
-  cliUrg = defaultModo === 'agenda' ? 1.0 : 1.10;
+  cliUrg = 1.0;
 
   // Mostrar grid correcto según el trabajo
   setTimeout(() => {
@@ -3363,17 +3534,128 @@ const Session = {
   existe() { return !!localStorage.getItem('fx_token'); },
 };
 
-// ── Fetch autenticado ─────────────────────────────────────────
-async function apiFetch(path, options = {}) {
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
-  const token = Session.token();
-  if (token) headers['Authorization'] = 'Bearer ' + token;
+// ── Fetch autenticado con auto-refresh de token ───────────────
+let _refreshing = false;
+let _refreshQueue = [];
 
-  const res = await fetch(API + path, { ...options, headers });
+async function _doRefresh() {
+  const refreshToken = localStorage.getItem('fx_refresh');
+  if (!refreshToken) throw new Error('Sin refresh token');
+  const res = await fetch(API + '/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  });
+  if (!res.ok) throw new Error('Refresh fallido');
+  const data = await res.json();
+  // El backend devuelve accessToken y refreshToken nuevos
+  localStorage.setItem('fx_token', data.accessToken);
+  if (data.refreshToken) localStorage.setItem('fx_refresh', data.refreshToken);
+  return data.accessToken;
+}
+
+async function apiFetch(path, options = {}) {
+  const makeReq = (token) => {
+    const headers = { 'Content-Type': 'application/json', ...options.headers };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    return fetch(API + path, { ...options, headers });
+  };
+
+  let res = await makeReq(Session.token());
   const data = await res.json().catch(() => ({}));
+
+  // Si el token expiró, intentar refresh automático una sola vez
+  if (res.status === 401 && localStorage.getItem('fx_refresh')) {
+    try {
+      // Cola de requests paralelos: solo uno hace el refresh
+      if (_refreshing) {
+        await new Promise((resolve, reject) => _refreshQueue.push({ resolve, reject }));
+      } else {
+        _refreshing = true;
+        try {
+          const newToken = await _doRefresh();
+          _refreshQueue.forEach(p => p.resolve());
+          _refreshQueue = [];
+          _refreshing = false;
+          // Reintentar la request original con token nuevo
+          res = await makeReq(newToken);
+          const data2 = await res.json().catch(() => ({}));
+          if (!res.ok) throw { status: res.status, message: data2.error || 'Error en la solicitud' };
+          return data2;
+        } catch (e) {
+          _refreshQueue.forEach(p => p.reject(e));
+          _refreshQueue = [];
+          _refreshing = false;
+          // Refresh falló → limpiar sesión y pedir re-login
+          Session.clear();
+          mostrarModalLogin('Tu sesión expiró. Vuelve a ingresar.');
+          throw { status: 401, message: 'Sesión expirada. Ingresa nuevamente.' };
+        }
+      }
+      // Si estaba en cola, reintentar
+      res = await makeReq(Session.token());
+      const data3 = await res.json().catch(() => ({}));
+      if (!res.ok) throw { status: res.status, message: data3.error || 'Error en la solicitud' };
+      return data3;
+    } catch (e) {
+      if (e.status) throw e;
+      throw { status: 401, message: 'Sesión expirada. Ingresa nuevamente.' };
+    }
+  }
 
   if (!res.ok) throw { status: res.status, message: data.error || 'Error en la solicitud' };
   return data;
+}
+
+// ── Modal de re-login inline (sin salir de la pantalla actual) ─
+function mostrarModalLogin(mensajeExtra) {
+  // Evitar duplicados
+  if (document.getElementById('relogin-modal')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'relogin-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(6,9,26,.92);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+  const rol = Session.rol() || 'usuario';
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:.5px solid var(--border);border-radius:18px;padding:24px;width:100%;max-width:360px;">
+      <div style="font-size:22px;font-weight:800;margin-bottom:6px;">Sesión expirada</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">${mensajeExtra || 'Tu sesión venció. Ingresa tus credenciales para continuar.'}</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px;">Email</div>
+      <input id="rl-email" type="email" placeholder="correo@ejemplo.cl" style="width:100%;padding:11px 13px;border-radius:10px;background:rgba(255,255,255,.07);border:.5px solid var(--border);font-size:14px;color:var(--text);outline:none;margin-bottom:9px;font-family:'DM Sans',sans-serif;">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px;">Contraseña</div>
+      <input id="rl-pass" type="password" placeholder="••••••••" style="width:100%;padding:11px 13px;border-radius:10px;background:rgba(255,255,255,.07);border:.5px solid var(--border);font-size:14px;color:var(--text);outline:none;margin-bottom:16px;font-family:'DM Sans',sans-serif;">
+      <button id="rl-btn" onclick="submitRelogin('${rol}')" style="width:100%;padding:14px;border-radius:12px;background:var(--accent);color:#05120A;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;border:none;">Ingresar nuevamente →</button>
+      <div id="rl-error" style="color:var(--red);font-size:12px;margin-top:10px;text-align:center;display:none;"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Auto-focus email
+  setTimeout(() => { const el = document.getElementById('rl-email'); if (el) el.focus(); }, 100);
+}
+
+async function submitRelogin(rol) {
+  const email = document.getElementById('rl-email')?.value?.trim();
+  const pass  = document.getElementById('rl-pass')?.value;
+  const errEl = document.getElementById('rl-error');
+  const btn   = document.getElementById('rl-btn');
+  if (!email || !pass) { if (errEl) { errEl.textContent = 'Completa los campos'; errEl.style.display = 'block'; } return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Ingresando...'; }
+  try {
+    const data = await fetch(API + '/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass, rol }),
+    }).then(r => r.json());
+    if (!data.accessToken) throw new Error(data.error || 'Credenciales incorrectas');
+    Session.save(data);
+    document.getElementById('relogin-modal')?.remove();
+    showSuccess('Sesión renovada ✓');
+  } catch(e) {
+    if (errEl) { errEl.textContent = e.message || 'Error al ingresar'; errEl.style.display = 'block'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Ingresar nuevamente →'; }
+  }
 }
 
 // ── Mostrar error en pantalla (reemplaza alert) ───────────────
@@ -3415,25 +3697,91 @@ function setLoading(btnId, loading, textoOriginal) {
 window.addEventListener('DOMContentLoaded', () => {
   if (Session.existe()) {
     const rol = Session.rol();
-    // Si hay sesión activa, saltar el onboarding e ir directo al home
-    if (rol === 'tecnico') go('tec-home');
-    else if (rol === 'usuario') go('cli-home');
+    if (rol === 'tecnico') {
+      go('tec-home');
+      // Restaurar card si tenía trabajo activo
+      const solTec = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      if (solTec.id && typeof poblarTecAlerta === 'function') {
+        // Verificar que la solicitud sigue activa antes de mostrar
+        setTimeout(async () => {
+          try {
+            const data = await apiFetch('/solicitudes/' + solTec.id);
+            const estadosActivos = ['PENDIENTE','CON_POSTULANTES','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
+            if (!data || !estadosActivos.includes(data.estado)) {
+              localStorage.removeItem('fx_solicitud_activa');
+              return;
+            }
+            // Si está en camino o en trabajo, ir a la pantalla correcta
+            if (data.estado === 'EN_CAMINO') { go('tec-en-camino'); return; }
+            if (data.estado === 'EN_TRABAJO') { go('tec-mat-verificar'); return; }
+            // Si pendiente, mostrar en lista de disponibles
+            agregarTrabajoDisponible({ ...solTec, solicitudId: solTec.id, trabajo: data.trabajo, urgencia: data.urgencia });
+          } catch {
+            localStorage.removeItem('fx_solicitud_activa');
+          }
+        }, 500);
+      }
+    } else if (rol === 'usuario') {
+      go('cli-home');
+      // Restaurar pantalla correcta si había solicitud activa
+      setTimeout(async () => {
+        const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+        if (!sol.id) return;
+        try {
+          const data = await apiFetch('/solicitudes/' + sol.id);
+          if (!data) { localStorage.removeItem('fx_solicitud_activa'); return; }
+          const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
+          if (!activos.includes(data.estado)) {
+            localStorage.removeItem('fx_solicitud_activa');
+            return;
+          }
+          // Enriquecer con datos del backend
+          localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+            ...sol,
+            tecnicoId: data.tecnicoId || sol.tecnicoId,
+            tecnicoNombre: data.tecnico?.nombre || sol.tecnicoNombre,
+            trabajo: data.trabajo || sol.trabajo,
+          }));
+          // Navegar a pantalla correcta según estado
+          if (data.estado === 'PENDIENTE') {
+            await cargarTecnicosDisponibles(sol.id);
+            go('cli-tecnicos');
+          } else if (data.estado === 'ACEPTADA' || data.estado === 'EN_CAMINO') {
+            if (typeof actualizarPantallaEnCamino === 'function') actualizarPantallaEnCamino();
+            go('cli-en-camino');
+          } else if (data.estado === 'EN_TRABAJO') {
+            go('cli-en-ejecucion');
+          }
+        } catch {}
+      }, 800);
+    }
+    setTimeout(() => { if (typeof conectarSocket === 'function') conectarSocket(); }, 1500);
   }
-  // Mostrar nombre en perfil si hay sesión
   actualizarUIConPerfil();
+  // Procesar retorno de Flow si hay ?pago= en la URL
+  if (typeof detectarRetornoPago === 'function') detectarRetornoPago();
 });
 
 function actualizarUIConPerfil() {
   const perfil = Session.perfil();
   if (!perfil) return;
 
-  // Actualizar nombre en perfil de cliente
   const elNombreCli = document.getElementById('cli-perfil-nombre');
   if (elNombreCli) elNombreCli.textContent = perfil.nombre || '';
 
-  // Actualizar nombre en perfil de técnico
   const elNombreTec = document.getElementById('tec-perfil-nombre');
   if (elNombreTec) elNombreTec.textContent = perfil.nombre || '';
+
+  // Mostrar rating con decimal y estrellas parciales en tec-home
+  if (perfil.ratingPromedio !== undefined) {
+    const r = parseFloat(perfil.ratingPromedio || 0).toFixed(1);
+    const elRating = document.getElementById('tec-home-rating');
+    if (elRating) elRating.textContent = r + '⭐';
+  }
+  if (perfil.trabajosCompletados !== undefined) {
+    const elTrab = document.getElementById('tec-home-trabajos');
+    if (elTrab) elTrab.textContent = perfil.trabajosCompletados || 0;
+  }
 }
 
 // ── LOGIN desde pantalla s0 ───────────────────────────────────
@@ -3485,6 +3833,7 @@ async function submitLogin(rol) {
     document.getElementById('login-modal-overlay')?.remove();
     actualizarUIConPerfil();
     showSuccess('Bienvenido, ' + data.perfil.nombre.split(' ')[0] + ' 👋');
+    setTimeout(() => { if (typeof conectarSocket === 'function') conectarSocket(); }, 800);
 
     if (rol === 'tecnico') go('tec-home');
     else go('cli-home');
@@ -3619,6 +3968,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// irATecnicos — definida en el script de Solicitudes (más abajo)
+// para garantizar acceso a Solicitud y cargarTecnicosDisponibles
 </script>
 
 <!-- MODAL DESCRIPCIÓN TRABAJO -->
@@ -3635,14 +3987,19 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="modal-section">Detalles</div>
     <div class="card" style="padding:10px 12px;margin-top:4px;">
       <div class="modal-price-row"><span style="color:var(--muted);font-size:12px;">Duración estimada</span><span style="font-size:12px;font-weight:600;" id="modal-dur">—</span></div>
-      <div class="modal-price-row"><span style="color:var(--muted);font-size:12px;">Materiales</
+      <div class="modal-price-row"><span style="color:var(--muted);font-size:12px;">Materiales incluidos</span><span style="font-size:12px;font-weight:600;" id="modal-mat">—</span></div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 // FIXYA — Módulo de Solicitudes
 // ============================================================
 
 // Estado global de la solicitud en curso
-const Solicitud = {
+// Expuesto en window para que sea accesible desde todos los scripts
+const Solicitud = window.Solicitud = {
   id: null,          // ID real del backend
   rubroId: null,     // ID del rubro en BD
   rubroNombre: null, // "gasfiteria" | "electricidad" etc
@@ -3723,26 +4080,37 @@ async function cargarTecnicosDisponibles(solicitudId) {
 
 // ── Renderizar tarjetas de técnicos reales ────────────────────
 function renderizarTecnicos(tecnicos) {
-  const wrap = document.querySelector('#s-cli-tecnicos .wrap');
-  if (!wrap || tecnicos.length === 0) return;
+  const lista = document.getElementById('tec-lista');
+  const sub = document.getElementById('tec-sub');
+  if (!lista || tecnicos.length === 0) return;
 
-  // Remover tarjetas hardcodeadas y reemplazar con reales
-  const tarjetasViejas = wrap.querySelectorAll('.tec-card');
-  tarjetasViejas.forEach(t => t.remove());
-
-  const sub = wrap.querySelector('.sub');
+  // Actualizar subtítulo
   if (sub) sub.textContent = tecnicos.length + ' técnico' + (tecnicos.length > 1 ? 's' : '') + ' disponible' + (tecnicos.length > 1 ? 's' : '') + ' cerca tuyo.';
 
+  // Limpiar estado de espera
+  lista.innerHTML = '';
+
   tecnicos.forEach(tec => {
-    const stars = '⭐'.repeat(Math.round(tec.ratingPromedio || 5));
+    const rating = parseFloat(tec.ratingPromedio || 5).toFixed(1);
+    const ratingNum = parseFloat(rating);
+    const llenas = Math.floor(ratingNum);
+    const decimal = Math.round((ratingNum - llenas) * 10);
+    let starsHtml = '';
+    for (let i = 0; i < llenas; i++) starsHtml += '<span style="color:#F4A429;">★</span>';
+    if (decimal > 0) starsHtml += '<span style="position:relative;display:inline-block;"><span style="color:#555;">★</span><span style="position:absolute;top:0;left:0;overflow:hidden;width:' + (decimal * 10) + '%;color:#F4A429;">★</span></span>';
+    for (let i = 0; i < (5 - llenas - (decimal > 0 ? 1 : 0)); i++) starsHtml += '<span style="color:#555;">★</span>';
+
     const div = document.createElement('div');
     div.className = 'tec-card';
+    div.dataset.tecnicoId = tec.id;
+    div.dataset.nombre = tec.nombre;
+    div.dataset.rating = rating;
     div.onclick = () => elegirTecnico(tec.id);
     div.innerHTML = `
       <div class="tec-av" style="background:rgba(0,229,160,.12);">👷</div>
       <div style="flex:1;">
         <div style="font-size:13px;font-weight:700;">${tec.nombre}</div>
-        <div style="font-size:11px;color:var(--accent2);">${stars} ${tec.ratingPromedio || '5.0'} · ${tec.trabajosCompletados || 0} trabajos</div>
+        <div style="font-size:11px;color:var(--muted);">${starsHtml} <span style="color:var(--accent2);font-weight:700;">${rating}</span> · ${tec.trabajosCompletados || 0} trabajos</div>
         <div style="display:flex;gap:4px;margin-top:4px;">
           <span class="tag tg" style="font-size:9px;">✓ Verificado</span>
           ${tec.plan === 'fundador' ? '<span class="tag ta" style="font-size:9px;">⭐ Fundador</span>' : ''}
@@ -3750,47 +4118,539 @@ function renderizarTecnicos(tecnicos) {
         </div>
       </div>
       <div style="text-align:right;">
-        <div style="font-family:\'JetBrains Mono\';font-size:12px;font-weight:700;color:var(--accent);">${fmt ? fmt(Solicitud.totalEstimado || 0) : '$0'}</div>
+        <div style="font-family:'JetBrains Mono';font-size:12px;font-weight:700;color:var(--accent);">${typeof fmt === 'function' ? fmt(Solicitud.totalEstimado || 0) : '$0'}</div>
         <div style="font-size:10px;color:var(--muted);">Disponible</div>
       </div>
     `;
-    wrap.insertBefore(div, wrap.lastElementChild);
+    lista.appendChild(div);
   });
 }
 
 // ── Elegir técnico ────────────────────────────────────────────
 async function elegirTecnico(tecnicoId) {
   const solicitudId = Solicitud.id || JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}').id;
-  if (!solicitudId) {
-    go('cli-verificar-mat'); // Fallback a UI estática
-    return;
-  }
+  if (!solicitudId) { go('cli-en-camino'); return; }
+
+  const tarjeta = document.querySelector('[data-tecnico-id="' + tecnicoId + '"]');
+  const nombre = tarjeta?.dataset?.nombre || 'El técnico';
+  const rating = tarjeta?.dataset?.rating || '5.0';
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+
+  // Leer total desde múltiples fuentes en orden de prioridad
+  const total = sol.total ||
+    window._lastTotal ||
+    (typeof cotizacion !== 'undefined' ? cotizacion.total : 0) ||
+    0;
+
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+  mostrarModalConfirmarTecnico({ tecnicoId, nombre, rating, total, solicitudId, fmt });
+}
+
+function mostrarModalConfirmarTecnico({ tecnicoId, nombre, rating, total, solicitudId, fmt }) {
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-confirmar-tec';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;display:flex;align-items:flex-end;justify-content:center;';
+  overlay.innerHTML =
+    '<div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:420px;">' +
+    '<div style="width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:99px;margin:0 auto 18px;"></div>' +
+    '<div style="font-size:18px;font-weight:800;margin-bottom:3px;">Confirmar y pagar</div>' +
+    '<div style="font-size:12px;color:var(--muted);margin-bottom:18px;">El dinero queda retenido hasta que confirmes el trabajo</div>' +
+    '<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--card2);border-radius:12px;margin-bottom:14px;">' +
+    '<div style="width:42px;height:42px;border-radius:50%;background:rgba(0,229,160,.12);display:flex;align-items:center;justify-content:center;font-size:22px;">👷</div>' +
+    '<div><div style="font-size:14px;font-weight:700;">' + nombre + '</div>' +
+    '<div style="font-size:12px;color:var(--accent2);">⭐ ' + rating + '</div></div></div>' +
+    '<div style="background:var(--card2);border-radius:12px;padding:14px;margin-bottom:14px;">' +
+    '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:.5px solid var(--border);"><span style="color:var(--muted);">Total del trabajo</span><span style="font-family:\'JetBrains Mono\';font-weight:700;">' + fmt(total) + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;"><span style="color:var(--muted);">Estado del pago</span><span style="color:var(--accent);font-weight:600;">🔒 En escrow</span></div></div>' +
+    '<div style="padding:9px 12px;background:rgba(0,229,160,.06);border:.5px solid rgba(0,229,160,.2);border-radius:10px;font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">' +
+    '🔒 <strong style="color:var(--text);">Pago protegido.</strong> El técnico recibe el dinero solo cuando confirmas que el trabajo quedó bien.</div>' +
+    '<button id="btn-confirmar-pagar" style="width:100%;padding:14px;border-radius:12px;background:var(--accent2);color:#1A0F00;font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;border:none;cursor:pointer;margin-bottom:8px;">💳 Confirmar y pagar ' + fmt(total) + ' →</button>' +
+    '<button onclick="document.getElementById(\'modal-confirmar-tec\').remove()" style="width:100%;padding:12px;border-radius:12px;background:rgba(255,255,255,.07);border:.5px solid rgba(255,255,255,.1);color:var(--muted);font-size:13px;cursor:pointer;">Cancelar</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+
+  document.getElementById('btn-confirmar-pagar').onclick = async () => {
+    const btn = document.getElementById('btn-confirmar-pagar');
+    btn.disabled = true; btn.textContent = 'Confirmando...';
+    try {
+      // PASO 1: Elegir técnico en backend
+      const data = await apiFetch('/solicitudes/' + solicitudId + '/elegir-tecnico', {
+        method: 'POST', body: JSON.stringify({ tecnicoId }),
+      });
+      // Preservar id y total explícitamente — NO depender del spread
+      const solActual = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+        ...solActual,
+        id: solicitudId,                                    // siempre del scope, nunca del localStorage
+        total: solActual.total || total,                    // preservar total original
+        tecnicoNombre: data?.tecnico?.nombre || nombre,
+        tecnicoId,
+      }));
+
+      // PASO 2: Iniciar pago Flow — pasar solicitudId explícito
+      btn.textContent = 'Generando pago...';
+      overlay.remove();
+      await iniciarPago(solicitudId);                       // solicitudId del scope, no del localStorage
+
+    } catch (err) {
+      // Si el error es 409 (conflicto) ya está pagado — ir directo
+      if (err.message && (err.message.includes('409') || err.message.includes('Conflict') || err.message.includes('ya existe'))) {
+        overlay.remove();
+        showSuccess('Técnico confirmado. El pago ya fue procesado.');
+        actualizarPantallaEnCamino();
+        go('cli-en-camino');
+      } else {
+        showError(err.message || 'Error al confirmar');
+        btn.disabled = false; btn.textContent = '💳 Confirmar y pagar ' + fmt(total) + ' →';
+      }
+    }
+  };
+}
+
+// ── Actualizar datos de la pantalla cli-en-camino ─────────────
+function actualizarPantallaEnCamino() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const nombre = sol.tecnicoNombre || 'Tu técnico';
+  const trabajo = sol.trabajo || '—';
+  const total = sol.total ? '$' + Number(sol.total).toLocaleString('es-CL') : '—';
+  const el = (id) => document.getElementById(id);
+  if (el('cli-ec-nombre')) el('cli-ec-nombre').textContent = nombre + ' viene en camino';
+  if (el('cli-ec-eta')) el('cli-ec-eta').textContent = 'Llegará en unos minutos';
+  if (el('cli-ec-trabajo')) el('cli-ec-trabajo').textContent = trabajo;
+  if (el('cli-ec-mo')) el('cli-ec-mo').textContent = total;
+}
+
+// ── Mostrar/ocultar card de solicitud activa en cli-home ──────
+async function actualizarCardSolActiva() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const container = document.getElementById('cli-home-sol-activa');
+  if (!container) return;
+  if (!sol.id) { container.style.display = 'none'; return; }
 
   try {
-    await apiFetch('/solicitudes/' + solicitudId + '/elegir-tecnico', {
-      method: 'POST',
-      body: JSON.stringify({ tecnicoId }),
-    });
-    localStorage.setItem('fx_tecnico_elegido', tecnicoId);
-    showSuccess('¡Técnico confirmado! En camino pronto 🔧');
-    go('cli-verificar-mat');
-  } catch (err) {
-    showError(err.message || 'Error al elegir técnico');
-    go('cli-verificar-mat'); // Fallback
+    const data = await apiFetch('/solicitudes/' + sol.id);
+    const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
+    if (!data || !activos.includes(data.estado)) {
+      localStorage.removeItem('fx_solicitud_activa');
+      localStorage.removeItem('fx_fotos_solicitud');
+      container.style.display = 'none';
+      return;
+    }
+    localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+      ...sol,
+      trabajo: data.trabajo || sol.trabajo,
+      estado: data.estado,
+      total: sol.total || data.totalEstimado || 0,          // preservar total original
+      tecnicoId: data.tecnicoId || sol.tecnicoId,
+      tecnicoNombre: data.tecnico?.nombre || sol.tecnicoNombre,
+    }));
+  } catch {}
+
+  const s = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  container.style.display = '';
+  const el = (id) => document.getElementById(id);
+  if (el('cli-home-sol-trabajo')) el('cli-home-sol-trabajo').textContent = s.trabajo || '—';
+  if (s.fotoMateriales) {
+    if (el('cli-home-sol-status')) el('cli-home-sol-status').textContent = '📸 Verifica los materiales del técnico';
+    if (el('cli-home-sol-estado')) { el('cli-home-sol-estado').textContent = '🔵 Verificando'; el('cli-home-sol-estado').className = 'tag tb'; }
+  } else if (s.tecnicoId || s.tecnicoNombre) {
+    if (el('cli-home-sol-tecnico')) el('cli-home-sol-tecnico').textContent = (s.tecnicoNombre || 'Técnico') + ' · En camino';
+    if (el('cli-home-sol-status')) el('cli-home-sol-status').textContent = '🚗 El técnico viene en camino';
+  } else {
+    if (el('cli-home-sol-tecnico')) el('cli-home-sol-tecnico').textContent = 'Buscando técnico...';
+    if (el('cli-home-sol-status')) el('cli-home-sol-status').textContent = '⏳ Esperando que un técnico acepte';
   }
 }
 
-// ── GPS: Obtener ubicación al entrar a foto-solicitud ─────────
-document.addEventListener('DOMContentLoaded', () => {
-  // Interceptar navegación a foto-solicitud para pedir GPS
-  const _go2 = window.go;
-  window.go = function(id) {
-    if (id === 'cli-foto-solicitud' || id === 'foto-solicitud') {
-      pedirUbicacion();
+// ── Cancelar solicitud activa ─────────────────────────────────
+async function cancelarSolicitudActiva() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  if (!sol.id) {
+    localStorage.removeItem('fx_solicitud_activa');
+    localStorage.removeItem('fx_fotos_solicitud');
+    go('cli-home');
+    return;
+  }
+
+  const confirmar = confirm('¿Cancelar la solicitud?\n\nSi ya hay un técnico en camino se aplicará la política de cancelación.');
+  if (!confirmar) return;
+
+  try {
+    await apiFetch('/solicitudes/' + sol.id + '/cancelar', { method: 'PATCH', body: JSON.stringify({ motivo: 'Cancelado por el cliente' }) });
+  } catch {}
+
+  localStorage.removeItem('fx_solicitud_activa');
+  localStorage.removeItem('fx_fotos_solicitud');
+  clearInterval(window._pollingPostulantes);
+  showSuccess('Solicitud cancelada');
+  go('cli-home');
+}
+
+// ── Navegar a la pantalla correcta según estado de la solicitud activa ─
+function irASolicitudActiva() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  if (!sol.id) return;
+  if (sol.fotoMateriales) {
+    go('cli-verificar-mat');
+    setTimeout(() => startTimer('tmr-cli', 10 * 60), 300);
+    return;
+  }
+  if (sol.tecnicoId || sol.tecnicoNombre) {
+    actualizarPantallaEnCamino();
+    go('cli-en-camino');
+    return;
+  }
+  go('cli-tecnicos');
+}
+// (direccion redirect now handled in the GPS go() override below)
+
+// ── Lista de trabajos disponibles en tec-home ────────────────
+const _trabajosDisponibles = {}; // solicitudId → data
+
+function agregarTrabajoDisponible(data) {
+  if (!data || !data.solicitudId) return;
+  _trabajosDisponibles[data.solicitudId] = data;
+  renderizarTrabajosDisponibles();
+}
+
+function quitarTrabajoDisponible(solicitudId) {
+  delete _trabajosDisponibles[solicitudId];
+  renderizarTrabajosDisponibles();
+}
+
+function renderizarTrabajosDisponibles() {
+  const wrap = document.getElementById('tec-trabajos-disponibles');
+  const lista = document.getElementById('tec-trabajos-lista');
+  const count = document.getElementById('tec-trabajos-count');
+  if (!wrap || !lista) return;
+
+  const items = Object.values(_trabajosDisponibles);
+  if (items.length === 0) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = '';
+  if (count) count.textContent = items.length + ' disponible' + (items.length > 1 ? 's' : '');
+
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+
+  lista.innerHTML = items.map(d => {
+    const mo = d.moBase || d.totalEstimado || 0;
+    const urgMult = d.urgencia === 'emergencia' ? 1.5 : 1.0;
+    const moFinal = Math.round(mo * urgMult);
+    const urgLabel = d.urgencia === 'emergencia' ? '🔴 Emergencia' : '🟢 Normal';
+    const urgClass = d.urgencia === 'emergencia' ? 'tag tr' : 'tag tg';
+    return '<div class="hl-a hl" style="margin-bottom:8px;cursor:pointer;" onclick="verTrabajoDisponible(\'' + d.solicitudId + '\')">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+      '<div style="font-size:13px;font-weight:700;">' + (d.trabajo || 'Trabajo disponible') + '</div>' +
+      '<span class="' + urgClass + '" style="font-size:9px;">' + urgLabel + '</span></div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">' + (d.descripcion ? '"' + d.descripcion.substring(0, 60) + (d.descripcion.length > 60 ? '..."' : '"') : '') + '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+      '<div><div style="font-size:10px;color:var(--muted);">Tú recibes</div>' +
+      '<div style="font-family:\'JetBrains Mono\';font-size:18px;font-weight:800;color:var(--accent);">' + fmt(moFinal) + '</div></div>' +
+      '<button class="btn btn-g btn-sm">Ver →</button></div></div>';
+  }).join('');
+}
+
+function verTrabajoDisponible(solicitudId) {
+  const data = _trabajosDisponibles[solicitudId];
+  if (!data) return;
+  // Guardar como solicitud activa del técnico
+  localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+    id: solicitudId,
+    trabajo: data.trabajo || '',
+    total: data.totalEstimado || 0,
+    urgencia: data.urgencia || 'normal',
+    moBase: data.moBase || 0,
+    descripcion: data.descripcion || '',
+    fotosProblema: data.fotosProblema || [],
+    latCliente: data.latitud,
+    lngCliente: data.longitud,
+    comuna: data.comuna || '',
+  }));
+  poblarTecAlerta(data);
+  go('tec-alerta');
+}
+
+// ── Técnico rechaza trabajo → quitarlo de la lista ───────────
+function tecnicoRechazarTrabajo() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  if (sol.id) quitarTrabajoDisponible(sol.id);
+  localStorage.removeItem('fx_solicitud_activa');
+  if (typeof stopTimer === 'function') stopTimer('tmr-tec', '—');
+  go('tec-home');
+}
+
+// ── Cargar historial real desde backend ───────────────────────
+async function cargarHistorial() {
+  const lista = document.getElementById('historial-lista');
+  const loading = document.getElementById('historial-loading');
+  if (!lista) return;
+  if (loading) { loading.style.display = ''; loading.textContent = 'Cargando...'; }
+
+  try {
+    const data = await apiFetch('/solicitudes/mis-solicitudes?limit=50');
+    const solicitudes = Array.isArray(data) ? data : (data.solicitudes || []);
+    if (loading) loading.style.display = 'none';
+
+    if (!solicitudes.length) {
+      lista.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--muted);"><div style="font-size:32px;margin-bottom:10px;">📋</div><div style="font-size:13px;">Aun no tienes reparaciones</div></div>';
+      return;
     }
-    _go2(id);
-  };
-});
+
+    const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO','CON_POSTULANTES'];
+    const estadoLabel = (e) => {
+      if (e === 'PENDIENTE') return '<span class="tag ta" style="font-size:9px;">⏳ Buscando técnico</span>';
+      if (e === 'CON_POSTULANTES') return '<span class="tag ta" style="font-size:9px;">👷 Con postulantes</span>';
+      if (e === 'ACEPTADA') return '<span class="tag ta" style="font-size:9px;">✓ Aceptado</span>';
+      if (e === 'EN_CAMINO') return '<span class="tag ta" style="font-size:9px;">🚗 En camino</span>';
+      if (e === 'EN_TRABAJO') return '<span class="tag ta" style="font-size:9px;">🔧 En trabajo</span>';
+      if (e === 'COMPLETADA') return '<span class="tag tg" style="font-size:9px;">✓ Completado</span>';
+      return '<span class="tag" style="font-size:9px;background:rgba(255,255,255,.07);">Cancelado</span>';
+    };
+
+    lista.innerHTML = '<div class="card" style="padding:0;overflow:hidden;" id="historial-card">' +
+      solicitudes.map(s => {
+        const fecha = new Date(s.creadoAt || s.createdAt || Date.now()).toLocaleDateString('es-CL', {day:'numeric', month:'short'});
+        const tec = s.tecnico?.nombre ? ' · ' + s.tecnico.nombre.split(' ')[0] : '';
+        const esActivo = activos.includes(s.estado);
+        return '<div style="border-bottom:.5px solid var(--border);">' +
+          '<div class="row" style="padding:11px 13px;cursor:' + (esActivo ? 'pointer' : 'default') + ';"' +
+          (esActivo ? ' onclick="verSolicitudHistorial(\'' + s.id + '\',\'' + s.estado + '\')"' : '') + '>' +
+          '<div><div style="font-size:13px;font-weight:600;">' + (s.trabajo || 'Servicio') + tec + '</div>' +
+          '<div style="font-size:11px;color:var(--muted);">' + fecha + ' · ' + s.codigo + '</div></div>' +
+          '<div>' + estadoLabel(s.estado) + '</div></div>' +
+          (esActivo ? '<div style="padding:0 13px 10px;"><button onclick="cancelarDesdeHistorial(\'' + s.id + '\')" style="width:100%;padding:7px;background:rgba(255,77,109,.07);border:.5px solid rgba(255,77,109,.2);border-radius:8px;color:var(--red);font-size:11px;font-weight:600;cursor:pointer;">✕ Cancelar esta solicitud</button></div>' : '') +
+          '</div>';
+      }).join('') + '</div>';
+  } catch {
+    if (loading) { loading.textContent = 'Error al cargar. Toca para reintentar.'; loading.style.cursor = 'pointer'; loading.onclick = cargarHistorial; }
+  }
+}
+
+async function cancelarDesdeHistorial(solicitudId) {
+  if (!confirm('¿Cancelar esta solicitud?')) return;
+  try {
+    await apiFetch('/solicitudes/' + solicitudId + '/cancelar', { method: 'PATCH', body: JSON.stringify({ motivo: 'Cancelado por el cliente' }) });
+    const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+    if (sol.id === solicitudId) {
+      localStorage.removeItem('fx_solicitud_activa');
+      localStorage.removeItem('fx_fotos_solicitud');
+      clearInterval(window._pollingPostulantes);
+    }
+    showSuccess('Solicitud cancelada');
+    cargarHistorial();
+  } catch(e) {
+    showError(e.message || 'No se pudo cancelar');
+  }
+}
+
+function verSolicitudHistorial(id, estado) {
+  // Cargar esta solicitud como activa y navegar a pantalla correcta
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  if (sol.id !== id) {
+    localStorage.setItem('fx_solicitud_activa', JSON.stringify({ ...sol, id }));
+  }
+  const activos = ['PENDIENTE','CON_POSTULANTES'];
+  if (activos.includes(estado)) {
+    go('cli-tecnicos');
+  } else if (estado === 'EN_CAMINO' || estado === 'ACEPTADA') {
+    if (typeof actualizarPantallaEnCamino === 'function') actualizarPantallaEnCamino();
+    go('cli-en-camino');
+  } else if (estado === 'EN_TRABAJO') {
+    go('cli-verificar-mat');
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// SISTEMA DE DIRECCIÓN Y FAVORITAS
+// ════════════════════════════════════════════════════════════
+
+let _autocompleteService = null;
+let _geocoderService = null;
+let _dirSeleccionada = null; // { address, lat, lng }
+let _buscarTimeout = null;
+
+// Inicializar servicios de Places cuando cargue Maps
+function initPlacesServices() {
+  if (typeof google === 'undefined') return;
+  if (!_autocompleteService) _autocompleteService = new google.maps.places.AutocompleteService();
+  if (!_geocoderService) _geocoderService = new google.maps.Geocoder();
+}
+
+function buscarDireccion(query) {
+  clearTimeout(_buscarTimeout);
+  if (!query || query.length < 4) { ocultarSugerencias(); return; }
+  _buscarTimeout = setTimeout(() => {
+    cargarGoogleMaps(() => {
+      initPlacesServices();
+      if (!_autocompleteService) return;
+      _autocompleteService.getPlacePredictions({
+        input: query,
+        componentRestrictions: { country: 'CL' },
+        types: ['address'],
+      }, (predictions, status) => {
+        if (status !== 'OK' || !predictions) { ocultarSugerencias(); return; }
+        mostrarSugerenciasLista(predictions);
+      });
+    });
+  }, 350);
+}
+
+function mostrarSugerenciasLista(predictions) {
+  const cont = document.getElementById('dir-sugerencias');
+  if (!cont) return;
+  cont.innerHTML = predictions.map((p, i) =>
+    '<div style="padding:10px 13px;font-size:13px;cursor:pointer;border-bottom:.5px solid var(--border);" ' +
+    'onclick="seleccionarSugerencia(\'' + p.place_id + '\',\'' + p.description.replace(/'/g, "\\'") + '\')">' +
+    '<div style="font-weight:600;">' + p.structured_formatting.main_text + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);">' + (p.structured_formatting.secondary_text || '') + '</div></div>'
+  ).join('');
+  cont.style.display = '';
+}
+
+function ocultarSugerencias() {
+  const cont = document.getElementById('dir-sugerencias');
+  if (cont) cont.style.display = 'none';
+}
+
+function mostrarSugerencias() {
+  const val = document.getElementById('dir-input')?.value;
+  if (val && val.length >= 4) buscarDireccion(val);
+}
+
+function seleccionarSugerencia(placeId, description) {
+  ocultarSugerencias();
+  cargarGoogleMaps(() => {
+    initPlacesServices();
+    if (!_geocoderService) return;
+    _geocoderService.geocode({ placeId }, (results, status) => {
+      if (status !== 'OK' || !results[0]) return;
+      const loc = results[0].geometry.location;
+      _dirSeleccionada = { address: description, lat: loc.lat(), lng: loc.lng() };
+      const input = document.getElementById('dir-input');
+      if (input) input.value = description;
+      // Mostrar confirmación
+      const conf = document.getElementById('dir-confirmada');
+      const confTxt = document.getElementById('dir-confirmada-text');
+      if (conf) conf.style.display = '';
+      if (confTxt) confTxt.textContent = description;
+      // Mostrar opción de guardar
+      const gw = document.getElementById('dir-guardar-wrap');
+      if (gw) gw.style.display = '';
+      // Habilitar botón
+      const btn = document.getElementById('btn-dir-continuar');
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+    });
+  });
+}
+
+function usarUbicacionActual() {
+  if (!navigator.geolocation) { showError('GPS no disponible'); return; }
+  navigator.geolocation.getCurrentPosition((pos) => {
+    cargarGoogleMaps(() => {
+      initPlacesServices();
+      if (!_geocoderService) return;
+      const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      _geocoderService.geocode({ location: latlng }, (results, status) => {
+        const addr = (status === 'OK' && results[0]) ? results[0].formatted_address : 'Ubicación actual';
+        _dirSeleccionada = { address: addr, lat: latlng.lat, lng: latlng.lng };
+        const input = document.getElementById('dir-input');
+        if (input) input.value = addr;
+        const conf = document.getElementById('dir-confirmada');
+        const confTxt = document.getElementById('dir-confirmada-text');
+        if (conf) conf.style.display = '';
+        if (confTxt) confTxt.textContent = addr;
+        const gw = document.getElementById('dir-guardar-wrap');
+        if (gw) gw.style.display = '';
+        const btn = document.getElementById('btn-dir-continuar');
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      });
+    });
+  }, () => showError('No se pudo obtener tu ubicación'));
+}
+
+function toggleGuardarFavorita() {
+  const checked = document.getElementById('dir-guardar-check')?.checked;
+  const apodoWrap = document.getElementById('dir-apodo-wrap');
+  if (apodoWrap) apodoWrap.style.display = checked ? '' : 'none';
+}
+
+function confirmarDireccion() {
+  if (!_dirSeleccionada) return;
+
+  // Guardar en Solicitud y localStorage
+  Solicitud.latitud = _dirSeleccionada.lat;
+  Solicitud.longitud = _dirSeleccionada.lng;
+  Solicitud.direccion = _dirSeleccionada.address;
+  const depto = document.getElementById('dir-depto')?.value?.trim();
+  if (depto) Solicitud.direccion += ', ' + depto;
+
+  // Guardar favorita si aplica
+  const guardar = document.getElementById('dir-guardar-check')?.checked;
+  if (guardar) {
+    const apodo = document.getElementById('dir-apodo')?.value?.trim() || _dirSeleccionada.address.split(',')[0];
+    guardarFavorita({ apodo, address: _dirSeleccionada.address, lat: _dirSeleccionada.lat, lng: _dirSeleccionada.lng });
+  }
+
+  // Resetear para próxima vez
+  _dirSeleccionada = null;
+  go('cli-foto-solicitud');
+  pedirUbicacion();
+}
+
+// ── Favoritas ─────────────────────────────────────────────────
+function getFavoritas() {
+  try { return JSON.parse(localStorage.getItem('fx_dir_favoritas') || '[]'); } catch { return []; }
+}
+
+function guardarFavorita(dir) {
+  const favs = getFavoritas();
+  const existente = favs.findIndex(f => f.address === dir.address);
+  if (existente >= 0) favs.splice(existente, 1);
+  favs.unshift(dir);
+  if (favs.length > 10) favs.pop();
+  localStorage.setItem('fx_dir_favoritas', JSON.stringify(favs));
+  renderizarFavoritasDireccion();
+}
+
+function eliminarFavorita(idx) {
+  const favs = getFavoritas();
+  favs.splice(idx, 1);
+  localStorage.setItem('fx_dir_favoritas', JSON.stringify(favs));
+  renderizarFavoritasDireccion();
+}
+
+function renderizarFavoritasDireccion() {
+  const lista = document.getElementById('dir-favoritas-lista');
+  if (!lista) return;
+  const favs = getFavoritas();
+  if (favs.length === 0) {
+    lista.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Aún no tienes direcciones guardadas.</div>';
+    return;
+  }
+  lista.innerHTML = favs.map((f, i) =>
+    '<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:.5px solid var(--border);">' +
+    '<div onclick="usarFavorita(' + i + ')" style="flex:1;cursor:pointer;">' +
+    '<div style="font-size:13px;font-weight:700;">📍 ' + f.apodo + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);">' + f.address + '</div></div>' +
+    '<div onclick="eliminarFavorita(' + i + ')" style="font-size:18px;cursor:pointer;color:var(--muted);padding:4px;">✕</div>' +
+    '</div>'
+  ).join('');
+}
+
+function usarFavorita(idx) {
+  const favs = getFavoritas();
+  const f = favs[idx];
+  if (!f) return;
+  _dirSeleccionada = { address: f.address, lat: f.lat, lng: f.lng };
+  const input = document.getElementById('dir-input');
+  if (input) input.value = f.address;
+  const conf = document.getElementById('dir-confirmada');
+  const confTxt = document.getElementById('dir-confirmada-text');
+  if (conf) conf.style.display = '';
+  if (confTxt) confTxt.textContent = f.apodo + ' — ' + f.address;
+  const btn = document.getElementById('btn-dir-continuar');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+}
 
 function pedirUbicacion() {
   if (!navigator.geolocation) return;
@@ -3821,41 +4681,255 @@ function conectarSocketCliente() {
   try {
     const socket = io('https://fixya-backend-production.up.railway.app', {
       auth: { token },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
+      reconnection: false, // manejamos reconexión manual para poder refrescar token
     });
 
     socket.on('connect', () => {
+      console.log('[FixYa] Socket cliente conectado:', socket.id);
       const solicitudActiva = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       if (solicitudActiva.id) {
         socket.emit('solicitud:join', solicitudActiva.id);
+        console.log('[FixYa] Joined room:', solicitudActiva.id);
+      }
+      if (typeof actualizarCardSolActiva === 'function') actualizarCardSolActiva();
+    });
+
+    socket.on('connect_error', async (err) => {
+      console.warn('[FixYa] Error socket cliente:', err.message);
+      const esTokenError = err.message && (
+        err.message.toLowerCase().includes('token') ||
+        err.message.toLowerCase().includes('unauthorized') ||
+        err.message.toLowerCase().includes('jwt') ||
+        err.message.toLowerCase().includes('invalido')
+      );
+      if (esTokenError && localStorage.getItem('fx_refresh')) {
+        try {
+          console.log('[FixYa] Refrescando token para socket cliente...');
+          await _doRefresh();
+          try { socket.disconnect(); } catch {}
+          window._fixya_socket = null;
+          setTimeout(conectarSocketCliente, 300);
+          console.log('[FixYa] Socket cliente reconectando con token nuevo');
+        } catch {
+          console.warn('[FixYa] Refresh fallido cliente — sesión expirada');
+          mostrarModalLogin();
+        }
+      } else {
+        setTimeout(() => {
+          if (!window._fixya_socket?.connected) conectarSocketCliente();
+        }, 5000);
+      }
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.warn('[FixYa] Socket cliente desconectado:', reason);
+      if (reason !== 'io client disconnect') {
+        setTimeout(() => {
+          if (!window._fixya_socket?.connected) conectarSocketCliente();
+        }, 3000);
       }
     });
 
     // Nuevo postulante → actualizar lista de técnicos
     socket.on('notif:nuevo_postulante', async (data) => {
-      showSuccess('👷 Nuevo técnico disponible para tu solicitud');
+      showSuccess('👷 Nuevo técnico disponible');
       const solicitudId = Solicitud.id || JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}').id;
       if (solicitudId) await cargarTecnicosDisponibles(solicitudId);
+      if (typeof actualizarCardSolActiva === 'function') actualizarCardSolActiva();
     });
 
-    // Técnico confirmado → notificar
+    // Técnico en camino → navegar al cliente a pantalla de seguimiento
     socket.on('notif:tecnico_en_camino', () => {
       showSuccess('🚗 Tu técnico está en camino');
+      const screenActual = document.querySelector('.screen.active');
+      if (screenActual && ['s-cli-tecnicos','s-cli-home'].includes(screenActual.id)) {
+        // navegar a pantalla de seguimiento si existe, sino home con solicitud activa
+        go('cli-home');
+      }
+    });
+
+    // Técnico llegó → cliente debe verificar materiales (10 min timer)
+    socket.on('notif:trabajo_iniciado', (data) => {
+      showSuccess('📍 Tu técnico llegó. Verifica los materiales que trajo.');
+      // Mostrar foto si viene en el payload
+      if (data && data.fotoMateriales) {
+        const img = document.getElementById('cli-boleta-foto');
+        const ph  = document.getElementById('cli-boleta-placeholder');
+        if (img) { img.src = data.fotoMateriales; img.style.display = 'block'; }
+        if (ph) ph.style.display = 'none';
+      }
+      // También revisar localStorage
+      const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      if (sol.fotoMateriales) {
+        const img = document.getElementById('cli-boleta-foto');
+        const ph  = document.getElementById('cli-boleta-placeholder');
+        if (img) { img.src = sol.fotoMateriales; img.style.display = 'block'; }
+        if (ph) ph.style.display = 'none';
+      }
+      // Navegar y arrancar timer de 10 min
+      setTimeout(() => {
+        go('cli-verificar-mat');
+        setTimeout(() => startTimer('tmr-cli', 10 * 60), 300);
+      }, 800);
     });
 
     // Trabajo terminado → pedir confirmación
     socket.on('notif:confirmar_trabajo', () => {
-      showSuccess('✅ El técnico dice que terminó. ¡Confirma el trabajo!');
+      showSuccess('✅ El técnico terminó. ¡Confirma el trabajo!');
+      // Navegar a pantalla de calificación del cliente
+      setTimeout(() => go('cli-rating'), 800);
     });
 
     window._fixya_socket = socket;
   } catch {}
 }
 
-// Cargar Socket.io desde CDN y conectar
+// ── Función unificada: detecta rol y conecta socket ───────────
+function conectarSocket() {
+  const token = Session.token();
+  if (!token) return;
+
+  if (typeof io === 'undefined') {
+    setTimeout(conectarSocket, 500);
+    return;
+  }
+
+  const s = window._fixya_socket;
+  if (s && s.connected) return;
+  if (s && !s.connected) { try { s.disconnect(); } catch {} window._fixya_socket = null; }
+
+  const rol = Session.rol();
+  console.log('[FixYa] Conectando socket como:', rol);
+
+  if (rol === 'usuario') { conectarSocketCliente(); return; }
+
+  if (rol === 'tecnico') {
+    const socket = io('https://fixya-backend-production.up.railway.app', {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      reconnection: false, // manejamos reconexión manual para poder refrescar token
+    });
+
+    socket.on('connect', () => {
+      console.log('[FixYa] Socket tecnico conectado:', socket.id);
+      socket.emit('tecnico:disponible', true);
+      actualizarBadgeNotif('tec', 0);
+    });
+
+    socket.on('connect_error', async (err) => {
+      console.warn('[FixYa] Error socket tecnico:', err.message);
+      const esTokenError = err.message && (
+        err.message.toLowerCase().includes('token') ||
+        err.message.toLowerCase().includes('unauthorized') ||
+        err.message.toLowerCase().includes('jwt') ||
+        err.message.toLowerCase().includes('invalido')
+      );
+      if (esTokenError && localStorage.getItem('fx_refresh')) {
+        try {
+          console.log('[FixYa] Refrescando token para socket tecnico...');
+          const newToken = await _doRefresh();
+          // Desconectar instancia vieja y crear nueva con token fresco
+          try { socket.disconnect(); } catch {}
+          window._fixya_socket = null;
+          setTimeout(conectarSocket, 300); // reconectar con token nuevo del localStorage
+          console.log('[FixYa] Socket tecnico reconectando con token nuevo');
+        } catch {
+          console.warn('[FixYa] Refresh fallido — sesión expirada');
+          mostrarModalLogin();
+        }
+      } else {
+        // Error no relacionado con token — reintentar en 5s
+        setTimeout(() => {
+          if (!window._fixya_socket?.connected) conectarSocket();
+        }, 5000);
+      }
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.warn('[FixYa] Socket tecnico desconectado:', reason);
+      // Reconectar automáticamente si no fue intencional
+      if (reason !== 'io client disconnect') {
+        setTimeout(() => {
+          if (!window._fixya_socket?.connected) conectarSocket();
+        }, 3000);
+      }
+    });
+
+    socket.on('nueva:solicitud', (data) => {
+      console.log('[FixYa] nueva:solicitud recibida', data);
+      if (data && data.solicitudId) {
+        localStorage.setItem('fx_solicitud_activa', JSON.stringify({
+          id: data.solicitudId,
+          trabajo: data.trabajo || '',
+          total: data.totalEstimado || 0,
+          urgencia: data.urgencia || 'normal',
+          moBase: data.moBase || 0,
+          descripcion: data.descripcion || '',
+          fotosProblema: data.fotosProblema || [],
+          latCliente: data.latitud,
+          lngCliente: data.longitud,
+          comuna: data.comuna || '',
+        }));
+      }
+      agregarNotif('tec', {
+        icono: '⚡',
+        color: 'var(--red)',
+        titulo: 'Nuevo trabajo: ' + (data.trabajo || '—'),
+        desc: (data.comuna || '') + ' · $' + Math.round(data.totalEstimado || 0).toLocaleString('es-CL'),
+      });
+      poblarTecAlerta(data || {});
+      // Agregar a lista (no navegar automáticamente)
+      showSuccess('Nuevo trabajo disponible');
+    });
+
+    socket.on('notif:trabajo_confirmado', async (data) => {
+      console.log('[FixYa] trabajo_confirmado', data);
+      agregarNotif('tec', { icono: '✅', color: 'var(--accent)', titulo: 'El cliente te eligio', desc: 'Esperando confirmación de pago' });
+      showSuccess('El cliente te eligio! Esperando que confirme el pago.');
+      const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      if (data && data.solicitudId && !sol.id) {
+        localStorage.setItem('fx_solicitud_activa', JSON.stringify({ ...sol, id: data.solicitudId }));
+      }
+      // No navegar todavía — la dirección del cliente solo se revela
+      // cuando el pago está confirmado (ver notif:pago_recibido)
+    });
+
+    socket.on('notif:pago_recibido', async (data) => {
+      console.log('[FixYa] pago_recibido', data);
+      agregarNotif('tec', { icono: '💰', color: 'var(--accent)', titulo: 'Pago recibido', desc: 'Dirigete al domicilio' });
+      showSuccess('Pago recibido! Dirigete al domicilio.');
+      try { await cambiarEstado('en-camino'); } catch {}
+      go('tec-en-camino');
+    });
+
+    socket.on('notif:pago_liberado', (data) => {
+      agregarNotif('tec', { icono: '💸', color: 'var(--accent)', titulo: 'Pago liberado', desc: data.monto ? '$' + Number(data.monto).toLocaleString('es-CL') : '' });
+    });
+
+    window._fixya_socket = socket;
+  }
+}
+
+// Cargar Socket.io desde backend propio (evita bloqueo CDN en Edge/Safari)
 (function loadSocket() {
+  if (document.getElementById('socketio-script')) return;
   const script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/npm/socket.io-client@4.7.4/dist/socket.io.min.js';
+  script.id = 'socketio-script';
+  script.src = 'https://fixya-backend-production.up.railway.app/socket.io/socket.io.js';
+  script.onload = function() {
+    console.log('[FixYa] Socket.io cargado desde backend');
+    if (typeof conectarSocket === 'function') conectarSocket();
+  };
+  script.onerror = function() {
+    console.warn('[FixYa] Fallback CDN socket.io');
+    const fb = document.createElement('script');
+    fb.src = 'https://cdn.socket.io/4.7.4/socket.io.min.js';
+    fb.onload = function() { if (typeof conectarSocket === 'function') conectarSocket(); };
+    document.head.appendChild(fb);
+  };
+  document.head.appendChild(script);
+})();
 // ============================================================
 // FIXYA — Módulo de Cámara Real
 // ============================================================
@@ -4084,80 +5158,67 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+// ── irATecnicos — definida aquí donde viven Solicitud y cargarTecnicosDisponibles ──
 async function irATecnicos() {
   if (!window.fotoSolSubida && !fotoSolSubida) {
     showError('Sube al menos una foto del problema para continuar.');
     return;
   }
-
   const token = Session.token();
   if (!token) {
     showError('Debes iniciar sesión para continuar.');
     return;
   }
-
   const btn = document.getElementById('btn-ir-tecnicos');
   if (btn) { btn.disabled = true; btn.textContent = 'Buscando técnicos...'; }
-
   try {
-    // Calcular totales actuales
-    const urgencia = (!window.schedModo || window.schedModo === 'normal') ? 'normal' :
-      window.schedModo === 'emergencia' ? 'emergencia' :
-      window.schedModo === 'asap' ? 'urgente' : 'normal';
-    const urgMult = urgencia === 'emergencia' ? 1.5 : urgencia === 'urgente' ? 1.1 : 1.0;
+    const urgencia = window.schedModo === 'emer' || window.schedModo === 'emergencia' ? 'emergencia' : 'normal';
+    const urgMult = urgencia === 'emergencia' ? 1.5 : 1.0;
     const moFinal = Math.round(((typeof cotMO!=="undefined"?cotMO:window.cotMO) || 30000) * urgMult);
     const matFinal = (typeof cotMat!=="undefined"?cotMat:window.cotMat) || 0;
     const comision = Math.round((moFinal + matFinal) * 0.12);
     const total = moFinal + matFinal + comision;
 
-    // Crear solicitud en el backend
     const data = await apiFetch('/solicitudes', {
       method: 'POST',
       body: JSON.stringify({
         trabajo: (typeof cotNombre!=="undefined"?cotNombre:window.cotNombre) || 'Trabajo general',
-        rubroId: await (async function() {
-          const cache = JSON.parse(localStorage.getItem('fx_rubros') || '{}');
-          const nombre = (typeof window.Solicitud !== 'undefined' && window.Solicitud.rubroNombre) || 'gasfiteria';
-          if (cache[nombre]) return cache[nombre];
-          try {
-            const res = await fetch('https://fixya-backend-production.up.railway.app/api/auth/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: 'tecnico'+'@'+'fixya.cl', password: 'Test1234!', rol: 'tecnico' }),
-            });
-            const data = await res.json();
-            if (data.perfil && data.perfil.rubros) {
-              const ids = {};
-              data.perfil.rubros.forEach(r => { ids[r.rubro.nombre] = r.rubro.id; });
-              localStorage.setItem('fx_rubros', JSON.stringify(ids));
-              return ids[nombre] || Object.values(ids)[0];
-            }
-          } catch(e) {}
-          return null;
-        })(),
-        descripcion: (document.getElementById('sol-desc') ? document.getElementById('sol-desc').value : '') || window.Solicitud.descripcion || '',
+        rubroId: await resolverRubroId(),
+        descripcion: (document.getElementById('sol-desc') ? document.getElementById('sol-desc').value : '') || Solicitud.descripcion || '',
         urgencia,
         moBase: moFinal,
         matEstimado: matFinal,
         totalEstimado: total,
-        latitud: window.Solicitud.latitud,
-        longitud: window.Solicitud.longitud,
-        comuna: window.Solicitud.comuna,
+        latitud: Solicitud.latitud,
+        longitud: Solicitud.longitud,
+        direccion: Solicitud.direccion || null,
+        comuna: Solicitud.comuna,
         agendado: (window.schedModo||null) === 'agenda',
         fotosProblema: [],
       }),
     });
 
-    // Guardar ID de la solicitud para usarla después
-    window.Solicitud.id = data.solicitud.id;
+    Solicitud.id = data.solicitud.id;
+    window._lastTotal = total; // fallback para elegirTecnico
+
+    // Fotos ya están guardadas en fx_fotos_solicitud — NO duplicar en fx_solicitud_activa
+    // (guardar las imágenes base64 dos veces agota la cuota de localStorage)
+    let _fotosParaGuardar = [];
+    try { _fotosParaGuardar = JSON.parse(localStorage.getItem('fx_fotos_solicitud') || '[]').filter(Boolean); } catch {}
+
     localStorage.setItem('fx_solicitud_activa', JSON.stringify({
       id: data.solicitud.id,
       codigo: data.solicitud.codigo,
       trabajo: data.solicitud.trabajo,
       total,
+      agendado: (window.schedModo || 'asap') === 'agenda',
+      schedModo: window.schedModo || 'asap',
+      fechaAgendada: window.schedFechaCompleta || null,
+      bloqueAgendado: window.schedBloque || null,
+      fotosProblema: [],
+      tieneFotos: _fotosParaGuardar.length,
     }));
 
-    // Resetear UI foto
     fotoSolSubida = false;
     const fp = document.getElementById('foto-preview');
     const fo = document.getElementById('foto-ok');
@@ -4165,8 +5226,20 @@ async function irATecnicos() {
     if (fo) fo.style.display = 'none';
     if (btn) { btn.disabled = true; btn.style.opacity = '.4'; btn.textContent = 'Ver técnicos disponibles →'; }
 
-    // Cargar técnicos reales y navegar
+    // Unirse a sala socket para recibir postulantes en tiempo real
+    const _sock = window._fixya_socket;
+    if (_sock && _sock.connected) _sock.emit('solicitud:join', data.solicitud.id);
+
     await cargarTecnicosDisponibles(data.solicitud.id);
+
+    // Polling cada 5s mientras espera en cli-tecnicos
+    clearInterval(window._pollingPostulantes);
+    window._pollingPostulantes = setInterval(async () => {
+      const sc = document.querySelector('.screen.active');
+      if (!sc || sc.id !== 's-cli-tecnicos') { clearInterval(window._pollingPostulantes); return; }
+      await cargarTecnicosDisponibles(data.solicitud.id);
+    }, 5000);
+
     go('cli-tecnicos');
 
   } catch (err) {
@@ -4174,6 +5247,9 @@ async function irATecnicos() {
     if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.textContent = 'Ver técnicos disponibles →'; }
   }
 }
+
+
+
 </script>
 <script>
 // ============================================================
@@ -4193,7 +5269,7 @@ function cargarGoogleMaps(callback) {
   if (document.getElementById('gmaps-script')) return;
   const script = document.createElement('script');
   script.id = 'gmaps-script';
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&callback=_gmapsReady&language=es&region=CL`;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&callback=_gmapsReady&libraries=places&language=es&region=CL`;
   script.async = true;
   document.head.appendChild(script);
 }
@@ -4224,44 +5300,66 @@ function iniciarGPSTecnico() {
   GPS.clienteLat  = solicitudActiva.latCliente;
   GPS.clienteLng  = solicitudActiva.lngCliente;
 
+  // Fix contenedor
+  const mapaEl = document.getElementById('mapa-tecnico');
+  if (mapaEl) { mapaEl.innerHTML = ''; mapaEl.style.display = 'block'; }
+
   cargarGoogleMaps(() => {
-    // Inicializar mapa centrado en Santiago por defecto
-    const centro = { lat: -33.4489, lng: -70.6693 };
-    GPS.map = new google.maps.Map(document.getElementById('mapa-tecnico'), {
+    const destino = (GPS.clienteLat && GPS.clienteLng)
+      ? { lat: GPS.clienteLat, lng: GPS.clienteLng }
+      : { lat: -33.4489, lng: -70.6693 };
+
+    GPS.map = new google.maps.Map(mapaEl, {
       zoom: 14,
-      center: centro,
+      center: destino,
       disableDefaultUI: true,
       zoomControl: true,
       styles: mapStyleOscuro(),
     });
 
-    // Marker del cliente (destino)
+    // Marker destino (cliente)
     if (GPS.clienteLat && GPS.clienteLng) {
       GPS.markerCliente = new google.maps.Marker({
-        position: { lat: GPS.clienteLat, lng: GPS.clienteLng },
+        position: destino,
         map: GPS.map,
         title: 'Domicilio del cliente',
-        icon: {
-          url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-          scaledSize: new google.maps.Size(32, 32),
-        },
+        icon: { url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', scaledSize: new google.maps.Size(36, 36) },
       });
     }
 
-    // Marker del técnico (posición actual)
+    // Marker técnico
     GPS.markerTecnico = new google.maps.Marker({
-      position: centro,
+      position: destino,
       map: GPS.map,
       title: 'Tu posición',
-      icon: {
-        url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-        scaledSize: new google.maps.Size(36, 36),
-      },
+      icon: { url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png', scaledSize: new google.maps.Size(36, 36) },
     });
 
-    // Iniciar tracking GPS del técnico
+    // DirectionsRenderer para dibujar la ruta
+    GPS.directionsRenderer = new google.maps.DirectionsRenderer({
+      map: GPS.map,
+      suppressMarkers: true,
+      polylineOptions: { strokeColor: '#00E5A0', strokeWeight: 4, strokeOpacity: 0.8 },
+    });
+    GPS.directionsService = new google.maps.DirectionsService();
+
     iniciarWatchGPS();
   });
+}
+
+// ── Abrir Google Maps con ruta al cliente ─────────────────────
+function abrirGoogleMapsTecnico() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const lat = sol.latCliente;
+  const lng = sol.lngCliente;
+  const dir = sol.direccion || '';
+  if (lat && lng) {
+    window.open('https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng + '&travelmode=driving', '_blank');
+  } else if (dir) {
+    window.open('https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(dir) + '&travelmode=driving', '_blank');
+  } else {
+    showError('Sin dirección del cliente disponible');
+  }
 }
 
 // ── Watchear GPS del técnico cada 10 segundos ─────────────────
@@ -4288,30 +5386,45 @@ function actualizarPosicionTecnico(lat, lng) {
 
   // Mover marker
   if (GPS.markerTecnico) GPS.markerTecnico.setPosition(pos);
-  if (GPS.map) GPS.map.panTo(pos);
 
-  // Calcular ETA si hay destino
-  if (GPS.clienteLat && GPS.clienteLng) {
+  // Dibujar ruta al destino con DirectionsService (cada 30s para no agotar cuota)
+  if (GPS.directionsService && GPS.directionsRenderer && GPS.clienteLat && GPS.clienteLng) {
+    const ahora = Date.now();
+    if (!GPS._ultimaRuta || ahora - GPS._ultimaRuta > 30000) {
+      GPS._ultimaRuta = ahora;
+      GPS.directionsService.route({
+        origin: pos,
+        destination: { lat: GPS.clienteLat, lng: GPS.clienteLng },
+        travelMode: google.maps.TravelMode.DRIVING,
+      }, (result, status) => {
+        if (status === 'OK') {
+          GPS.directionsRenderer.setDirections(result);
+          // Actualizar ETA desde Directions
+          const leg = result.routes[0]?.legs[0];
+          if (leg) mostrarETA('📍 ' + leg.distance.text + ' · ~' + leg.duration.text);
+        }
+      });
+    }
+  } else if (GPS.map) {
+    GPS.map.panTo(pos);
+  }
+
+  // Calcular ETA simple si no hay DirectionsService
+  if (!GPS.directionsService && GPS.clienteLat && GPS.clienteLng) {
     calcularETA(lat, lng, GPS.clienteLat, GPS.clienteLng);
   }
 
   // Emitir por Socket.io al cliente en tiempo real
   const socket = window._fixya_socket;
   if (socket && GPS.solicitudId) {
-    socket.emit('tecnico:gps', {
-      lat, lng,
-      solicitudId: GPS.solicitudId,
-    });
+    socket.emit('tecnico:gps', { lat, lng, solicitudId: GPS.solicitudId });
   }
 
-  // También actualizar via API REST como respaldo
+  // API REST como respaldo
   if (Session.token()) {
     fetch(API + '/tecnicos/gps', {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + Session.token(),
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + Session.token() },
       body: JSON.stringify({ latitud: lat, longitud: lng, solicitudId: GPS.solicitudId }),
     }).catch(() => {});
   }
@@ -4355,53 +5468,69 @@ let _mapaCliente = null;
 let _markerTecnicoCliente = null;
 
 function iniciarMapaCliente() {
-  const contenedor = document.getElementById('mapa-cliente-tracking');
+  const contenedor = document.getElementById('mapa-cliente-tracking') || document.getElementById('mapa-cliente-encamino');
   if (!contenedor) return;
+
+  // Limpiar el placeholder antes de inicializar el mapa
+  contenedor.innerHTML = '';
+  contenedor.style.display = 'block';
+  contenedor.style.background = 'var(--card2)';
 
   cargarGoogleMaps(() => {
     const solicitudActiva = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
     const centro = {
-      lat: solicitudActiva.latCliente || -33.4489,
-      lng: solicitudActiva.lngCliente || -70.6693,
+      lat: solicitudActiva.latCliente || solicitudActiva.latitud || -33.4489,
+      lng: solicitudActiva.lngCliente || solicitudActiva.longitud || -70.6693,
     };
 
     _mapaCliente = new google.maps.Map(contenedor, {
-      zoom: 14,
+      zoom: 15,
       center: centro,
       disableDefaultUI: true,
       zoomControl: true,
       styles: mapStyleOscuro(),
     });
 
-    // Marker del domicilio del cliente
+    // Marker del domicilio del cliente (azul = su casa)
     new google.maps.Marker({
       position: centro,
       map: _mapaCliente,
       title: 'Tu domicilio',
-      icon: {
-        url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-        scaledSize: new google.maps.Size(32, 32),
-      },
+      icon: { url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png', scaledSize: new google.maps.Size(32, 32) },
     });
 
-    // Marker del técnico (se actualiza via socket)
+    // Marker del técnico (verde, se mueve)
     _markerTecnicoCliente = new google.maps.Marker({
       position: centro,
       map: _mapaCliente,
       title: 'Técnico en camino',
-      icon: {
-        url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-        scaledSize: new google.maps.Size(36, 36),
-      },
+      icon: { url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png', scaledSize: new google.maps.Size(40, 40) },
     });
 
     // Escuchar actualizaciones GPS del técnico via socket
     const socket = window._fixya_socket;
     if (socket) {
+      socket.off('tecnico:ubicacion');
       socket.on('tecnico:ubicacion', (data) => {
         const pos = { lat: data.lat, lng: data.lng };
         if (_markerTecnicoCliente) _markerTecnicoCliente.setPosition(pos);
-        if (_mapaCliente) _mapaCliente.panTo(pos);
+        if (_mapaCliente) {
+          // Centrar entre técnico y cliente
+          const bounds = new google.maps.LatLngBounds();
+          bounds.extend(pos);
+          bounds.extend(centro);
+          _mapaCliente.fitBounds(bounds, { padding: 40 });
+        }
+        // Actualizar ETA del cliente
+        const R = 6371;
+        const dLat = (centro.lat - data.lat) * Math.PI / 180;
+        const dLng = (centro.lng - data.lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(data.lat*Math.PI/180)*Math.cos(centro.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+        const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const etaMin = Math.round(dist / 30 * 60); // ~30 km/h en ciudad
+        const distStr = dist < 1 ? Math.round(dist*1000) + ' m' : dist.toFixed(1) + ' km';
+        const etaEl = document.getElementById('cli-ec-eta');
+        if (etaEl) etaEl.textContent = distStr + ' · ~' + etaMin + ' min';
       });
     }
   });
@@ -4444,22 +5573,59 @@ window.pedirUbicacion = function() {
 // ── Interceptar navegación para iniciar/detener GPS ───────────
 const _goGPS = window.go;
 window.go = function(id) {
-  // Restaurar fotos si vuelve a la pantalla
+  // DIRECCIÓN: interceptar antes de foto-solicitud
+  if (id === 'cli-foto-solicitud' || id === 'foto-solicitud') {
+    const sol = window.Solicitud || {};
+    if (!sol.latitud && !sol.direccion) {
+      if (typeof renderizarFavoritasDireccion === 'function') renderizarFavoritasDireccion();
+      // Resetear campos de la pantalla de dirección
+      const inp = document.getElementById('dir-input');
+      const conf = document.getElementById('dir-confirmada');
+      const btn = document.getElementById('btn-dir-continuar');
+      if (inp) inp.value = '';
+      if (conf) conf.style.display = 'none';
+      if (btn) { btn.disabled = true; btn.style.opacity = '.4'; }
+      _goGPS('cli-direccion');
+      return;
+    }
+    setTimeout(restaurarFotosSolicitud, 100);
+    pedirUbicacion();
+    _goGPS(id);
+    return;
+  }
+
+  // Restaurar fotos si vuelve a la pantalla directamente
   if (id === 'cli-foto-solicitud') {
     setTimeout(restaurarFotosSolicitud, 100);
   }
   // Técnico entra a "en camino" → iniciar GPS
   if (id === 'tec-en-camino') {
     setTimeout(iniciarGPSTecnico, 300);
+    setTimeout(() => { if (typeof poblarTecEnCamino === 'function') poblarTecEnCamino(); }, 150);
+  }
+  if (id === 'tec-cierre') {
+    setTimeout(() => {
+      const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+      const fmt = (n) => n ? '$' + Math.round(n).toLocaleString('es-CL') : '—';
+      const el = (id) => document.getElementById(id);
+      const mo = sol.total || 0;
+      const mat = sol.matEstimado || 0;
+      if (el('cierre-mo')) el('cierre-mo').textContent = fmt(mo);
+      if (el('cierre-monto-mat')) el('cierre-monto-mat').textContent = mat > 0 ? fmt(mat) : 'Según boleta';
+      if (el('cierre-total')) el('cierre-total').textContent = fmt(mo + mat);
+      // Actualizar timing text
+      const timing = el('cierre-timing');
+      if (timing && mat > 0) timing.innerHTML = '💸 Materiales ' + fmt(mat) + ' → hoy al subir boleta<br>💰 M.O. ' + fmt(mo) + ' → 24 hrs tras confirmación del cliente';
+    }, 100);
   }
   // Técnico sale de "en camino" → detener GPS
   const screenActual = document.querySelector('.screen.active');
   if (screenActual && screenActual.id === 's-tec-en-camino' && id !== 'tec-en-camino') {
     detenerGPSTecnico();
   }
-  // Cliente en "verificar materiales" → iniciar mapa de tracking
-  if (id === 'cli-verificar-mat') {
-    setTimeout(iniciarMapaCliente, 300);
+  // Cliente en "en camino" o "verificar materiales" → iniciar mapa de tracking
+  if (id === 'cli-en-camino' || id === 'cli-verificar-mat') {
+    setTimeout(iniciarMapaCliente, 400);
   }
   _goGPS(id);
 };
@@ -4532,31 +5698,199 @@ async function cambiarEstado(endpoint, method = 'PATCH', body = {}) {
 // ════════════════════════════════════════════════════════════
 // TÉCNICO — Aceptar trabajo y marcar "en camino"
 // ════════════════════════════════════════════════════════════
+// ── Poblar pantalla tec-alerta con datos reales ───────────────
+// ── Sistema de notificaciones en tiempo real ─────────────────
+function agregarNotif(tipo, { icono, color, titulo, desc }) {
+  const key = 'fx_notif_' + tipo;
+  const lista = JSON.parse(localStorage.getItem(key) || '[]');
+  lista.unshift({ icono, color, titulo, desc, ts: Date.now() });
+  if (lista.length > 30) lista.pop();
+  localStorage.setItem(key, JSON.stringify(lista));
+  renderNotifs(tipo);
+  actualizarBadgeNotif(tipo, lista.filter(n => !n.leida).length);
+}
+
+function renderNotifs(tipo) {
+  const key = 'fx_notif_' + tipo;
+  const lista = JSON.parse(localStorage.getItem(key) || '[]');
+  const container = document.getElementById(tipo + '-notif-lista');
+  const empty = document.getElementById(tipo + '-notif-empty');
+  if (!container) return;
+
+  // Remove existing notif divs (keep empty state)
+  container.querySelectorAll('.notif').forEach(n => n.remove());
+
+  if (lista.length === 0) {
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  lista.forEach(n => {
+    const div = document.createElement('div');
+    div.className = 'notif';
+    const ago = _timeAgo(n.ts);
+    div.innerHTML = '<div class="notif-dot" style="background:' + n.color + ';"></div>' +
+      '<div><div style="font-size:13px;font-weight:700;margin-bottom:2px;">' + n.icono + ' ' + n.titulo + '</div>' +
+      (n.desc ? '<div style="font-size:12px;color:var(--muted);">' + n.desc + '</div>' : '') +
+      '<div style="font-size:10px;color:var(--muted);margin-top:3px;">' + ago + '</div></div>';
+    container.appendChild(div);
+  });
+}
+
+function limpiarNotifs(tipo) {
+  localStorage.removeItem('fx_notif_' + tipo);
+  renderNotifs(tipo);
+  actualizarBadgeNotif(tipo, 0);
+}
+
+function actualizarBadgeNotif(tipo, count) {
+  // Buscar el badge de notificaciones según tipo
+  const badgeId = tipo === 'tec' ? 'tec-notif-badge' : 'cli-notif-badge';
+  const badge = document.getElementById(badgeId);
+  if (badge) {
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'flex' : 'none';
+  }
+}
+
+function _timeAgo(ts) {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return 'Ahora';
+  if (diff < 3600) return 'Hace ' + Math.floor(diff/60) + ' min';
+  if (diff < 86400) return 'Hace ' + Math.floor(diff/3600) + ' hrs';
+  return 'Hace ' + Math.floor(diff/86400) + ' dias';
+}
+
+// Cargar notificaciones guardadas al navegar a pantalla de notifs
+document.addEventListener('DOMContentLoaded', () => {
+  // Renderizar notifs al abrir la pantalla
+  const observer = new MutationObserver(() => {
+    const tecNotif = document.querySelector('#s-tec-notif.active');
+    if (tecNotif) renderNotifs('tec');
+  });
+  observer.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+});
+
+function poblarTecAlerta(data) {
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+  const el = (id) => document.getElementById(id);
+
+  const trabajo = data.trabajo || 'Trabajo disponible';
+  const urgencia = data.urgencia || 'normal';
+  const mo = data.moBase || data.totalEstimado || 0;
+  const urgMult = urgencia === 'emergencia' ? 1.5 : 1.0;
+  const moFinal = Math.round(mo * urgMult);
+  const comision = Math.round(moFinal * 0.12);
+
+  if (el('tec-alerta-trabajo')) el('tec-alerta-trabajo').textContent = trabajo;
+
+  // Badge urgencia
+  const badge = el('tec-alerta-urgencia');
+  if (badge) {
+    if (urgencia === 'emergencia') { badge.textContent = '🔴 Emergencia'; badge.className = 'tag tr'; }
+    else { badge.textContent = '🟢 Normal'; badge.className = 'tag tg'; }
+  }
+
+  // Descripción
+  const descWrap = el('tec-alerta-desc-wrap');
+  if (data.descripcion) {
+    if (el('tec-alerta-desc')) el('tec-alerta-desc').textContent = '"' + data.descripcion + '"';
+    if (descWrap) descWrap.style.display = '';
+  } else {
+    if (descWrap) descWrap.style.display = 'none';
+  }
+
+  // Fotos: URLs del backend O base64 de localStorage O FotosCapturadas en memoria
+  let fotos = (data.fotosProblema || []).filter(Boolean);
+  if (fotos.length === 0) {
+    try { fotos = JSON.parse(localStorage.getItem('fx_fotos_solicitud') || '[]').filter(Boolean); } catch {}
+  }
+  if (fotos.length === 0 && typeof FotosCapturadas !== 'undefined') {
+    fotos = (FotosCapturadas.solicitud || []).filter(Boolean);
+  }
+  const fotosWrap = el('tec-alerta-fotos-wrap');
+  const fotosContainer = el('tec-alerta-fotos');
+  if (fotos.length > 0 && fotosContainer) {
+    fotosContainer.innerHTML = '';
+    fotos.forEach(src => {
+      const img = document.createElement('img');
+      img.src = src;
+      img.style.cssText = 'height:90px;width:90px;object-fit:cover;border-radius:9px;flex-shrink:0;border:.5px solid var(--border);cursor:pointer;';
+      img.onclick = () => { window.open(src, '_blank'); };
+      fotosContainer.appendChild(img);
+    });
+    if (fotosWrap) fotosWrap.style.display = 'block';
+  } else {
+    if (fotosWrap) fotosWrap.style.display = 'none';
+  }
+
+  // Distancia y dirección
+  let distStr = '—';
+  if (data.latitud) {
+    const tecLat = window._tecLatActual;
+    const tecLng = window._tecLngActual;
+    if (tecLat && tecLng) {
+      const R = 6371;
+      const dLat = (data.latitud - tecLat) * Math.PI / 180;
+      const dLng = (data.longitud - tecLng) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(tecLat*Math.PI/180)*Math.cos(data.latitud*Math.PI/180)*Math.sin(dLng/2)**2;
+      const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      distStr = dist < 1 ? Math.round(dist*1000) + ' m' : dist.toFixed(1) + ' km';
+    }
+  }
+  if (el('tec-alerta-dist')) {
+    const dirText = data.direccion || data.comuna || '';
+    el('tec-alerta-dist').textContent = (dirText ? dirText + (distStr !== '—' ? '  ·  ' + distStr : '') : distStr);
+  }
+
+  // Precios
+  if (el('tec-alerta-total')) el('tec-alerta-total').textContent = fmt(moFinal);
+  if (el('tec-alerta-total2')) el('tec-alerta-total2').textContent = fmt(moFinal);
+  if (el('tec-alerta-mo')) el('tec-alerta-mo').textContent = fmt(mo);
+  if (el('tec-alerta-com')) el('tec-alerta-com').textContent = fmt(comision);
+
+  if (urgMult > 1) {
+    const urgExtra = moFinal - mo;
+    const urgRow = el('tec-alerta-urg-row');
+    if (urgRow) urgRow.style.display = '';
+    if (el('tec-alerta-urg-lbl')) el('tec-alerta-urg-lbl').textContent = 'Urgencia x' + urgMult.toFixed(2);
+    if (el('tec-alerta-urg-val')) el('tec-alerta-urg-val').textContent = '+' + fmt(urgExtra);
+    if (el('tec-alerta-mo-desc')) el('tec-alerta-mo-desc').textContent = 'M.O. ' + fmt(mo) + ' x urgencia x' + urgMult.toFixed(2);
+  }
+
+  // Agregar/actualizar en lista de trabajos disponibles en tec-home
+  agregarTrabajoDisponible(data);
+}
+
 async function tecAceptarYPartir() {
   const btn = document.querySelector('#s-tec-alerta .btn-g');
   if (btn) { btn.disabled = true; btn.textContent = 'Confirmando...'; }
 
   const sol = getSolicitudActiva();
   if (!sol.id) {
-    // Sin solicitud real, navegar igual (modo demo)
     go('tec-en-camino'); return;
   }
 
   try {
-    // 1. Postularse si no lo ha hecho
+    // Postularse — el cliente verá la card y elegirá al técnico
     await apiFetch('/postulaciones', {
       method: 'POST',
-      body: JSON.stringify({ solicitudId: sol.id, mensaje: 'En camino', tiempoEta: 15 }),
-    }).catch(() => {}); // ignorar si ya se postuló
-
-    // 2. Marcar en camino (solo si ya fue elegido)
-    await cambiarEstado('en-camino');
-    showSuccess('¡Confirmado! El cliente fue notificado 🚗');
-    go('tec-en-camino');
-  } catch {
-    go('tec-en-camino'); // fallback navegación
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '✓ Aceptar →'; }
+      body: JSON.stringify({ solicitudId: sol.id, mensaje: 'Disponible', tiempoEta: 15 }),
+    });
+    stopTimer('tmr-tec', 'Postulado ✓');
+    showSuccess('Postulacion enviada. Esperando que el cliente te elija...');
+    // No navegar aún — esperar evento notif:tecnico_elegido
+    if (btn) btn.textContent = 'Esperando cliente...';
+  } catch (err) {
+    if (err.message && err.message.includes('ya')) {
+      stopTimer('tmr-tec', 'Postulado ✓');
+      showSuccess('Ya estas postulado. Esperando al cliente...');
+      if (btn) btn.textContent = 'Esperando cliente...';
+    } else {
+      showError(err.message || 'Error al postularse');
+      if (btn) { btn.disabled = false; btn.textContent = '✓ Aceptar →'; }
+    }
   }
 }
 
@@ -4569,11 +5903,81 @@ async function tecLlego() {
 
   detenerGPSTecnico(); // Detener watch GPS continuo
 
-  const res = await cambiarEstado('inicio-trabajo');
-  if (res) showSuccess('✅ Llegada registrada. El cliente fue notificado.');
-  
+  // Solo navegar a mat-verificar — el cliente se notifica cuando tecnico sube la foto
   if (btn) { btn.disabled = false; btn.textContent = '📍 Llegué — verificar materiales →'; }
   go('tec-mat-verificar');
+}
+
+// ════════════════════════════════════════════════════════════
+// TÉCNICO — Subir foto de materiales/boleta
+// ════════════════════════════════════════════════════════════
+let _tecBoleta = null; // archivo de la foto
+
+function tecAbrirFotoBoleta() {
+  abrirCamara('inp-boleta-tec', (file) => {
+    _tecBoleta = file;
+    // Mostrar preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.getElementById('tec-boleta-img');
+      const preview = document.getElementById('tec-boleta-preview');
+      const estado = document.getElementById('tec-boleta-estado');
+      const btnConfirmar = document.getElementById('btn-tec-confirmar-llegada');
+      const btnSubir = document.getElementById('btn-tec-subir-boleta');
+      if (img) { img.src = e.target.result; }
+      if (preview) preview.style.display = 'block';
+      if (estado) { estado.textContent = '✓ Foto lista — presiona confirmar para notificar al cliente'; estado.style.display = 'block'; estado.style.color = 'var(--accent)'; }
+      if (btnConfirmar) btnConfirmar.style.display = 'block';
+      if (btnSubir) btnSubir.textContent = '📸 Cambiar foto';
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function tecBorrarFotoBoleta() {
+  _tecBoleta = null;
+  const img = document.getElementById('tec-boleta-img');
+  const preview = document.getElementById('tec-boleta-preview');
+  const estado = document.getElementById('tec-boleta-estado');
+  const btnConfirmar = document.getElementById('btn-tec-confirmar-llegada');
+  const btnSubir = document.getElementById('btn-tec-subir-boleta');
+  if (preview) preview.style.display = 'none';
+  if (estado) estado.style.display = 'none';
+  if (btnConfirmar) btnConfirmar.style.display = 'none';
+  if (btnSubir) btnSubir.textContent = '📸 Subir foto →';
+}
+
+async function tecConfirmarLlegadaConFoto() {
+  if (!_tecBoleta) {
+    showError('Sube la foto de los materiales primero.');
+    return;
+  }
+  const btn = document.getElementById('btn-tec-confirmar-llegada');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+
+  try {
+    // Subir la foto al backend
+    let fotoUrl = null;
+    try {
+      fotoUrl = await subirFoto(_tecBoleta, 'materiales');
+    } catch {
+      // Si falla la subida, continuar igual con base64 local
+      fotoUrl = document.getElementById('tec-boleta-img')?.src || null;
+    }
+
+    // Guardar url en localStorage para que el cliente la vea
+    const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+    localStorage.setItem('fx_solicitud_activa', JSON.stringify({ ...sol, fotoMateriales: fotoUrl }));
+
+    // Registrar llegada en el backend → dispara notif:trabajo_iniciado al cliente
+    await cambiarEstado('inicio-trabajo');
+
+    showSuccess('✅ Cliente notificado. Tiene 10 min para verificar.');
+    go('tec-en-trabajo');
+  } catch (err) {
+    showError(err.message || 'Error al confirmar llegada');
+    if (btn) { btn.disabled = false; btn.textContent = '✅ Confirmar llegada al cliente →'; }
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -4682,16 +6086,183 @@ async function respTarifa(decision) {
 // ════════════════════════════════════════════════════════════
 // CLIENTE — Confirmar materiales
 // ════════════════════════════════════════════════════════════
+function marcarTodosCliMats() {
+  const items = document.querySelectorAll('#cli-mat-list .mat-item');
+  items.forEach((el, i) => {
+    const box = el.querySelector('.mat-chk');
+    if (!cliMats.has(i)) { cliMats.add(i); el.classList.add('verified'); if (box) box.textContent = '✓'; }
+  });
+  const st = document.getElementById('cli-mat-status');
+  if (st) { st.textContent = items.length + '/' + items.length + ' materiales verificados'; st.style.background = 'rgba(0,229,160,.07)'; st.style.color = 'var(--accent)'; }
+  const btn = document.getElementById('btn-conf-m');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+}
+
+// Fix 3: Marcar todos en pantalla del técnico
+function marcarTodosTecMats() {
+  const items = document.querySelectorAll('#mat-list-tec .mat-item');
+  items.forEach((el, i) => {
+    const box = el.querySelector('.mat-chk');
+    if (box && !el.classList.contains('verified')) {
+      el.classList.add('verified');
+      box.textContent = '✓';
+    }
+  });
+  // Mostrar botón de subir foto si aún no está visible
+  const btnSubir = document.getElementById('btn-tec-subir-boleta');
+  if (btnSubir) btnSubir.style.opacity = '1';
+  showSuccess('Todos los materiales marcados');
+}
+
 async function confMats() {
   if (typeof cliMats !== 'undefined' && cliMats.size < 4) {
     showError('Marca todos los materiales que puedes ver. Si falta algo, usa "Falta algo".');
     return;
   }
 
-  const res = await cambiarEstado('inicio-trabajo', 'PATCH').catch(() => null);
+  await cambiarEstado('inicio-trabajo', 'PATCH').catch(() => null);
   showSuccess('✅ Materiales confirmados. El técnico puede comenzar.');
-  go('cli-home');
+
+  // Poblar pantalla de ejecución
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const el = (id) => document.getElementById(id);
+  if (el('cli-ej-tecnico')) el('cli-ej-tecnico').textContent = (sol.tecnicoNombre || 'Tu técnico') + ' está trabajando';
+  if (el('cli-ej-trabajo')) el('cli-ej-trabajo').textContent = sol.trabajo || '—';
+  if (el('cli-ej-mo')) el('cli-ej-mo').textContent = sol.total ? '$' + Number(sol.total).toLocaleString('es-CL') : '—';
+  const hora = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+  if (el('cli-ej-inicio')) el('cli-ej-inicio').textContent = 'Inicio: ' + hora + ' hrs';
+
+  go('cli-en-ejecucion');
 }
+
+// ── Materiales técnico ────────────────────────────────────────
+const MATERIALES_RUBRO = {
+  gasfiteria:    [{ nombre: 'Teflón + uniones', precio: 1780 }, { nombre: 'Sellante sanitario', precio: 4200 }, { nombre: 'Cañería PVC 1/2" × 2m', precio: 2100 }, { nombre: 'Codos 90° PVC × 3un', precio: 2550 }],
+  electricidad:  [{ nombre: 'Cinta aislante', precio: 890 }, { nombre: 'Conectores × 10', precio: 1200 }, { nombre: 'Cable dúplex 1.5mm × 3m', precio: 2800 }, { nombre: 'Caja plástica salida', precio: 1500 }],
+  cerrajeria:    [{ nombre: 'Lubricante cerradura', precio: 2900 }, { nombre: 'Tornillos surtidos', precio: 1200 }],
+  handyman:      [{ nombre: 'Tornillos y tarugos', precio: 1500 }, { nombre: 'Silicona transparente', precio: 3200 }],
+};
+
+function getMaterialesRubro(rubroNombre) {
+  return MATERIALES_RUBRO[(rubroNombre || '').toLowerCase()] || [];
+}
+
+function toggleMatListaTec() {
+  const lista = document.getElementById('tec-ec-mat-lista');
+  const lbl = document.getElementById('tec-ec-mat');
+  if (!lista) return;
+  const visible = lista.style.display !== 'none';
+  lista.style.display = visible ? 'none' : '';
+  if (lbl) lbl.textContent = visible ? 'Ver lista →' : 'Ocultar ↑';
+}
+
+function poblarTecEnCamino() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const el = (id) => document.getElementById(id);
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+
+  if (el('tec-ec-cliente')) el('tec-ec-cliente').textContent = sol.clienteNombre || '—';
+  if (el('tec-ec-trabajo')) el('tec-ec-trabajo').textContent = sol.trabajo || '—';
+  if (el('tec-ec-mo')) el('tec-ec-mo').textContent = sol.total ? fmt(sol.total) : '—';
+  if (el('tec-ec-dir')) el('tec-ec-dir').textContent = sol.direccion || sol.comuna || '—';
+
+  // Materiales del rubro
+  const mats = getMaterialesRubro(sol.rubroNombre || sol.rubro);
+  const lista = el('tec-ec-mat-lista');
+  if (lista && mats.length > 0) {
+    if (el('tec-ec-mat')) el('tec-ec-mat').textContent = mats.length + ' ítems → ver';
+    lista.innerHTML = '<div class="card" style="padding:0;overflow:hidden;margin-bottom:4px;">' +
+      mats.map(m => '<div class="row" style="padding:8px 12px;"><span class="rl">' + m.nombre + '</span>' +
+        '<span class="rv" style="color:var(--muted);">~' + fmt(m.precio) + '</span></div>').join('') +
+      '</div><div style="font-size:10px;color:var(--muted);padding:2px 4px 6px;">Precios referenciales. Sube boleta real al terminar.</div>';
+  }
+}
+
+// ── Fotos del cierre ──────────────────────────────────────────
+let _fotoTerminadoFile = null;
+let _fotoBoleta2File = null;
+
+function tecAbrirFotoTerminado() {
+  abrirCamara('inp-terminado-tec', (file) => {
+    _fotoTerminadoFile = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.getElementById('cierre-img-terminado');
+      const preview = document.getElementById('cierre-fotos-preview');
+      const ico = document.getElementById('ico-foto-terminado');
+      const lbl = document.getElementById('lbl-foto-terminado');
+      if (img) { img.src = e.target.result; img.style.display = 'block'; }
+      if (preview) preview.style.display = '';
+      if (ico) ico.textContent = '✅';
+      if (lbl) lbl.textContent = 'Foto lista';
+      verificarFotosCierre();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function verificarFotosCierre() {
+  const btn = document.getElementById('btn-cerrar-trabajo');
+  if (!btn) return;
+  // Habilitar cuando ambas fotos estén listas
+  if (_fotoTerminadoFile && _fotoBoleta2File) {
+    btn.disabled = false; btn.style.opacity = '1';
+  }
+}
+
+async function cerrarTrabajo() {
+  const btn = document.getElementById('btn-cerrar-trabajo');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+
+  const sol = getSolicitudActiva ? getSolicitudActiva() : JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const fmt = (n) => n ? '$' + Math.round(n).toLocaleString('es-CL') : '—';
+
+  try {
+    let urlTerminado = null, urlBoleta = null;
+    if (_fotoTerminadoFile) try { urlTerminado = await subirFoto(_fotoTerminadoFile, 'cierre'); } catch {}
+    if (_fotoBoleta2File) try { urlBoleta = await subirFoto(_fotoBoleta2File, 'boleta'); } catch {}
+
+    await cambiarEstado('terminar', 'PATCH', {
+      fotosCierre: [urlTerminado, urlBoleta].filter(Boolean),
+    });
+
+    _fotoTerminadoFile = null; _fotoBoleta2File = null;
+
+    // Poblar montos en pantalla de cierre con datos reales
+    const mo = sol.total || 0;
+    const mat = sol.matEstimado || 0;
+    const el = (id) => document.getElementById(id);
+    if (el('cierre-mo')) el('cierre-mo').textContent = fmt(mo);
+    if (el('cierre-monto-mat')) el('cierre-monto-mat').textContent = mat > 0 ? fmt(mat) : 'Según boleta';
+    if (el('cierre-total')) el('cierre-total').textContent = fmt(mo + mat);
+
+    go('tec-rating');
+  } catch (err) {
+    showError(err.message || 'Error al cerrar trabajo');
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar y cerrar trabajo →'; }
+  }
+}
+
+// Reusar tecAbrirFotoBoleta para el cierre - también actualiza cierre-img-boleta
+const _tecAbrirFotaBoleta_original = window.tecAbrirFotoBoleta;
+window.tecAbrirFotaBoleta_cierre = function() {
+  abrirCamara('inp-boleta-cierre', (file) => {
+    _fotoBoleta2File = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.getElementById('cierre-img-boleta');
+      const preview = document.getElementById('cierre-fotos-preview');
+      const ico = document.getElementById('ico-foto-boleta');
+      const lbl = document.getElementById('lbl-foto-boleta');
+      if (img) { img.src = e.target.result; img.style.display = 'block'; }
+      if (preview) preview.style.display = '';
+      if (ico) ico.textContent = '✅';
+      if (lbl) lbl.textContent = 'Boleta lista';
+      verificarFotosCierre();
+    };
+    reader.readAsDataURL(file);
+  });
+};
 
 // ════════════════════════════════════════════════════════════
 // TÉCNICO — Calificación final y cerrar trabajo
@@ -4700,18 +6271,149 @@ async function enviarCalificacion() {
   const estrellas = document.querySelectorAll('#stars-tec .star');
   let rating = 0;
   estrellas.forEach((s, i) => { if (s.textContent === '⭐') rating = i + 1; });
-
-  const sol = getSolicitudActiva();
+  const sol = getSolicitudActiva ? getSolicitudActiva() : JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
   if (sol.id && rating > 0) {
-    await apiFetch('/ratings', {
-      method: 'POST',
-      body: JSON.stringify({ solicitudId: sol.id, estrellas: rating }),
-    }).catch(() => {});
+    await apiFetch('/ratings', { method: 'POST', body: JSON.stringify({ solicitudId: sol.id, estrellas: rating }) }).catch(() => {});
   }
-
   localStorage.removeItem('fx_solicitud_activa');
-  showSuccess('¡Trabajo completado! 🎉');
+  showSuccess('Trabajo completado. ¡Buen trabajo!');
   go('tec-home');
+}
+
+function omitirCalificacionTec() {
+  localStorage.removeItem('fx_solicitud_activa');
+  go('tec-home');
+}
+
+// ── Calificación del cliente ──────────────────────────────────
+let _cliRating = 0;
+// ── Estrellas con relleno parcial ────────────────────────────
+// Renderiza N estrellas con relleno parcial según promedio decimal
+// Ej: 4.3 → 4 llenas + 1 al 30%
+function renderStarsPromedio(promedio, containerId) {
+  const cont = document.getElementById(containerId);
+  if (!cont) return;
+  const val = Math.max(0, Math.min(5, parseFloat(promedio) || 0));
+  const llenas = Math.floor(val);
+  const decimal = Math.round((val - llenas) * 10) / 10; // 0.0 a 0.9
+  const vacias = 5 - llenas - (decimal > 0 ? 1 : 0);
+
+  let html = '<div style="display:flex;gap:3px;align-items:center;">';
+  // Estrellas llenas
+  for (let i = 0; i < llenas; i++) {
+    html += '<span style="font-size:22px;color:#F4A429;">★</span>';
+  }
+  // Estrella parcial
+  if (decimal > 0) {
+    const pct = Math.round(decimal * 100);
+    html += '<span class="star-partial">' +
+      '<span class="star-empty">★</span>' +
+      '<span class="star-fill" style="width:' + pct + '%;">★</span>' +
+      '</span>';
+  }
+  // Estrellas vacías
+  for (let i = 0; i < vacias; i++) {
+    html += '<span style="font-size:22px;color:#555;">★</span>';
+  }
+  html += '<span style="font-size:13px;color:var(--muted);margin-left:5px;font-weight:700;">' +
+    val.toFixed(1) + '</span></div>';
+
+  cont.innerHTML = html;
+}
+
+// rateCli: n=1 → 1 estrella, n=5 → 5 estrellas
+function rateCli(n) {
+  _cliRating = n; // 1 a 5
+  document.querySelectorAll('#stars-cli .star').forEach((s, i) => {
+    s.textContent = i < n ? '⭐' : '☆';
+  });
+}
+
+async function enviarCalificacionCliente() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const comment = document.getElementById('cli-rating-comment')?.value || '';
+  if (sol.id && _cliRating > 0) {
+    await apiFetch('/ratings', { method: 'POST', body: JSON.stringify({ solicitudId: sol.id, estrellas: _cliRating, comentario: comment }) }).catch(() => {});
+  }
+  localStorage.removeItem('fx_solicitud_activa');
+  showSuccess('¡Gracias por tu calificación!');
+  go('cli-home');
+}
+
+function omitirCalificacionCliente() {
+  localStorage.removeItem('fx_solicitud_activa');
+  go('cli-home');
+}
+
+// ── Chat cliente-técnico ──────────────────────────────────────
+let _chatMensajes = [];
+let _chatSolicitudId = null;
+
+function abrirChatTrabajo() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  _chatSolicitudId = sol.id;
+  const titulo = document.getElementById('chat-titulo');
+  if (titulo) titulo.textContent = Session.rol() === 'tecnico' ? 'Chat con el cliente' : 'Chat con el técnico';
+  renderizarMensajesChat();
+  go('chat-trabajo');
+}
+
+function renderizarMensajesChat() {
+  const cont = document.getElementById('chat-mensajes');
+  const empty = document.getElementById('chat-empty');
+  if (!cont) return;
+  if (_chatMensajes.length === 0) { if (empty) empty.style.display = ''; return; }
+  if (empty) empty.style.display = 'none';
+  const miRol = Session.rol();
+  Array.from(cont.children).forEach(c => { if (c.id !== 'chat-empty') c.remove(); });
+  _chatMensajes.forEach(m => {
+    const esMio = m.autorRol === miRol;
+    const hora = new Date(m.creadoAt || Date.now()).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;justify-content:' + (esMio ? 'flex-end' : 'flex-start') + ';margin-bottom:4px;';
+    div.innerHTML = '<div style="max-width:75%;padding:8px 12px;border-radius:' + (esMio ? '14px 14px 4px 14px' : '14px 14px 14px 4px') + ';background:' + (esMio ? 'var(--accent)' : 'var(--card)') + ';color:' + (esMio ? '#05120A' : 'var(--text)') + ';font-size:13px;line-height:1.4;">' + m.texto + '<div style="font-size:9px;opacity:.6;margin-top:3px;text-align:right;">' + hora + '</div></div>';
+    cont.appendChild(div);
+  });
+  cont.scrollTop = cont.scrollHeight;
+}
+
+async function enviarMensajeChat() {
+  const input = document.getElementById('chat-input');
+  const texto = input?.value?.trim();
+  if (!texto) return;
+  input.value = ''; input.style.height = 'auto';
+  const msj = { texto, autorRol: Session.rol(), creadoAt: new Date().toISOString() };
+  _chatMensajes.push(msj);
+  renderizarMensajesChat();
+  const socket = window._fixya_socket;
+  if (socket && _chatSolicitudId) socket.emit('chat:mensaje', { solicitudId: _chatSolicitudId, texto, autorRol: Session.rol() });
+}
+
+function registrarSocketChat(socket) {
+  socket.off('chat:mensaje');
+  socket.on('chat:mensaje', (data) => {
+    // Obtener solicitudId activa aunque el chat no esté abierto
+    const solActiva = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+    const solId = _chatSolicitudId || solActiva.id;
+
+    // Si el mensaje no es de la solicitud activa, ignorar
+    if (solId && data.solicitudId !== solId) return;
+
+    // Si es el mismo rol (echo propio), ignorar
+    if (data.autorRol === Session.rol()) return;
+
+    // Actualizar chat si está abierto
+    if (_chatSolicitudId && data.solicitudId === _chatSolicitudId) {
+      _chatMensajes.push(data);
+      renderizarMensajesChat();
+    }
+
+    // Notificar siempre si no está en el chat
+    const screen = document.querySelector('.screen.active');
+    if (!screen || screen.id !== 's-chat-trabajo') {
+      showSuccess('💬 Nuevo mensaje del ' + (data.autorRol === 'tecnico' ? 'técnico' : 'cliente'));
+    }
+  });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -4762,14 +6464,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pago === 'ok') {
       showSuccess('✅ Pago recibido. El dinero está en escrow hasta confirmar el trabajo.');
       const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
-      if (sol.id) go('cli-verificar-mat');
-      else go('cli-home');
+      if (!sol.id) { go('cli-home'); return; }
+
+      if (sol.agendado) {
+        // Agendado → volver al inicio, mostrar card con fecha
+        showSuccess('Trabajo agendado. Te avisaremos cuando el técnico vaya en camino.');
+        go('cli-home');
+      } else {
+        // Lo antes posible → pantalla técnico en camino
+        if (typeof actualizarPantallaEnCamino === 'function') actualizarPantallaEnCamino();
+        go('cli-en-camino');
+      }
     } else if (pago === 'fallido') {
       showError('El pago fue rechazado. Intenta de nuevo.');
     } else {
       showError('Hubo un error con el pago. Intenta de nuevo.');
     }
-  }, 500);
+  }, 1200);
 })();
 
 // ── Iniciar pago Flow ─────────────────────────────────────────
@@ -4798,6 +6509,17 @@ async function iniciarPago(solicitudId) {
     mostrarModalPago(data);
 
   } catch (err) {
+    console.error('[FixYa] Error pagos/iniciar:', err.message);
+    // 422 = solicitudId faltante o inválido
+    if (err.message && err.message.includes('422')) {
+      showError('Error: ID de solicitud inválido. Intenta crear una nueva solicitud.');
+      return;
+    }
+    // 500 = error del servidor (posiblemente estado incorrecto de la solicitud)
+    if (err.message && err.message.includes('500')) {
+      showError('Error del servidor al iniciar el pago. Intenta de nuevo en unos segundos.');
+      return;
+    }
     showError(err.message || 'Error al iniciar el pago');
     if (btn) { btn.disabled = false; btn.textContent = 'Pagar ahora'; }
   }
@@ -4827,8 +6549,8 @@ function mostrarModalPago(data) {
           <span style="font-family:'JetBrains Mono';font-weight:700;">$${Math.round(desglose.materiales).toLocaleString('es-CL')}</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:0.5px solid var(--border);">
-          <span style="color:var(--muted);">Comisión FixYa</span>
-          <span style="font-family:'JetBrains Mono';font-weight:700;">$${Math.round(desglose.comision).toLocaleString('es-CL')}</span>
+          <span style="color:var(--muted);">Tú recibes (M.O.)</span>
+          <span style="font-family:'JetBrains Mono';font-weight:700;">$${Math.round(desglose.mo || desglose.manoObra || monto).toLocaleString('es-CL')}</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;padding:10px 0 0;">
           <span>Total</span>
@@ -4852,61 +6574,24 @@ function mostrarModalPago(data) {
   document.body.appendChild(overlay);
 }
 
-// ── Agregar botón de pago en pantalla de técnicos ─────────────
-document.addEventListener('DOMContentLoaded', () => {
-  // Cuando el cliente está en la pantalla de técnicos disponibles
-  // y ya eligió uno, mostrar botón de pago
-  const screenTecnicos = document.getElementById('s-cli-tecnicos');
-  if (screenTecnicos) {
-    const wrap = screenTecnicos.querySelector('.wrap');
-    if (wrap) {
-      const btnPago = document.createElement('button');
-      btnPago.id = 'btn-pagar';
-      btnPago.className = 'btn btn-a';
-      btnPago.style.cssText = 'margin-top:12px;display:none;';
-      btnPago.textContent = '💳 Pagar y confirmar trabajo →';
-      btnPago.onclick = () => iniciarPago();
-      wrap.appendChild(btnPago);
-    }
-  }
-
-  // Detectar cuando se elige técnico para mostrar botón de pago
-  const _elegirOriginal = window.elegirTecnico;
-  if (_elegirOriginal) {
-    window.elegirTecnico = async function(tecnicoId) {
-      await _elegirOriginal(tecnicoId);
-      const btn = document.getElementById('btn-pagar');
-      if (btn) btn.style.display = 'block';
-    };
-  }
-
-  // Manejar parámetro ?pago= en URL al volver de Flow
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('pago') === 'ok') {
-    // Ya manejado por el IIFE arriba
-  }
-});
+// El pago se inicia desde elegirTecnico → mostrarModalConfirmarTecnico (flujo correcto)
 
 
 // ── Funciones críticas movidas al último script ──
 async function resolverRubroId() {
   const cache = JSON.parse(localStorage.getItem('fx_rubros') || '{}');
-  const nombre = Solicitud.rubroNombre || 'gasfiteria';
+  const nombre = (window.Solicitud && window.Solicitud.rubroNombre) || 'gasfiteria';
   if (cache[nombre]) return cache[nombre];
 
-  // Cargar rubros desde el técnico de prueba (tienen los IDs del seed)
+  // Endpoint público GET /api/rubros → [{ id, nombre, emoji }]
   try {
-    const res = await fetch('https://fixya-backend-production.up.railway.app/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'tecnico'+'@'+'fixya.cl', password: 'Test1234!', rol: 'tecnico' }),
-    });
-    const data = await res.json();
-    if (data.perfil && data.perfil.rubros) {
+    const res = await fetch(API + '/rubros');
+    if (res.ok) {
+      const lista = await res.json(); // array
       const nuevosIds = {};
-      data.perfil.rubros.forEach(r => { nuevosIds[r.rubro.nombre] = r.rubro.id; });
+      lista.forEach(r => { nuevosIds[r.nombre] = r.id; });
       localStorage.setItem('fx_rubros', JSON.stringify(nuevosIds));
-      return nuevosIds[nombre] || Object.values(nuevosIds)[0];
+      return nuevosIds[nombre] || Object.values(nuevosIds)[0] || null;
     }
   } catch {}
   return null;

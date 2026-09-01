@@ -2528,7 +2528,7 @@ function abrirFotoExtra() {
     if (inp && inp._dataUrl) _agregarFotoAGaleria(inp._dataUrl);
   });
 }
-function abrirFotoMod() { _crearInputFoto(function(inp) { handleFotoMod(inp); });  }
+function abrirFotoMod() { _crearInputFoto(function(inp) { _handleFotoModReal(inp); });  }
 
 function restaurarFotosSolicitud() {
   try {
@@ -5079,7 +5079,7 @@ function simFoto2() {
 // FOTO TÉCNICO — Modificación de tarifa (obligatoria)
 // ════════════════════════════════════════════════════════════
 function simModFoto() {
-  abrirSelectorFoto('input-foto-mod-directo', function(el) { handleFotoMod(el); });
+  abrirSelectorFoto('input-foto-mod-directo', function(el) { _handleFotoModReal(el); });
 }
 
 // ── Handlers directos para inputs en HTML ────────────────────

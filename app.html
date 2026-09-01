@@ -1858,7 +1858,7 @@ textarea.inp{resize:none;}
     <div class="chip-motivo" onclick="selMotivo(this)">Trabajo involucra más de un punto</div>
     <div class="chip-motivo" onclick="selMotivo(this)">Otro (especifica abajo)</div>
   </div>
-  <textarea class="inp" style="height:65px;resize:none;margin-bottom:12px;" placeholder="Detalle adicional (opcional)..."></textarea>
+  <textarea class="inp" id="mod-detalle-texto" style="height:65px;resize:none;margin-bottom:12px;" placeholder="Detalle adicional (opcional)..."></textarea>
 
   <!-- NUEVA TARIFA -->
   <div class="lbl">Nueva tarifa M.O. propuesta</div>
@@ -1885,24 +1885,24 @@ textarea.inp{resize:none;}
 <div class="status"><span>10:08</span><span>⚠️ Revisión</span><span>📶</span></div>
 <div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title" style="color:var(--accent2);">El técnico solicita ajuste</div></div>
 <div class="wrap">
-  <div style="padding:11px 13px;background:rgba(244,164,41,.08);border:.5px solid rgba(244,164,41,.3);border-radius:12px;font-size:13px;color:var(--accent2);font-weight:600;margin-bottom:14px;">
-    Carlos encontró dificultades al llegar. Revisa la foto y decide si aceptas la nueva tarifa.
+  <div style="padding:11px 13px;background:rgba(244,164,41,.08);border:.5px solid rgba(244,164,41,.3);border-radius:12px;font-size:13px;color:var(--accent2);font-weight:600;margin-bottom:14px;" id="resp-tarifa-intro">
+    Tu técnico encontró dificultades. Revisa la foto y decide si aceptas la nueva tarifa.
   </div>
 
   <!-- FOTO TÉCNICO -->
   <div class="lbl">Foto de las dificultades</div>
-  <div style="width:100%;height:160px;background:linear-gradient(135deg,#1A1200,#2A1F00);border-radius:12px;border:.5px solid rgba(244,164,41,.25);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;margin-bottom:4px;">
+  <div id="resp-tarifa-foto-wrap" style="width:100%;height:160px;background:linear-gradient(135deg,#1A1200,#2A1F00);border-radius:12px;border:.5px solid rgba(244,164,41,.25);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;margin-bottom:4px;overflow:hidden;">
     <div style="font-size:36px;">🔧</div>
-    <div style="font-size:11px;color:var(--accent2);">Foto técnico · GPS verificado · 10:06 hrs</div>
+    <div style="font-size:11px;color:var(--accent2);" id="resp-tarifa-foto-ts">Foto no disponible</div>
   </div>
-  <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Acceso más difícil de lo esperado — cañería detrás de mueble empotrado.</div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:12px;" id="resp-tarifa-motivo">—</div>
 
   <!-- COMPARATIVA TARIFAS -->
   <div class="card" style="margin-bottom:12px;">
-    <div class="row"><span class="rl">Tarifa acordada</span><span class="rv" style="text-decoration:line-through;color:var(--muted);">$49.280</span></div>
-    <div class="row row-total"><span style="font-weight:700;">Nueva tarifa propuesta</span><span style="font-family:'JetBrains Mono';font-size:17px;font-weight:800;color:var(--accent2);">$65.800</span></div>
-    <div style="margin-top:7px;padding:6px 10px;background:rgba(255,77,109,.06);border-radius:8px;font-size:11px;color:var(--red);">
-      Diferencia: +$16.520 adicionales
+    <div class="row"><span class="rl">Tarifa acordada</span><span class="rv" style="text-decoration:line-through;color:var(--muted);" id="resp-tarifa-original">—</span></div>
+    <div class="row row-total"><span style="font-weight:700;">Nueva tarifa propuesta</span><span style="font-family:'JetBrains Mono';font-size:17px;font-weight:800;color:var(--accent2);" id="resp-tarifa-nueva">—</span></div>
+    <div style="margin-top:7px;padding:6px 10px;background:rgba(255,77,109,.06);border-radius:8px;font-size:11px;color:var(--red);" id="resp-tarifa-diff">
+      Diferencia: —
     </div>
   </div>
 
@@ -2042,7 +2042,7 @@ textarea.inp{resize:none;}
     <div class="mat-item" id="ri2" onclick="togRep(2)" style="background:transparent;margin-bottom:6px;"><div class="mat-chk" id="rb2"></div><div style="font-size:13px;font-weight:600;">Sellante sanitario</div></div>
     <div class="mat-item" id="ri3" onclick="togRep(3)" style="background:transparent;"><div class="mat-chk" id="rb3"></div><div style="font-size:13px;font-weight:600;">Teflón + uniones</div></div>
   </div>
-  <button class="btn btn-r" style="margin-bottom:8px;" onclick="go('cli-verificar-mat')">Enviar reporte al técnico →</button>
+  <button class="btn btn-r" style="margin-bottom:8px;" onclick="enviarReporteFaltante()">Enviar reporte al técnico →</button>
 </div>
 </div>
 
@@ -2124,6 +2124,9 @@ textarea.inp{resize:none;}
     <div style="font-size:17px;font-weight:700;">María González</div>
     <div style="font-size:12px;color:var(--muted);">Cliente verificada · Desde enero 2026</div>
   </div>
+
+  <!-- ADICIONAL PENDIENTE DE PAGO -->
+  <div id="cli-perfil-adicional" class="card" style="display:none;margin-bottom:9px;border-color:rgba(244,164,41,.3);"></div>
 
   <!-- STATS -->
   <div class="card" style="margin-bottom:9px;">
@@ -2567,6 +2570,7 @@ function go(id) {
   if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
   if (fullId === 's-cli-historial') setTimeout(cargarHistorial, 50);
   if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
+  if (fullId === 's-cli-perfil') setTimeout(() => { if (typeof revisarAdicionalPendiente === 'function') revisarAdicionalPendiente(); }, 50);
 }
 
 function back() {
@@ -2889,6 +2893,19 @@ function togRep(i) {
     repMats.add(i); el.classList.add('missing');
     box.style.background = 'var(--red)'; box.style.borderColor = 'var(--red)'; box.style.color = '#fff'; box.textContent = '✗';
   }
+}
+
+const MATERIALES_VERIFICAR = ['Cañería PVC 1/2" × 2m', 'Codos 90° × 3un', 'Sellante sanitario', 'Teflón + uniones'];
+
+async function enviarReporteFaltante() {
+  if (repMats.size === 0) {
+    showError('Marca al menos un material faltante.');
+    return;
+  }
+  const detalle = 'Faltó: ' + Array.from(repMats).map(i => MATERIALES_VERIFICAR[i] || ('Ítem ' + i)).join(', ');
+  await cambiarEstado('reportar-faltante', 'POST', { detalle }).catch(() => null);
+  showSuccess('Reporte enviado al técnico.');
+  go('cli-verificar-mat');
 }
 
 
@@ -4775,6 +4792,15 @@ function conectarSocketCliente() {
       }, 800);
     });
 
+    // Técnico solicita ajuste de tarifa → cliente revisa foto+motivo y decide
+    socket.on('notif:mod_tarifa', async (data) => {
+      showError('⚠️ El técnico solicita ajustar la tarifa. Revisa los detalles.');
+      const solicitudId = (data && data.solicitudId) || JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}').id;
+      if (solicitudId && typeof poblarRespTarifa === 'function') await poblarRespTarifa(solicitudId);
+      go('cli-resp-tarifa');
+      setTimeout(() => startTimer('tmr-resp', 30 * 60), 300);
+    });
+
     // Trabajo terminado → pedir confirmación
     socket.on('notif:confirmar_trabajo', () => {
       showSuccess('✅ El técnico terminó. ¡Confirma el trabajo!');
@@ -4902,6 +4928,12 @@ function conectarSocket() {
       showSuccess('Pago recibido! Dirigete al domicilio.');
       try { await cambiarEstado('en-camino'); } catch {}
       go('tec-en-camino');
+    });
+
+    socket.on('notif:pago_adicional_recibido', (data) => {
+      console.log('[FixYa] pago_adicional_recibido', data);
+      agregarNotif('tec', { icono: '💰', color: 'var(--accent)', titulo: 'Pago del adicional recibido', desc: 'Puedes continuar el trabajo' });
+      showSuccess('💰 El cliente pagó el adicional. Puedes continuar.');
     });
 
     socket.on('notif:pago_liberado', (data) => {
@@ -6020,7 +6052,9 @@ async function enviarModTarifa() {
 
   const motivoEl = document.querySelector('#motivos .chip-motivo.on');
   const motivo   = motivoEl ? motivoEl.textContent.trim() : 'Trabajo no se ajusta a lo descrito';
-  const nuevaMO  = parseFloat(document.getElementById('inp-nueva-mo')?.value || '0');
+  const detalle  = document.getElementById('mod-detalle-texto')?.value?.trim() || '';
+  const motivoModTarifa = detalle ? (motivo + ' — ' + detalle) : motivo;
+  const nuevaMO  = parseFloat(document.getElementById('nueva-tarifa')?.value || '0');
 
   if (nuevaMO < 1000) { showError('Ingresa la nueva tarifa M.O.'); return; }
 
@@ -6029,7 +6063,8 @@ async function enviarModTarifa() {
 
   const res = await cambiarEstado('mod-tarifa', 'POST', {
     moModificada: nuevaMO,
-    motivoModTarifa: motivo,
+    motivoModTarifa,
+    fotoDificultad: FotosCapturadas?.modTarifa || null,
   });
 
   modFotoSubida = false;
@@ -6058,7 +6093,7 @@ async function clienteConfirmar() {
     localStorage.removeItem('fx_solicitud_activa');
   }
   if (btn) { btn.disabled = false; }
-  go('tec-rating'); // pantalla de calificación
+  go('cli-rating'); // pantalla de calificación (cliente)
 }
 
 // ════════════════════════════════════════════════════════════
@@ -6082,6 +6117,34 @@ async function respTarifa(decision) {
     showSuccess('Tarifa rechazada. El técnico fue notificado.');
     go('cli-home');
   }
+}
+
+// ── Poblar pantalla de respuesta a tarifa con datos reales ────
+async function poblarRespTarifa(solicitudId) {
+  try {
+    const data = await apiFetch('/solicitudes/' + solicitudId);
+    const sol = data.solicitud || data;
+    const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+    const el = (id) => document.getElementById(id);
+
+    if (el('resp-tarifa-motivo')) el('resp-tarifa-motivo').textContent = sol.motivoModTarifa || '—';
+    if (el('resp-tarifa-original')) el('resp-tarifa-original').textContent = fmt(sol.moBase || 0);
+    if (el('resp-tarifa-nueva')) el('resp-tarifa-nueva').textContent = fmt(sol.moModificada || 0);
+    if (el('resp-tarifa-diff')) {
+      const diff = (sol.moModificada || 0) - (sol.moBase || 0);
+      el('resp-tarifa-diff').textContent = 'Diferencia: ' + (diff >= 0 ? '+' : '') + fmt(diff) + ' adicionales';
+    }
+
+    const foto = Array.isArray(sol.fotosTrabajo) && sol.fotosTrabajo.length
+      ? sol.fotosTrabajo[sol.fotosTrabajo.length - 1] : null;
+    const fotoWrap = el('resp-tarifa-foto-wrap');
+    if (foto && fotoWrap) {
+      fotoWrap.innerHTML = '<img src="' + foto + '" style="width:100%;height:100%;object-fit:cover;" alt="Foto dificultades">';
+    }
+
+    const solActual = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+    localStorage.setItem('fx_solicitud_activa', JSON.stringify({ ...solActual, id: solicitudId }));
+  } catch {}
 }
 
 // ════════════════════════════════════════════════════════════
@@ -6121,8 +6184,8 @@ async function confMats() {
     return;
   }
 
-  await cambiarEstado('inicio-trabajo', 'PATCH').catch(() => null);
-  showSuccess('✅ Materiales confirmados. El técnico puede comenzar.');
+  await cambiarEstado('confirmar-materiales', 'PATCH').catch(() => null);
+  showSuccess('✅ Materiales confirmados.');
 
   // Poblar pantalla de ejecución
   const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
@@ -6223,9 +6286,8 @@ async function cerrarTrabajo() {
     if (_fotoTerminadoFile) try { urlTerminado = await subirFoto(_fotoTerminadoFile, 'cierre'); } catch {}
     if (_fotoBoleta2File) try { urlBoleta = await subirFoto(_fotoBoleta2File, 'boleta'); } catch {}
 
-    await cambiarEstado('terminar', 'PATCH', {
-      fotosCierre: [urlTerminado, urlBoleta].filter(Boolean),
-    });
+    // El estado ya se transicionó a ESPERANDO_CONF en tecTermino() — aquí solo
+    // se suben las fotos finales, no hay una segunda transición de estado.
 
     _fotoTerminadoFile = null; _fotoBoleta2File = null;
 
@@ -6576,6 +6638,50 @@ function mostrarModalPago(data) {
 }
 
 // El pago se inicia desde elegirTecnico → mostrarModalConfirmarTecnico (flujo correcto)
+
+// ── Pago del adicional (solo desde el perfil del cliente) ─────
+async function iniciarPagoAdicional(solicitudId) {
+  const btn = document.getElementById('btn-pagar-adicional');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generando pago...'; }
+  try {
+    const data = await apiFetch('/pagos/adicional/iniciar', {
+      method: 'POST',
+      body: JSON.stringify({ solicitudId }),
+    });
+    mostrarModalPago(data);
+  } catch (err) {
+    showError(err.message || 'Error al iniciar el pago del adicional');
+    if (btn) { btn.disabled = false; btn.textContent = 'Pagar ahora →'; }
+  }
+}
+
+async function revisarAdicionalPendiente() {
+  const cont = document.getElementById('cli-perfil-adicional');
+  if (!cont) return;
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  if (!sol.id) { cont.style.display = 'none'; return; }
+
+  try {
+    const data = await apiFetch('/solicitudes/' + sol.id);
+    const s = data.solicitud || data;
+    if (s.modTarifaEstado !== 'aceptada') { cont.style.display = 'none'; return; }
+
+    const historial = await apiFetch('/pagos/historial');
+    const pagoAdicional = (historial.pagos || []).find(p => p.solicitudId === sol.id && p.tipo === 'adicional');
+    if (pagoAdicional && pagoAdicional.estado === 'EN_ESCROW') { cont.style.display = 'none'; return; }
+
+    const monto = Math.round((s.totalFinal || 0) - (s.totalEstimado || 0));
+    const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+
+    cont.style.display = '';
+    cont.innerHTML =
+      '<div style="font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:4px;">⚠️ ADICIONAL PENDIENTE</div>' +
+      '<div style="font-size:17px;font-weight:800;margin-bottom:10px;">' + fmt(monto) + '</div>' +
+      '<button class="btn btn-a" id="btn-pagar-adicional" onclick="iniciarPagoAdicional(\'' + sol.id + '\')">Pagar ahora →</button>';
+  } catch {
+    cont.style.display = 'none';
+  }
+}
 
 
 // ── Funciones críticas movidas al último script ──

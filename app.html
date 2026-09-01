@@ -6120,6 +6120,7 @@ async function respTarifa(decision) {
   const res = await cambiarEstado('resp-tarifa', 'PATCH', {
     decision: aceptar ? 'aceptar' : 'rechazar',
   });
+  if (!res) return; // cambiarEstado ya mostró el error
 
   if (aceptar) {
     showSuccess('✅ Tarifa aceptada. El técnico fue notificado y puede continuar.');
@@ -6406,16 +6407,20 @@ function rateCli(n) {
 async function enviarCalificacionCliente() {
   const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
   const comment = document.getElementById('cli-rating-comment')?.value || '';
+  // Confirmar el trabajo primero — esto es lo que libera el pago al técnico
+  await cambiarEstado('confirmar', 'PATCH').catch(() => null);
   if (sol.id && _cliRating > 0) {
     await apiFetch('/ratings', { method: 'POST', body: JSON.stringify({ solicitudId: sol.id, estrellas: _cliRating, comentario: comment }) }).catch(() => {});
   }
   localStorage.removeItem('fx_solicitud_activa');
-  showSuccess('¡Gracias por tu calificación!');
+  showSuccess('✅ Trabajo confirmado. ¡Gracias por tu calificación!');
   go('cli-home');
 }
 
-function omitirCalificacionCliente() {
+async function omitirCalificacionCliente() {
+  await cambiarEstado('confirmar', 'PATCH').catch(() => null);
   localStorage.removeItem('fx_solicitud_activa');
+  showSuccess('✅ Trabajo confirmado.');
   go('cli-home');
 }
 

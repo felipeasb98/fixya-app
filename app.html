@@ -3706,7 +3706,7 @@ window.addEventListener('DOMContentLoaded', () => {
         setTimeout(async () => {
           try {
             const data = await apiFetch('/solicitudes/' + solTec.id);
-            const estadosActivos = ['PENDIENTE','CON_POSTULANTES','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
+            const estadosActivos = ['PENDIENTE','CON_POSTULANTES','CONFIRMADO','EN_CAMINO','EN_TRABAJO','ESPERANDO_CONF'];
             if (!data || !estadosActivos.includes(data.estado)) {
               localStorage.removeItem('fx_solicitud_activa');
               return;
@@ -3730,7 +3730,7 @@ window.addEventListener('DOMContentLoaded', () => {
         try {
           const data = await apiFetch('/solicitudes/' + sol.id);
           if (!data) { localStorage.removeItem('fx_solicitud_activa'); return; }
-          const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
+          const activos = ['PENDIENTE','CONFIRMADO','EN_CAMINO','EN_TRABAJO','ESPERANDO_CONF'];
           if (!activos.includes(data.estado)) {
             localStorage.removeItem('fx_solicitud_activa');
             return;
@@ -4229,7 +4229,7 @@ async function actualizarCardSolActiva() {
 
   try {
     const data = await apiFetch('/solicitudes/' + sol.id);
-    const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO'];
+    const activos = ['PENDIENTE','CONFIRMADO','EN_CAMINO','EN_TRABAJO','ESPERANDO_CONF'];
     if (!data || !activos.includes(data.estado)) {
       localStorage.removeItem('fx_solicitud_activa');
       localStorage.removeItem('fx_fotos_solicitud');
@@ -4396,13 +4396,14 @@ async function cargarHistorial() {
       return;
     }
 
-    const activos = ['PENDIENTE','ACEPTADA','EN_CAMINO','EN_TRABAJO','CON_POSTULANTES'];
+    const activos = ['PENDIENTE','CONFIRMADO','EN_CAMINO','EN_TRABAJO','CON_POSTULANTES','ESPERANDO_CONF'];
     const estadoLabel = (e) => {
       if (e === 'PENDIENTE') return '<span class="tag ta" style="font-size:9px;">⏳ Buscando técnico</span>';
       if (e === 'CON_POSTULANTES') return '<span class="tag ta" style="font-size:9px;">👷 Con postulantes</span>';
-      if (e === 'ACEPTADA') return '<span class="tag ta" style="font-size:9px;">✓ Aceptado</span>';
+      if (e === 'CONFIRMADO') return '<span class="tag ta" style="font-size:9px;">✓ Técnico confirmado</span>';
       if (e === 'EN_CAMINO') return '<span class="tag ta" style="font-size:9px;">🚗 En camino</span>';
       if (e === 'EN_TRABAJO') return '<span class="tag ta" style="font-size:9px;">🔧 En trabajo</span>';
+      if (e === 'ESPERANDO_CONF') return '<span class="tag ta" style="font-size:9px;">🔍 Esperando tu confirmación</span>';
       if (e === 'COMPLETADA') return '<span class="tag tg" style="font-size:9px;">✓ Completado</span>';
       return '<span class="tag" style="font-size:9px;background:rgba(255,255,255,.07);">Cancelado</span>';
     };

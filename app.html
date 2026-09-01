@@ -4936,6 +4936,18 @@ function conectarSocket() {
       showSuccess('💰 El cliente pagó el adicional. Puedes continuar.');
     });
 
+    socket.on('notif:tarifa_aceptada', (data) => {
+      console.log('[FixYa] tarifa_aceptada', data);
+      agregarNotif('tec', { icono: '✅', color: 'var(--accent)', titulo: 'Tarifa aceptada', desc: 'El cliente aceptó el nuevo precio' });
+      showSuccess('✅ El cliente aceptó la nueva tarifa. Puedes continuar.');
+    });
+
+    socket.on('notif:tarifa_rechazada', (data) => {
+      console.log('[FixYa] tarifa_rechazada', data);
+      agregarNotif('tec', { icono: '❌', color: 'var(--red)', titulo: 'Tarifa rechazada', desc: 'El cliente rechazó el ajuste' });
+      showError('❌ El cliente rechazó la nueva tarifa.');
+    });
+
     socket.on('notif:pago_liberado', (data) => {
       agregarNotif('tec', { icono: '💸', color: 'var(--accent)', titulo: 'Pago liberado', desc: data.monto ? '$' + Number(data.monto).toLocaleString('es-CL') : '' });
     });
@@ -6076,8 +6088,7 @@ async function enviarModTarifa() {
 
   if (res) showSuccess('Solicitud enviada al cliente. Espera su respuesta.');
   if (btn) { btn.disabled = false; btn.textContent = 'Enviar solicitud al cliente →'; }
-  go('cli-resp-tarifa');
-  if (typeof startTimer === 'function') startTimer('tmr-resp', 30 * 60);
+  go('tec-en-trabajo');
 }
 
 // ════════════════════════════════════════════════════════════

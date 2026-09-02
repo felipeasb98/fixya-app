@@ -1867,7 +1867,7 @@ textarea.inp{resize:none;}
     <input type="number" class="inp" id="nueva-tarifa" value="55000" min="25000" max="200000" step="2500" oninput="updNuevaTarifa()" style="margin-bottom:0;font-family:'JetBrains Mono';font-size:18px;font-weight:700;">
   </div>
   <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:12px;">
-    <span>Tarifa original: $46.875</span>
+    <span>Tarifa original: <span id="mod-tarifa-original">$46.875</span></span>
     <span id="mod-diff" style="color:var(--accent2);">+$8.125</span>
   </div>
 
@@ -2571,6 +2571,7 @@ function go(id) {
   if (fullId === 's-cli-historial') setTimeout(cargarHistorial, 50);
   if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
   if (fullId === 's-cli-perfil') setTimeout(() => { if (typeof revisarAdicionalPendiente === 'function') revisarAdicionalPendiente(); }, 50);
+  if (fullId === 's-tec-mod-tarifa') setTimeout(() => { if (typeof poblarTecModTarifa === 'function') poblarTecModTarifa(); }, 50);
 }
 
 function back() {
@@ -3093,10 +3094,23 @@ function updBtnMod() {
   btn.disabled = !modFotoSubida; btn.style.opacity = modFotoSubida ? '1' : '.4';
 }
 function updNuevaTarifa() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const original = sol.moBase || 0;
   const val = parseInt(document.getElementById('nueva-tarifa')?.value) || 0;
-  const diff = val - 46875;
+  const diff = val - original;
   const el = document.getElementById('mod-diff');
   if (el) { el.textContent = (diff >= 0 ? '+' : '') + '$' + Math.abs(diff).toLocaleString('es-CL'); el.style.color = diff > 0 ? 'var(--accent2)' : 'var(--accent)'; }
+}
+
+function poblarTecModTarifa() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const original = sol.moBase || 0;
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+  const elOriginal = document.getElementById('mod-tarifa-original');
+  if (elOriginal) elOriginal.textContent = fmt(original);
+  const input = document.getElementById('nueva-tarifa');
+  if (input) input.value = Math.round(original * 1.2);
+  updNuevaTarifa();
 }
 // enviarModTarifa — redefinida en módulo de estados del trabajo
 // cancelarTrabajo — redefinida en módulo de estados del trabajo
@@ -6139,11 +6153,14 @@ async function poblarRespTarifa(solicitudId) {
     const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
     const el = (id) => document.getElementById(id);
 
+    // El cliente ve el total a pagar (con la comisión FixYa ya recargada
+    // adentro) — nunca el monto crudo que propuso el técnico ni la comisión
+    // como línea aparte.
     if (el('resp-tarifa-motivo')) el('resp-tarifa-motivo').textContent = sol.motivoModTarifa || '—';
-    if (el('resp-tarifa-original')) el('resp-tarifa-original').textContent = fmt(sol.moBase || 0);
-    if (el('resp-tarifa-nueva')) el('resp-tarifa-nueva').textContent = fmt(sol.moModificada || 0);
+    if (el('resp-tarifa-original')) el('resp-tarifa-original').textContent = fmt(sol.totalEstimado || 0);
+    if (el('resp-tarifa-nueva')) el('resp-tarifa-nueva').textContent = fmt(sol.totalFinal || 0);
     if (el('resp-tarifa-diff')) {
-      const diff = (sol.moModificada || 0) - (sol.moBase || 0);
+      const diff = (sol.totalFinal || 0) - (sol.totalEstimado || 0);
       el('resp-tarifa-diff').textContent = 'Diferencia: ' + (diff >= 0 ? '+' : '') + fmt(diff) + ' adicionales';
     }
 

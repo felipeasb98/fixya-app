@@ -1872,7 +1872,7 @@ textarea.inp{resize:none;}
   </div>
 
   <div style="padding:9px 12px;background:rgba(255,77,109,.05);border:.5px solid rgba(255,77,109,.18);border-radius:10px;font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px;">
-    ⏱️ El cliente tiene <strong style="color:var(--white);">30 minutos</strong> para responder. Si rechaza o no responde, puedes retirarte sin penalización.
+    ⏱️ El cliente tiene <strong style="color:var(--white);">10 minutos</strong> para responder. Si rechaza o no responde, puedes retirarte sin penalización.
   </div>
 
   <button class="btn btn-a" id="btn-enviar-mod" onclick="enviarModTarifa()" style="margin-bottom:8px;opacity:.4;" disabled>Enviar solicitud al cliente →</button>
@@ -1909,7 +1909,7 @@ textarea.inp{resize:none;}
   <!-- TIMER -->
   <div class="timer-box" style="margin-bottom:12px;">
     <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">⏳ Tiempo para decidir</div>
-    <div class="timer-num" style="color:var(--accent2);" id="tmr-resp">29:59</div>
+    <div class="timer-num" style="color:var(--accent2);" id="tmr-resp">9:59</div>
     <div style="font-size:11px;color:var(--muted);margin-top:2px;">Sin respuesta → técnico puede retirarse</div>
   </div>
 
@@ -4812,7 +4812,7 @@ function conectarSocketCliente() {
       const solicitudId = (data && data.solicitudId) || JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}').id;
       if (solicitudId && typeof poblarRespTarifa === 'function') await poblarRespTarifa(solicitudId);
       go('cli-resp-tarifa');
-      setTimeout(() => startTimer('tmr-resp', 30 * 60), 300);
+      setTimeout(() => startTimer('tmr-resp', 10 * 60), 300);
     });
 
     // Trabajo terminado → pedir confirmación

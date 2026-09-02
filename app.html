@@ -6100,7 +6100,13 @@ async function enviarModTarifa() {
   if (o) o.style.display = 'none';
   if (typeof updBtnMod === 'function') updBtnMod();
 
-  if (res) showSuccess('Solicitud enviada al cliente. Espera su respuesta.');
+  if (res) {
+    if (res.requiereRevision) {
+      showSuccess('⏳ Tu ajuste supera el 30% del valor original — FixYa lo está validando antes de mandarlo al cliente.');
+    } else {
+      showSuccess('Solicitud enviada al cliente. Espera su respuesta.');
+    }
+  }
   if (btn) { btn.disabled = false; btn.textContent = 'Enviar solicitud al cliente →'; }
   go('tec-en-trabajo');
 }

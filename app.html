@@ -923,7 +923,7 @@ textarea.inp{resize:none;}
   </div>
   <div class="hl-a hl" style="margin-bottom:12px;font-size:13px;color:var(--text);line-height:1.6;">
     💸 <strong>Materiales:</strong> reembolso <strong style="color:var(--accent2);">hoy mismo día</strong> al subir boleta.<br>
-    💰 <strong>M.O. $46.875:</strong> en 24 hrs tras confirmación del cliente.
+    💰 <strong>M.O. $46.875:</strong> en 48 hrs tras confirmación del cliente.
   </div>
   <div style="display:flex;gap:8px;">
     <button class="btn btn-ghost btn-sm" onclick="go('tec-faltante')" style="flex:1;">⚠️ Falta algo</button>
@@ -968,7 +968,7 @@ textarea.inp{resize:none;}
     <div class="row"><span class="rl">M.O. fija</span><span class="rv rg" id="cierre-mo">—</span></div>
     <div class="row row-total"><span style="font-weight:700;">Tú recibes total</span><span class="rv rg" style="font-size:15px;" id="cierre-total">—</span></div>
     <div style="margin-top:7px;padding:7px 9px;background:rgba(0,229,160,.05);border-radius:8px;font-size:11px;color:var(--accent);line-height:1.5;" id="cierre-timing">
-      💸 Materiales → hoy al subir boleta<br>💰 M.O. → 24 hrs tras confirmación del cliente
+      💸 Materiales → hoy al subir boleta<br>💰 M.O. → 48 hrs tras confirmación del cliente
     </div>
   </div>
   <button class="btn btn-g" id="btn-cerrar-trabajo" onclick="cerrarTrabajo()" style="opacity:.4;" disabled>Enviar y cerrar trabajo →</button>
@@ -5674,7 +5674,7 @@ window.go = function(id) {
       if (el('cierre-total')) el('cierre-total').textContent = fmt(mo + mat);
       // Actualizar timing text
       const timing = el('cierre-timing');
-      if (timing && mat > 0) timing.innerHTML = '💸 Materiales ' + fmt(mat) + ' → hoy al subir boleta<br>💰 M.O. ' + fmt(mo) + ' → 24 hrs tras confirmación del cliente';
+      if (timing && mat > 0) timing.innerHTML = '💸 Materiales ' + fmt(mat) + ' → hoy al subir boleta<br>💰 M.O. ' + fmt(mo) + ' → 48 hrs tras confirmación del cliente';
     }, 100);
   }
   // Técnico sale de "en camino" → detener GPS

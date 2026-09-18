@@ -4489,6 +4489,8 @@ function verSolicitudHistorial(id, estado) {
     go('cli-en-camino');
   } else if (estado === 'EN_TRABAJO') {
     go('cli-verificar-mat');
+  } else if (estado === 'ESPERANDO_CONF') {
+    go('cli-rating');
   }
 }
 
@@ -6048,9 +6050,10 @@ async function tecTermino() {
 
   const fotosCierre = FotosCapturadas?.solicitud || [];
   const res = await cambiarEstado('trabajo-terminado', 'PATCH', { fotosCierre });
-  
-  if (res) showSuccess('✅ Notificamos al cliente para que confirme el trabajo');
   if (btn) { btn.disabled = false; btn.textContent = 'Terminé el trabajo →'; }
+  if (!res) return;
+
+  showSuccess('✅ Notificamos al cliente para que confirme el trabajo');
   go('tec-cierre');
 }
 

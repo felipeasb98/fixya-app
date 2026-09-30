@@ -5906,7 +5906,7 @@ function getSolicitudActiva() {
 function montoNetoTecnico(total) {
   let perfil = {};
   try { perfil = JSON.parse(localStorage.getItem('fx_perfil') || '{}'); } catch {}
-  const comisionPct = perfil.comisionPct ?? 18;
+  const comisionPct = perfil.comisionPct ?? 10;
   const t = total || 0;
   return t - Math.round((t * comisionPct) / 100);
 }

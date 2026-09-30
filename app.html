@@ -741,9 +741,9 @@ textarea.inp{resize:none;}
     <div class="toggle-track on" id="tog" onclick="toggleDisp()"><div class="toggle-thumb"></div></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:14px;">
-    <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--accent);">3</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Hoy</div></div>
-    <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:16px;font-weight:800;color:var(--accent2);">$112K</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Esta semana</div></div>
-    <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--purple);">0</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Pendientes</div></div>
+    <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--accent);" id="tec-stat-hoy">—</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Hoy</div></div>
+    <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:16px;font-weight:800;color:var(--accent2);" id="tec-stat-semana">—</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Esta semana</div></div>
+    <div class="card2" style="padding:11px;text-align:center;border-radius:11px;"><div style="font-family:'JetBrains Mono';font-size:20px;font-weight:800;color:var(--purple);" id="tec-stat-pendientes">—</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Pendientes</div></div>
   </div>
   <!-- Lista de trabajos disponibles — se puebla dinámicamente -->
   <div id="tec-trabajos-disponibles" style="display:none;margin-bottom:12px;">
@@ -754,10 +754,8 @@ textarea.inp{resize:none;}
     <div id="tec-trabajos-lista"></div>
   </div>
   <div class="lbl">Trabajos recientes</div>
-  <div class="card" style="padding:0;overflow:hidden;">
-    <div class="row" style="padding:10px 13px;cursor:pointer;"><span class="rl">Cambio grifo · Ñuñoa</span><span class="rv rg">$31.250 ✓</span></div>
-    <div class="row" style="padding:10px 13px;cursor:pointer;"><span class="rl">Destape · Providencia</span><span class="rv rg">$31.250 ✓</span></div>
-    <div class="row" style="padding:10px 13px;cursor:pointer;"><span class="rl">Calefont · Santiago Centro</span><span class="rv rg">$68.750 ✓</span></div>
+  <div class="card" style="padding:0;overflow:hidden;" id="tec-recientes-card">
+    <div id="tec-recientes-lista" style="padding:14px 13px;font-size:12px;color:var(--muted);text-align:center;">Cargando...</div>
   </div>
   <div class="spacer"></div>
 </div>
@@ -914,12 +912,7 @@ textarea.inp{resize:none;}
   <div class="status-badge sb-on"><div style="font-size:16px;">🔨</div><div><div style="font-size:13px;font-weight:700;color:var(--accent);">Técnicos verificados · En ejecución</div><div style="font-size:11px;color:var(--muted);">Tú recibes <span id="tec-ent-monto">—</span></div></div></div>
   <div class="card" style="margin-bottom:9px;">
     <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:8px;">✅ MATERIALES VERIFICADOS POR CLIENTE</div>
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:.5px solid var(--border);"><span style="color:var(--muted);">Cañería PVC 1/2"</span><span class="tag tg" style="font-size:9px;">✓ 10:05</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:.5px solid var(--border);"><span style="color:var(--muted);">Codos 90° × 3un</span><span class="tag tg" style="font-size:9px;">✓ 10:05</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:.5px solid var(--border);"><span style="color:var(--muted);">Sellante sanitario</span><span class="tag tg" style="font-size:9px;">✓ 10:05</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;"><span style="color:var(--muted);">Teflón + uniones</span><span class="tag tg" style="font-size:9px;">✓ 10:05</span></div>
-    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;" id="mat-list-verificados"></div>
   </div>
   <div class="hl-a hl" style="margin-bottom:12px;font-size:13px;color:var(--text);line-height:1.6;">
     💸 <strong>Materiales:</strong> reembolso <strong style="color:var(--accent2);">hoy mismo día</strong> al subir boleta.<br>
@@ -998,13 +991,11 @@ textarea.inp{resize:none;}
 <div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Mis pagos</div></div>
 <div class="wrap">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px;">
-    <div class="card2" style="padding:12px;border-radius:11px;"><div style="font-size:10px;color:var(--muted);">Esta semana</div><div style="font-family:'JetBrains Mono';font-size:17px;font-weight:800;color:var(--accent);margin-top:2px;">$112.500</div></div>
-    <div class="card2" style="padding:12px;border-radius:11px;"><div style="font-size:10px;color:var(--muted);">Pendiente</div><div style="font-family:'JetBrains Mono';font-size:17px;font-weight:800;color:var(--accent2);margin-top:2px;">$46.875</div></div>
+    <div class="card2" style="padding:12px;border-radius:11px;"><div style="font-size:10px;color:var(--muted);">Esta semana</div><div style="font-family:'JetBrains Mono';font-size:17px;font-weight:800;color:var(--accent);margin-top:2px;" id="tec-pagos-semana">—</div></div>
+    <div class="card2" style="padding:12px;border-radius:11px;"><div style="font-size:10px;color:var(--muted);">Pendiente</div><div style="font-family:'JetBrains Mono';font-size:17px;font-weight:800;color:var(--accent2);margin-top:2px;" id="tec-pagos-pendiente">—</div></div>
   </div>
-  <div class="card" style="padding:0;overflow:hidden;">
-    <div class="row" style="padding:11px 13px;"><div><div style="font-size:13px;font-weight:600;">Reparación fuga · #FY-2845</div><div style="font-size:11px;color:var(--muted);">Hoy · M.O.+materiales</div></div><div style="text-align:right;"><div class="rv rg">$48.130</div><span class="tag tg" style="font-size:9px;">Pagado</span></div></div>
-    <div class="row" style="padding:11px 13px;"><div><div style="font-size:13px;font-weight:600;">Instalación calefont · #FY-2844</div><div style="font-size:11px;color:var(--muted);">Ayer</div></div><div style="text-align:right;"><div class="rv rg">$68.750</div><span class="tag tg" style="font-size:9px;">Pagado</span></div></div>
-    <div class="row" style="padding:11px 13px;"><div><div style="font-size:13px;font-weight:600;">Cambio grifo · #FY-2843</div><div style="font-size:11px;color:var(--muted);">Ayer · Reemb. mat.</div></div><div style="text-align:right;"><div class="rv ra">$31.250</div><span class="tag ta" style="font-size:9px;">Pendiente</span></div></div>
+  <div class="card" style="padding:0;overflow:hidden;" id="tec-pagos-lista">
+    <div style="padding:14px 13px;font-size:12px;color:var(--muted);text-align:center;">Cargando...</div>
   </div>
 </div>
 <div class="nav-bottom">
@@ -2036,12 +2027,7 @@ textarea.inp{resize:none;}
 <div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title" style="color:var(--red);">¿Qué material falta?</div></div>
 <div class="wrap">
   <div class="sub">Marca el material que no viste en la foto del técnico.</div>
-  <div style="background:rgba(255,77,109,.05);border:.5px solid rgba(255,77,109,.22);border-radius:11px;padding:12px;margin-bottom:11px;">
-    <div class="mat-item" id="ri0" onclick="togRep(0)" style="background:transparent;margin-bottom:6px;"><div class="mat-chk" id="rb0"></div><div style="font-size:13px;font-weight:600;">Cañería PVC 1/2" × 2m</div></div>
-    <div class="mat-item" id="ri1" onclick="togRep(1)" style="background:transparent;margin-bottom:6px;"><div class="mat-chk" id="rb1"></div><div style="font-size:13px;font-weight:600;">Codos 90° × 3un</div></div>
-    <div class="mat-item" id="ri2" onclick="togRep(2)" style="background:transparent;margin-bottom:6px;"><div class="mat-chk" id="rb2"></div><div style="font-size:13px;font-weight:600;">Sellante sanitario</div></div>
-    <div class="mat-item" id="ri3" onclick="togRep(3)" style="background:transparent;"><div class="mat-chk" id="rb3"></div><div style="font-size:13px;font-weight:600;">Teflón + uniones</div></div>
-  </div>
+  <div style="background:rgba(255,77,109,.05);border:.5px solid rgba(255,77,109,.22);border-radius:11px;padding:12px;margin-bottom:11px;" id="mat-list-faltante"></div>
   <button class="btn btn-r" style="margin-bottom:8px;" onclick="enviarReporteFaltante()">Enviar reporte al técnico →</button>
 </div>
 </div>
@@ -2572,6 +2558,8 @@ function go(id) {
   if (fullId === 's-cli-home') setTimeout(actualizarCardSolActiva, 50);
   if (fullId === 's-cli-perfil') setTimeout(() => { if (typeof revisarAdicionalPendiente === 'function') revisarAdicionalPendiente(); }, 50);
   if (fullId === 's-tec-mod-tarifa') setTimeout(() => { if (typeof poblarTecModTarifa === 'function') poblarTecModTarifa(); }, 50);
+  if (fullId === 's-tec-home') setTimeout(() => { if (typeof cargarStatsTecnico === 'function') cargarStatsTecnico(); }, 50);
+  if (fullId === 's-tec-pagos') setTimeout(() => { if (typeof cargarMisPagos === 'function') cargarMisPagos(); }, 50);
 }
 
 function back() {
@@ -2865,25 +2853,74 @@ function updCot() {
 
 }
 
-// ── MATERIALES CLIENTE ────────────────────────────────────────────────────────
+// ── MATERIALES: listas dinámicas por rubro (no más ítems fijos de gasfitería) ──
+// Todas leen getMaterialesRubro(rubroNombre) (definida más abajo) para que
+// electricidad/cerrajería/handyman muestren sus propios ítems, no los de gasfitería.
+function _rubroSolicitudActiva() {
+  try {
+    const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+    return sol.rubroNombre || sol.rubro || (typeof Solicitud !== 'undefined' ? Solicitud.rubroNombre : '') || '';
+  } catch { return ''; }
+}
+
+// ── MATERIALES TÉCNICO (preparar/comprado-stock) ──────────────────────────────
+// tmChk / chkM / setOg ya están definidas más arriba — solo agregamos el render.
+function renderMaterialesTec(rubroNombre) {
+  const items = getMaterialesRubro(rubroNombre ?? _rubroSolicitudActiva());
+  const cont = document.getElementById('mat-list-tec');
+  if (!cont) return;
+  tmChk.clear();
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+  cont.innerHTML = items.map((m, i) =>
+    '<div class="mat-item" id="tm' + i + '"><div class="mat-chk" onclick="chkM(\'tm\',' + i + ')"></div>' +
+    '<div style="flex:1;"><div style="font-size:13px;font-weight:600;">' + m.nombre + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);">' + fmt(m.precio) + '</div></div>' +
+    '<div class="og"><div class="og-btn on-c" onclick="setOg(\'tm\',' + i + ',\'c\')">🛒</div>' +
+    '<div class="og-btn" onclick="setOg(\'tm\',' + i + ',\'s\')">📦</div></div></div>'
+  ).join('');
+}
+
+// ── MATERIALES CLIENTE (verificar) ────────────────────────────────────────────
 const cliMats = new Set();
+let _cliMatCount = 0;
 function chkCli(i) {
   const el = document.getElementById('cm' + i);
   const box = el.querySelector('.mat-chk');
   if (cliMats.has(i)) { cliMats.delete(i); el.classList.remove('verified'); box.textContent = ''; }
   else { cliMats.add(i); el.classList.add('verified'); box.textContent = '✓'; }
   const st = document.getElementById('cli-mat-status');
-  if (cliMats.size === 4) {
+  if (!st) return;
+  if (_cliMatCount > 0 && cliMats.size === _cliMatCount) {
     st.textContent = '✅ Todos los materiales verificados';
     st.style.background = 'rgba(0,229,160,.07)'; st.style.color = 'var(--accent)';
   } else {
-    st.textContent = cliMats.size + '/4 materiales verificados';
+    st.textContent = cliMats.size + '/' + _cliMatCount + ' materiales verificados';
+    st.style.background = 'rgba(255,255,255,.04)'; st.style.color = 'var(--muted)';
+  }
+}
+function renderMaterialesCli(rubroNombre) {
+  const items = getMaterialesRubro(rubroNombre ?? _rubroSolicitudActiva());
+  const cont = document.getElementById('cli-mat-list');
+  if (!cont) return;
+  cliMats.clear();
+  _cliMatCount = items.length;
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+  cont.innerHTML = items.map((m, i) =>
+    '<div class="mat-item" id="cm' + i + '" onclick="chkCli(' + i + ')"><div class="mat-chk"></div>' +
+    '<div style="flex:1;font-size:13px;font-weight:600;">' + m.nombre + '</div>' +
+    '<div class="rv ra" style="font-size:12px;">' + fmt(m.precio) + '</div></div>'
+  ).join('');
+  const st = document.getElementById('cli-mat-status');
+  if (st) {
+    st.textContent = 'Marca cada ítem que puedes ver en la foto ↑';
     st.style.background = 'rgba(255,255,255,.04)'; st.style.color = 'var(--muted)';
   }
 }
 // confMats — redefinida en módulo de estados del trabajo
 
+// ── MATERIALES CLIENTE (reportar faltante) ────────────────────────────────────
 const repMats = new Set();
+let _faltanteItems = [];
 function togRep(i) {
   const el = document.getElementById('ri' + i);
   const box = document.getElementById('rb' + i);
@@ -2895,15 +2932,36 @@ function togRep(i) {
     box.style.background = 'var(--red)'; box.style.borderColor = 'var(--red)'; box.style.color = '#fff'; box.textContent = '✗';
   }
 }
+function renderMaterialesFaltante(rubroNombre) {
+  const items = getMaterialesRubro(rubroNombre ?? _rubroSolicitudActiva());
+  _faltanteItems = items.map(m => m.nombre);
+  repMats.clear();
+  const cont = document.getElementById('mat-list-faltante');
+  if (!cont) return;
+  cont.innerHTML = items.map((m, i) =>
+    '<div class="mat-item" id="ri' + i + '" onclick="togRep(' + i + ')" style="background:transparent;' + (i < items.length - 1 ? 'margin-bottom:6px;' : '') + '">' +
+    '<div class="mat-chk" id="rb' + i + '"></div><div style="font-size:13px;font-weight:600;">' + m.nombre + '</div></div>'
+  ).join('');
+}
 
-const MATERIALES_VERIFICAR = ['Cañería PVC 1/2" × 2m', 'Codos 90° × 3un', 'Sellante sanitario', 'Teflón + uniones'];
+// ── TÉCNICO — lista de solo lectura "materiales verificados" (en-trabajo) ────
+function renderMaterialesVerificadosTec(rubroNombre) {
+  const items = getMaterialesRubro(rubroNombre ?? _rubroSolicitudActiva());
+  const cont = document.getElementById('mat-list-verificados');
+  if (!cont) return;
+  cont.innerHTML = items.map((m, i) =>
+    '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;' +
+    (i < items.length - 1 ? 'border-bottom:.5px solid var(--border);' : '') + '">' +
+    '<span style="color:var(--muted);">' + m.nombre + '</span><span class="tag tg" style="font-size:9px;">✓</span></div>'
+  ).join('');
+}
 
 async function enviarReporteFaltante() {
   if (repMats.size === 0) {
     showError('Marca al menos un material faltante.');
     return;
   }
-  const detalle = 'Faltó: ' + Array.from(repMats).map(i => MATERIALES_VERIFICAR[i] || ('Ítem ' + i)).join(', ');
+  const detalle = 'Faltó: ' + Array.from(repMats).map(i => _faltanteItems[i] || ('Ítem ' + i)).join(', ');
   await cambiarEstado('reportar-faltante', 'POST', { detalle }).catch(() => null);
   showSuccess('Reporte enviado al técnico.');
   go('cli-verificar-mat');
@@ -4409,6 +4467,82 @@ function tecnicoRechazarTrabajo() {
 }
 
 // ── Cargar historial real desde backend ───────────────────────
+// ── TÉCNICO — Stats reales del home (Hoy / Esta semana / Pendientes + recientes) ──
+function _fmtMonto(n) { return '$' + Math.round(n || 0).toLocaleString('es-CL'); }
+function _fmtMontoK(n) {
+  const v = Math.round(n || 0);
+  return v >= 1000 ? '$' + Math.round(v / 1000) + 'K' : _fmtMonto(v);
+}
+
+async function cargarStatsTecnico() {
+  const elHoy = document.getElementById('tec-stat-hoy');
+  const elSemana = document.getElementById('tec-stat-semana');
+  const elPendientes = document.getElementById('tec-stat-pendientes');
+  const lista = document.getElementById('tec-recientes-lista');
+  if (!elHoy && !lista) return;
+
+  try {
+    const data = await apiFetch('/pagos/historial');
+    const resumen = data.resumen || {};
+    if (elHoy) elHoy.textContent = resumen.hoy?.count ?? 0;
+    if (elSemana) elSemana.textContent = _fmtMontoK(resumen.semana?.monto);
+    if (elPendientes) elPendientes.textContent = resumen.pendientes?.count ?? 0;
+
+    if (lista) {
+      const recientes = (data.pagos || []).slice(0, 3);
+      const card = document.getElementById('tec-recientes-card');
+      if (recientes.length === 0) {
+        if (card) card.innerHTML = '<div style="padding:14px 13px;font-size:12px;color:var(--muted);text-align:center;">Aún no tienes trabajos.</div>';
+      } else if (card) {
+        card.innerHTML = recientes.map(p => {
+          const nombre = p.solicitud?.trabajo || 'Trabajo';
+          const comuna = p.solicitud?.comuna ? ' · ' + p.solicitud.comuna : '';
+          const check = p.estado === 'LIBERADO' ? ' ✓' : '';
+          return '<div class="row" style="padding:10px 13px;"><span class="rl">' + nombre + comuna + '</span>' +
+            '<span class="rv rg">' + _fmtMonto(p.montoTecnico) + check + '</span></div>';
+        }).join('');
+      }
+    }
+  } catch {
+    const card = document.getElementById('tec-recientes-card');
+    if (card) card.innerHTML = '<div style="padding:14px 13px;font-size:12px;color:var(--muted);text-align:center;">No se pudo cargar.</div>';
+  }
+}
+
+async function cargarMisPagos() {
+  const elSemana = document.getElementById('tec-pagos-semana');
+  const elPendiente = document.getElementById('tec-pagos-pendiente');
+  const cont = document.getElementById('tec-pagos-lista');
+  if (!cont) return;
+
+  try {
+    const data = await apiFetch('/pagos/historial');
+    const resumen = data.resumen || {};
+    if (elSemana) elSemana.textContent = _fmtMonto(resumen.semana?.monto);
+    if (elPendiente) elPendiente.textContent = _fmtMonto(resumen.pendientes?.monto);
+
+    const pagos = data.pagos || [];
+    if (pagos.length === 0) {
+      cont.innerHTML = '<div style="padding:14px 13px;font-size:12px;color:var(--muted);text-align:center;">Aún no tienes pagos.</div>';
+      return;
+    }
+    cont.innerHTML = pagos.map(p => {
+      const nombre = p.solicitud?.trabajo || 'Trabajo';
+      const codigo = p.solicitud?.codigo || '';
+      const fecha = new Date(p.createdAt).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+      const tipo = p.tipo === 'adicional' ? ' · Adicional' : '';
+      const pagado = p.estado === 'LIBERADO';
+      const tag = pagado ? '<span class="tag tg" style="font-size:9px;">Pagado</span>' : '<span class="tag ta" style="font-size:9px;">Pendiente</span>';
+      const valClass = pagado ? 'rv rg' : 'rv ra';
+      return '<div class="row" style="padding:11px 13px;"><div><div style="font-size:13px;font-weight:600;">' + nombre + ' · #' + codigo + '</div>' +
+        '<div style="font-size:11px;color:var(--muted);">' + fecha + tipo + '</div></div>' +
+        '<div style="text-align:right;"><div class="' + valClass + '">' + _fmtMonto(p.montoTecnico) + '</div>' + tag + '</div></div>';
+    }).join('');
+  } catch {
+    cont.innerHTML = '<div style="padding:14px 13px;font-size:12px;color:var(--muted);text-align:center;">No se pudo cargar.</div>';
+  }
+}
+
 async function cargarHistorial() {
   const lista = document.getElementById('historial-lista');
   const loading = document.getElementById('historial-loading');
@@ -4906,6 +5040,8 @@ function conectarSocket() {
           total: data.totalEstimado || 0,
           urgencia: data.urgencia || 'normal',
           moBase: data.moBase || 0,
+          matEstimado: data.matEstimado || 0,
+          rubroNombre: data.rubro || '',
           descripcion: data.descripcion || '',
           fotosProblema: data.fotosProblema || [],
           latCliente: data.latitud,
@@ -5280,6 +5416,8 @@ async function irATecnicos() {
       codigo: data.solicitud.codigo,
       trabajo: data.solicitud.trabajo,
       total,
+      rubroNombre: Solicitud.rubroNombre || '',
+      matEstimado: matFinal,
       agendado: (window.schedModo || 'asap') === 'agenda',
       schedModo: window.schedModo || 'asap',
       fechaAgendada: window.schedFechaCompleta || null,
@@ -5674,6 +5812,16 @@ window.go = function(id) {
   }
   if (id === 'tec-en-trabajo') {
     setTimeout(() => { if (typeof poblarTecEnTrabajo === 'function') poblarTecEnTrabajo(); }, 100);
+    setTimeout(() => { if (typeof renderMaterialesVerificadosTec === 'function') renderMaterialesVerificadosTec(); }, 100);
+  }
+  if (id === 'tec-mat-verificar') {
+    setTimeout(() => { if (typeof renderMaterialesTec === 'function') renderMaterialesTec(); }, 50);
+  }
+  if (id === 'cli-verificar-mat') {
+    setTimeout(() => { if (typeof renderMaterialesCli === 'function') renderMaterialesCli(); }, 50);
+  }
+  if (id === 'cli-reporte-faltante') {
+    setTimeout(() => { if (typeof renderMaterialesFaltante === 'function') renderMaterialesFaltante(); }, 50);
   }
   if (id === 'tec-cierre') {
     setTimeout(() => {

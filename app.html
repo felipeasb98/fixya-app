@@ -911,7 +911,7 @@ textarea.inp{resize:none;}
 <div class="status"><span>10:15</span><span>🔨 En ejecución</span><span>📶</span></div>
 <div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title">Trabajo en curso</div></div>
 <div class="wrap">
-  <div class="status-badge sb-on"><div style="font-size:16px;">🔨</div><div><div style="font-size:13px;font-weight:700;color:var(--accent);">Técnicos verificados · En ejecución</div><div style="font-size:11px;color:var(--muted);">10:15 hrs · M.O. fija $46.875</div></div></div>
+  <div class="status-badge sb-on"><div style="font-size:16px;">🔨</div><div><div style="font-size:13px;font-weight:700;color:var(--accent);">Técnicos verificados · En ejecución</div><div style="font-size:11px;color:var(--muted);">Tú recibes <span id="tec-ent-monto">—</span></div></div></div>
   <div class="card" style="margin-bottom:9px;">
     <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:8px;">✅ MATERIALES VERIFICADOS POR CLIENTE</div>
     <div style="display:flex;flex-direction:column;gap:4px;">
@@ -923,7 +923,7 @@ textarea.inp{resize:none;}
   </div>
   <div class="hl-a hl" style="margin-bottom:12px;font-size:13px;color:var(--text);line-height:1.6;">
     💸 <strong>Materiales:</strong> reembolso <strong style="color:var(--accent2);">hoy mismo día</strong> al subir boleta.<br>
-    💰 <strong>M.O. $46.875:</strong> en 48 hrs tras confirmación del cliente.
+    💰 <strong>Tu M.O. (<span id="tec-ent-monto2">—</span>):</strong> en 48 hrs tras confirmación del cliente.
   </div>
   <div style="display:flex;gap:8px;">
     <button class="btn btn-ghost btn-sm" onclick="go('tec-faltante')" style="flex:1;">⚠️ Falta algo</button>
@@ -4364,9 +4364,7 @@ function renderizarTrabajosDisponibles() {
   const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
 
   lista.innerHTML = items.map(d => {
-    const mo = d.moBase || d.totalEstimado || 0;
-    const urgMult = d.urgencia === 'emergencia' ? 1.5 : 1.0;
-    const moFinal = Math.round(mo * urgMult);
+    const neto = montoNetoTecnico(d.totalEstimado || d.moBase || 0);
     const urgLabel = d.urgencia === 'emergencia' ? '🔴 Emergencia' : '🟢 Normal';
     const urgClass = d.urgencia === 'emergencia' ? 'tag tr' : 'tag tg';
     return '<div class="hl-a hl" style="margin-bottom:8px;cursor:pointer;" onclick="verTrabajoDisponible(\'' + d.solicitudId + '\')">' +
@@ -4376,7 +4374,7 @@ function renderizarTrabajosDisponibles() {
       '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">' + (d.descripcion ? '"' + d.descripcion.substring(0, 60) + (d.descripcion.length > 60 ? '..."' : '"') : '') + '</div>' +
       '<div style="display:flex;justify-content:space-between;align-items:center;">' +
       '<div><div style="font-size:10px;color:var(--muted);">Tú recibes</div>' +
-      '<div style="font-family:\'JetBrains Mono\';font-size:18px;font-weight:800;color:var(--accent);">' + fmt(moFinal) + '</div></div>' +
+      '<div style="font-family:\'JetBrains Mono\';font-size:18px;font-weight:800;color:var(--accent);">' + fmt(neto) + '</div></div>' +
       '<button class="btn btn-g btn-sm">Ver →</button></div></div>';
   }).join('');
 }
@@ -5674,16 +5672,19 @@ window.go = function(id) {
     setTimeout(iniciarGPSTecnico, 300);
     setTimeout(() => { if (typeof poblarTecEnCamino === 'function') poblarTecEnCamino(); }, 150);
   }
+  if (id === 'tec-en-trabajo') {
+    setTimeout(() => { if (typeof poblarTecEnTrabajo === 'function') poblarTecEnTrabajo(); }, 100);
+  }
   if (id === 'tec-cierre') {
     setTimeout(() => {
       const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
       const fmt = (n) => n ? '$' + Math.round(n).toLocaleString('es-CL') : '—';
       const el = (id) => document.getElementById(id);
-      const mo = sol.total || 0;
+      const mo = typeof montoNetoTecnico === 'function' ? montoNetoTecnico(sol.total || 0) : (sol.total || 0);
       const mat = sol.matEstimado || 0;
       if (el('cierre-mo')) el('cierre-mo').textContent = fmt(mo);
       if (el('cierre-monto-mat')) el('cierre-monto-mat').textContent = mat > 0 ? fmt(mat) : 'Según boleta';
-      if (el('cierre-total')) el('cierre-total').textContent = fmt(mo + mat);
+      if (el('cierre-total')) el('cierre-total').textContent = fmt(mo);
       // Actualizar timing text
       const timing = el('cierre-timing');
       if (timing && mat > 0) timing.innerHTML = '💸 Materiales ' + fmt(mat) + ' → hoy al subir boleta<br>💰 M.O. ' + fmt(mo) + ' → 48 hrs tras confirmación del cliente';
@@ -5746,8 +5747,20 @@ _modoObserver.observe(document.body, { attributes: true });
 
 // ── Obtener solicitud activa ──────────────────────────────────
 function getSolicitudActiva() {
-  try { return JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}'); } 
+  try { return JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}'); }
   catch { return {}; }
+}
+
+// ── Monto neto del técnico (comisión oculta) ─────────────────
+// Misma fórmula que usa el backend (calcularComision + montoTecnico
+// en pagos.js): el técnico solo debe ver esto, nunca el total que
+// se le cobra al cliente.
+function montoNetoTecnico(total) {
+  let perfil = {};
+  try { perfil = JSON.parse(localStorage.getItem('fx_perfil') || '{}'); } catch {}
+  const comisionPct = perfil.comisionPct ?? 18;
+  const t = total || 0;
+  return t - Math.round((t * comisionPct) / 100);
 }
 
 // ── Helper: llamar endpoint de estado ────────────────────────
@@ -5849,10 +5862,7 @@ function poblarTecAlerta(data) {
 
   const trabajo = data.trabajo || 'Trabajo disponible';
   const urgencia = data.urgencia || 'normal';
-  const mo = data.moBase || data.totalEstimado || 0;
-  const urgMult = urgencia === 'emergencia' ? 1.5 : 1.0;
-  const moFinal = Math.round(mo * urgMult);
-  const comision = Math.round(moFinal * 0.12);
+  const neto = montoNetoTecnico(data.totalEstimado || data.moBase || 0);
 
   if (el('tec-alerta-trabajo')) el('tec-alerta-trabajo').textContent = trabajo;
 
@@ -5915,20 +5925,11 @@ function poblarTecAlerta(data) {
     el('tec-alerta-dist').textContent = (dirText ? dirText + (distStr !== '—' ? '  ·  ' + distStr : '') : distStr);
   }
 
-  // Precios
-  if (el('tec-alerta-total')) el('tec-alerta-total').textContent = fmt(moFinal);
-  if (el('tec-alerta-total2')) el('tec-alerta-total2').textContent = fmt(moFinal);
-  if (el('tec-alerta-mo')) el('tec-alerta-mo').textContent = fmt(mo);
-  if (el('tec-alerta-com')) el('tec-alerta-com').textContent = fmt(comision);
-
-  if (urgMult > 1) {
-    const urgExtra = moFinal - mo;
-    const urgRow = el('tec-alerta-urg-row');
-    if (urgRow) urgRow.style.display = '';
-    if (el('tec-alerta-urg-lbl')) el('tec-alerta-urg-lbl').textContent = 'Urgencia x' + urgMult.toFixed(2);
-    if (el('tec-alerta-urg-val')) el('tec-alerta-urg-val').textContent = '+' + fmt(urgExtra);
-    if (el('tec-alerta-mo-desc')) el('tec-alerta-mo-desc').textContent = 'M.O. ' + fmt(mo) + ' x urgencia x' + urgMult.toFixed(2);
-  }
+  // Precio — el técnico solo ve lo que a él le corresponde, nunca
+  // el total que se le cobra al cliente (comisión ya descontada).
+  if (el('tec-alerta-total')) el('tec-alerta-total').textContent = fmt(neto);
+  const desglose = document.querySelector('#s-tec-alerta .desglose');
+  if (desglose) desglose.style.display = 'none';
 
   // Agregar/actualizar en lista de trabajos disponibles en tec-home
   agregarTrabajoDisponible(data);
@@ -6268,6 +6269,16 @@ function toggleMatListaTec() {
   if (lbl) lbl.textContent = visible ? 'Ver lista →' : 'Ocultar ↑';
 }
 
+function poblarTecEnTrabajo() {
+  const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('es-CL');
+  const neto = fmt(montoNetoTecnico(sol.total));
+  const m1 = document.getElementById('tec-ent-monto');
+  const m2 = document.getElementById('tec-ent-monto2');
+  if (m1) m1.textContent = neto;
+  if (m2) m2.textContent = neto;
+}
+
 function poblarTecEnCamino() {
   const sol = JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
   const el = (id) => document.getElementById(id);
@@ -6275,7 +6286,7 @@ function poblarTecEnCamino() {
 
   if (el('tec-ec-cliente')) el('tec-ec-cliente').textContent = sol.clienteNombre || '—';
   if (el('tec-ec-trabajo')) el('tec-ec-trabajo').textContent = sol.trabajo || '—';
-  if (el('tec-ec-mo')) el('tec-ec-mo').textContent = sol.total ? fmt(sol.total) : '—';
+  if (el('tec-ec-mo')) el('tec-ec-mo').textContent = sol.total ? fmt(montoNetoTecnico(sol.total)) : '—';
   if (el('tec-ec-dir')) el('tec-ec-dir').textContent = sol.direccion || sol.comuna || '—';
 
   // Materiales del rubro
@@ -6343,13 +6354,14 @@ async function cerrarTrabajo() {
 
     _fotoTerminadoFile = null; _fotoBoleta2File = null;
 
-    // Poblar montos en pantalla de cierre con datos reales
-    const mo = sol.total || 0;
+    // Poblar montos en pantalla de cierre con datos reales — el
+    // técnico solo ve lo que a él le corresponde, no el total del cliente.
+    const mo = montoNetoTecnico(sol.total || 0);
     const mat = sol.matEstimado || 0;
     const el = (id) => document.getElementById(id);
     if (el('cierre-mo')) el('cierre-mo').textContent = fmt(mo);
     if (el('cierre-monto-mat')) el('cierre-monto-mat').textContent = mat > 0 ? fmt(mat) : 'Según boleta';
-    if (el('cierre-total')) el('cierre-total').textContent = fmt(mo + mat);
+    if (el('cierre-total')) el('cierre-total').textContent = fmt(mo);
 
     // La calificación al cliente se pide recién cuando el cliente confirme
     // (ver socket.on('notif:trabajo_completado')) — antes de eso el backend
@@ -6390,7 +6402,7 @@ function poblarTecRating() {
   const sol = getSolicitudActiva ? getSolicitudActiva() : JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
   const monto = document.getElementById('tec-rating-monto');
   if (monto) {
-    monto.textContent = sol.total ? '$' + Math.round(sol.total).toLocaleString('es-CL') + ' en camino a tu cuenta' : 'Tu pago está en camino';
+    monto.textContent = sol.total ? '$' + Math.round(montoNetoTecnico(sol.total)).toLocaleString('es-CL') + ' en camino a tu cuenta' : 'Tu pago está en camino';
   }
   document.querySelectorAll('#stars-tec .star').forEach(s => s.textContent = '☆');
 }

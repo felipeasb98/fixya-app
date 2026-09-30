@@ -983,7 +983,7 @@ textarea.inp{resize:none;}
   <div style="text-align:center;padding:14px 0 18px;">
     <div style="font-size:42px;margin-bottom:9px;">🎉</div>
     <div class="ttl">¡Trabajo completado!</div>
-    <div class="sub">$57.505 en camino a tu cuenta</div>
+    <div class="sub" id="tec-rating-monto">Tu pago está en camino</div>
   </div>
   <div style="text-align:center;margin-bottom:8px;font-size:13px;font-weight:700;">¿Cómo fue el cliente?</div>
   <div class="stars" id="stars-tec"><div class="star" onclick="rateTec(1)">☆</div><div class="star" onclick="rateTec(2)">☆</div><div class="star" onclick="rateTec(3)">☆</div><div class="star" onclick="rateTec(4)">☆</div><div class="star" onclick="rateTec(5)">☆</div></div>
@@ -4968,6 +4968,16 @@ function conectarSocket() {
       agregarNotif('tec', { icono: '💸', color: 'var(--accent)', titulo: 'Pago liberado', desc: data.monto ? '$' + Number(data.monto).toLocaleString('es-CL') : '' });
     });
 
+    // Cliente confirmó el trabajo → recién ahora la solicitud está COMPLETADO
+    // y el backend permite calificar (POST /ratings exige ese estado).
+    socket.on('notif:trabajo_completado', (data) => {
+      console.log('[FixYa] trabajo_completado', data);
+      agregarNotif('tec', { icono: '🎉', color: 'var(--accent)', titulo: 'Trabajo confirmado', desc: 'El cliente confirmó. Puedes calificarlo.' });
+      showSuccess('🎉 El cliente confirmó el trabajo. ¡Califícalo!');
+      if (typeof poblarTecRating === 'function') poblarTecRating();
+      go('tec-rating');
+    });
+
     window._fixya_socket = socket;
   }
 }
@@ -6326,6 +6336,10 @@ async function cerrarTrabajo() {
 
     // El estado ya se transicionó a ESPERANDO_CONF en tecTermino() — aquí solo
     // se suben las fotos finales, no hay una segunda transición de estado.
+    const fotosCierre = [urlTerminado, urlBoleta].filter(Boolean);
+    if (fotosCierre.length) {
+      await cambiarEstado('fotos-cierre', 'PATCH', { fotosCierre }).catch(() => null);
+    }
 
     _fotoTerminadoFile = null; _fotoBoleta2File = null;
 
@@ -6337,7 +6351,11 @@ async function cerrarTrabajo() {
     if (el('cierre-monto-mat')) el('cierre-monto-mat').textContent = mat > 0 ? fmt(mat) : 'Según boleta';
     if (el('cierre-total')) el('cierre-total').textContent = fmt(mo + mat);
 
-    go('tec-rating');
+    // La calificación al cliente se pide recién cuando el cliente confirme
+    // (ver socket.on('notif:trabajo_completado')) — antes de eso el backend
+    // rechaza POST /ratings porque la solicitud aún no está COMPLETADO.
+    showSuccess('✅ Trabajo cerrado. Avisamos al cliente para que confirme — te avisamos cuando lo haga para que lo puedas calificar.');
+    go('tec-home');
   } catch (err) {
     showError(err.message || 'Error al cerrar trabajo');
     if (btn) { btn.disabled = false; btn.textContent = 'Enviar y cerrar trabajo →'; }
@@ -6368,6 +6386,15 @@ window.tecAbrirFotaBoleta_cierre = function() {
 // ════════════════════════════════════════════════════════════
 // TÉCNICO — Calificación final y cerrar trabajo
 // ════════════════════════════════════════════════════════════
+function poblarTecRating() {
+  const sol = getSolicitudActiva ? getSolicitudActiva() : JSON.parse(localStorage.getItem('fx_solicitud_activa') || '{}');
+  const monto = document.getElementById('tec-rating-monto');
+  if (monto) {
+    monto.textContent = sol.total ? '$' + Math.round(sol.total).toLocaleString('es-CL') + ' en camino a tu cuenta' : 'Tu pago está en camino';
+  }
+  document.querySelectorAll('#stars-tec .star').forEach(s => s.textContent = '☆');
+}
+
 async function enviarCalificacion() {
   const estrellas = document.querySelectorAll('#stars-tec .star');
   let rating = 0;

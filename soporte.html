@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FixYa · Soporte</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{
+    --bg:#05070f; --card:#11152a; --card2:#161b36; --border:rgba(255,255,255,.08);
+    --text:#eef0fa; --muted:#8a90ad; --accent:#5be3a0; --accent-d:#05120A;
+    --red:#ff6b6b; --yellow:#ffce54; --blue:#5b9bff;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select{font-family:inherit;}
+  .hidden{display:none !important;}
+
+  /* ── Login ── */
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;width:100%;max-width:360px;}
+  .login-box h1{font-size:20px;margin:0 0 4px;}
+  .login-box p{color:var(--muted);font-size:13px;margin:0 0 22px;}
+  .field-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;}
+  .field-input{width:100%;padding:11px 13px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-size:14px;outline:none;margin-bottom:14px;}
+  .field-input:focus{border-color:var(--accent);}
+  .btn-primary{width:100%;padding:13px;border-radius:10px;background:var(--accent);color:var(--accent-d);font-weight:700;font-size:14px;border:none;}
+  .btn-primary:disabled{opacity:.5;}
+  .btn-ghost{padding:8px 14px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text);font-size:13px;}
+  .btn-danger{background:var(--red);color:#2a0505;border:none;padding:8px 14px;border-radius:8px;font-weight:700;font-size:13px;}
+  .btn-accent-sm{background:var(--accent);color:var(--accent-d);border:none;padding:8px 14px;border-radius:8px;font-weight:700;font-size:13px;}
+  .err-box{color:var(--red);font-size:12px;margin-top:10px;text-align:center;min-height:16px;}
+
+  /* ── Shell ── */
+  #app-shell{display:flex;min-height:100vh;}
+  #sidebar{width:210px;flex:none;background:var(--card);border-right:1px solid var(--border);padding:20px 14px;display:flex;flex-direction:column;}
+  #sidebar h2{font-size:16px;margin:0 0 2px;}
+  #sidebar .who{font-size:12px;color:var(--muted);margin-bottom:22px;}
+  .nav-item{padding:10px 12px;border-radius:8px;color:var(--muted);font-size:13px;font-weight:600;margin-bottom:3px;cursor:pointer;}
+  .nav-item:hover{background:rgba(255,255,255,.04);color:var(--text);}
+  .nav-item.active{background:rgba(91,227,160,.12);color:var(--accent);}
+  .nav-badge{float:right;background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:700;}
+  #logout-btn{margin-top:auto;}
+  #main{flex:1;padding:26px 32px;overflow-x:hidden;}
+  #main h1{font-size:22px;margin:0 0 18px;}
+
+  .cards-row{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:22px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;min-width:150px;flex:1;}
+  .stat-card .n{font-size:26px;font-weight:800;}
+  .stat-card .l{font-size:12px;color:var(--muted);margin-top:4px;}
+
+  .subtabs{display:flex;gap:8px;margin-bottom:16px;}
+  .subtab{padding:7px 14px;border-radius:8px;background:var(--card);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--muted);}
+  .subtab.active{background:rgba(91,227,160,.14);color:var(--accent);border-color:rgba(91,227,160,.3);}
+
+  .filters-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .filters-row select,.filters-row input{padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);font-size:12px;}
+
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;}
+  th,td{text-align:left;padding:10px 12px;font-size:12.5px;border-bottom:1px solid var(--border);}
+  th{color:var(--muted);font-weight:600;text-transform:uppercase;font-size:10.5px;letter-spacing:.3px;}
+  tr:last-child td{border-bottom:none;}
+  tr.clickable{cursor:pointer;}
+  tr.clickable:hover td{background:rgba(255,255,255,.03);}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700;}
+  .pill-green{background:rgba(91,227,160,.15);color:var(--accent);}
+  .pill-yellow{background:rgba(255,206,84,.15);color:var(--yellow);}
+  .pill-red{background:rgba(255,107,107,.15);color:var(--red);}
+  .pill-blue{background:rgba(91,155,255,.15);color:var(--blue);}
+  .pill-muted{background:rgba(255,255,255,.08);color:var(--muted);}
+
+  .card-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:12px;}
+  .card-item .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;}
+  .card-item .title{font-weight:700;font-size:14px;}
+  .card-item .meta{color:var(--muted);font-size:12px;line-height:1.6;}
+  .card-item .actions{display:flex;gap:8px;margin-top:12px;}
+  .empty-msg{color:var(--muted);font-size:13px;padding:20px;text-align:center;}
+  .loading-msg{color:var(--muted);font-size:13px;padding:20px;text-align:center;}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(4,6,15,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;}
+  .modal-box h3{margin:0 0 14px;font-size:17px;}
+  .modal-close{float:right;background:none;border:none;color:var(--muted);font-size:18px;}
+  .kv-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;}
+  .kv-row .k{color:var(--muted);}
+
+  @media (max-width:760px){
+    #app-shell{flex-direction:column;}
+    #sidebar{width:100%;flex-direction:row;flex-wrap:wrap;align-items:center;padding:14px;}
+    #sidebar h2,#sidebar .who{display:none;}
+    .nav-item{margin-bottom:0;}
+    #logout-btn{margin-top:0;margin-left:auto;}
+    #main{padding:18px;}
+    table{font-size:11px;}
+    th,td{padding:8px 6px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Panel de Soporte</h1>
+    <p>FixYa — acceso interno</p>
+    <div class="field-label">Email</div>
+    <input id="li-email" type="email" class="field-input" placeholder="correo@fixya.cl" autocomplete="username">
+    <div class="field-label">Contraseña</div>
+    <input id="li-pass" type="password" class="field-input" placeholder="••••••••" autocomplete="current-password">
+    <button id="li-btn" class="btn-primary" onclick="doLogin()">Ingresar →</button>
+    <div id="li-err" class="err-box"></div>
+  </div>
+</div>
+
+<div id="app-shell" class="hidden">
+  <div id="sidebar">
+    <h2>FixYa</h2>
+    <div class="who" id="who-label">—</div>
+    <div class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</div>
+    <div class="nav-item" data-tab="tarifas" onclick="switchTab('tarifas')">Ajustes de tarifa <span class="nav-badge hidden" id="badge-tarifas"></span></div>
+    <div class="nav-item" data-tab="solicitudes" onclick="switchTab('solicitudes')">Solicitudes</div>
+    <div class="nav-item" data-tab="tecnicos" onclick="switchTab('tecnicos')">Técnicos</div>
+    <div class="nav-item" data-tab="usuarios" onclick="switchTab('usuarios')">Usuarios</div>
+    <div class="nav-item hidden" data-tab="cuentas" id="nav-cuentas" onclick="switchTab('cuentas')">Cuentas de soporte</div>
+    <button id="logout-btn" class="btn-ghost" onclick="doLogout()">Cerrar sesión</button>
+  </div>
+
+  <div id="main">
+    <!-- Dashboard -->
+    <div id="tab-dashboard" class="tab-panel">
+      <h1>Dashboard</h1>
+      <div class="cards-row" id="dash-cards">
+        <div class="loading-msg">Cargando…</div>
+      </div>
+    </div>
+
+    <!-- Tarifas -->
+    <div id="tab-tarifas" class="tab-panel hidden">
+      <h1>Ajustes de tarifa</h1>
+      <div class="subtabs">
+        <div class="subtab active" data-sub="pendiente_revision" onclick="switchTarifasSub('pendiente_revision')">Pendientes</div>
+        <div class="subtab" data-sub="resueltos" onclick="switchTarifasSub('resueltos')">Resueltas</div>
+      </div>
+      <div id="tarifas-list"><div class="loading-msg">Cargando…</div></div>
+    </div>
+
+    <!-- Solicitudes -->
+    <div id="tab-solicitudes" class="tab-panel hidden">
+      <h1>Solicitudes</h1>
+      <div class="filters-row">
+        <select id="sol-filtro-estado" onchange="cargarSolicitudes()">
+          <option value="">Todos los estados</option>
+          <option value="PENDIENTE">Pendiente</option>
+          <option value="CON_POSTULANTES">Con postulantes</option>
+          <option value="CONFIRMADO">Confirmado</option>
+          <option value="EN_CAMINO">En camino</option>
+          <option value="EN_TRABAJO">En trabajo</option>
+          <option value="ESPERANDO_CONF">Esperando confirmación</option>
+          <option value="COMPLETADO">Completado</option>
+          <option value="CANCELADO">Cancelado</option>
+          <option value="DISPUTADO">Disputado</option>
+        </select>
+      </div>
+      <div id="solicitudes-list"><div class="loading-msg">Cargando…</div></div>
+    </div>
+
+    <!-- Técnicos -->
+    <div id="tab-tecnicos" class="tab-panel hidden">
+      <h1>Técnicos</h1>
+      <div id="tecnicos-list"><div class="loading-msg">Cargando…</div></div>
+    </div>
+
+    <!-- Usuarios -->
+    <div id="tab-usuarios" class="tab-panel hidden">
+      <h1>Usuarios</h1>
+      <div id="usuarios-list"><div class="loading-msg">Cargando…</div></div>
+    </div>
+
+    <!-- Cuentas -->
+    <div id="tab-cuentas" class="tab-panel hidden">
+      <h1>Cuentas de soporte</h1>
+      <div class="card-item">
+        <div class="title" style="margin-bottom:12px;">Nueva cuenta</div>
+        <input id="nc-nombre" class="field-input" placeholder="Nombre">
+        <input id="nc-email" class="field-input" placeholder="Email">
+        <input id="nc-pass" type="password" class="field-input" placeholder="Contraseña (mín. 8 caracteres)">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:14px;">
+          <input type="checkbox" id="nc-admin"> Es administrador
+        </label>
+        <button class="btn-accent-sm" onclick="crearCuenta()">Crear cuenta</button>
+        <div id="nc-err" class="err-box"></div>
+      </div>
+      <div id="cuentas-list"><div class="loading-msg">Cargando…</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+const API = 'https://fixya-backend-production.up.railway.app/api';
+const Session = {
+  token: () => localStorage.getItem('sop_token'),
+  refresh: () => localStorage.getItem('sop_refresh'),
+  perfil: () => JSON.parse(localStorage.getItem('sop_perfil') || 'null'),
+  set: (accessToken, refreshToken, perfil) => {
+    localStorage.setItem('sop_token', accessToken);
+    localStorage.setItem('sop_refresh', refreshToken);
+    localStorage.setItem('sop_perfil', JSON.stringify(perfil));
+  },
+  clear: () => {
+    localStorage.removeItem('sop_token');
+    localStorage.removeItem('sop_refresh');
+    localStorage.removeItem('sop_perfil');
+  },
+};
+
+let _refreshing = false;
+let _refreshQueue = [];
+
+async function _doRefresh() {
+  const refreshToken = Session.refresh();
+  if (!refreshToken) throw new Error('Sin refresh token');
+  const res = await fetch(API + '/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  });
+  if (!res.ok) throw new Error('Refresh fallido');
+  const data = await res.json();
+  localStorage.setItem('sop_token', data.accessToken);
+  if (data.refreshToken) localStorage.setItem('sop_refresh', data.refreshToken);
+  return data.accessToken;
+}
+
+async function apiFetch(path, options = {}) {
+  const makeReq = (token) => {
+    const headers = { 'Content-Type': 'application/json', ...options.headers };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    return fetch(API + path, { ...options, headers });
+  };
+
+  let res = await makeReq(Session.token());
+  let data = await res.json().catch(() => ({}));
+
+  if (res.status === 401 && Session.refresh()) {
+    try {
+      if (_refreshing) {
+        await new Promise((resolve, reject) => _refreshQueue.push({ resolve, reject }));
+      } else {
+        _refreshing = true;
+        try {
+          const newToken = await _doRefresh();
+          _refreshQueue.forEach(p => p.resolve());
+          _refreshQueue = [];
+          _refreshing = false;
+        } catch (e) {
+          _refreshQueue.forEach(p => p.reject(e));
+          _refreshQueue = [];
+          _refreshing = false;
+          Session.clear();
+          mostrarLogin('Tu sesión expiró. Ingresa nuevamente.');
+          throw { status: 401, message: 'Sesión expirada' };
+        }
+      }
+      res = await makeReq(Session.token());
+      data = await res.json().catch(() => ({}));
+    } catch (e) {
+      if (e && e.status) throw e;
+      throw { status: 401, message: 'Sesión expirada' };
+    }
+  }
+
+  if (!res.ok) throw { status: res.status, message: data.error || 'Error en la solicitud' };
+  return data;
+}
+
+// ── Login / logout ──────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('li-email').value.trim();
+  const password = document.getElementById('li-pass').value;
+  const btn = document.getElementById('li-btn');
+  const errEl = document.getElementById('li-err');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Ingresa email y contraseña'; return; }
+
+  btn.disabled = true; btn.textContent = 'Ingresando…';
+  try {
+    const res = await fetch(API + '/soporte/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || (data.errors && data.errors[0] && data.errors[0].msg) || 'Error al ingresar');
+    Session.set(data.accessToken, data.refreshToken, data.perfil);
+    mostrarApp();
+  } catch (e) {
+    errEl.textContent = e.message || 'Error al ingresar';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Ingresar →';
+  }
+}
+
+function doLogout() {
+  Session.clear();
+  mostrarLogin();
+}
+
+function mostrarLogin(mensaje) {
+  document.getElementById('app-shell').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('li-err').textContent = mensaje || '';
+}
+
+function mostrarApp() {
+  const perfil = Session.perfil();
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-shell').classList.remove('hidden');
+  document.getElementById('who-label').textContent = perfil.nombre + (perfil.esAdmin ? ' · Admin' : ' · Agente');
+  document.getElementById('nav-cuentas').classList.toggle('hidden', !perfil.esAdmin);
+  switchTab('dashboard');
+}
+
+// ── Navegación ───────────────────────────────────
+let currentTab = 'dashboard';
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+  document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden'));
+  document.getElementById('tab-' + tab).classList.remove('hidden');
+
+  if (tab === 'dashboard') cargarDashboard();
+  if (tab === 'tarifas') cargarTarifas();
+  if (tab === 'solicitudes') cargarSolicitudes();
+  if (tab === 'tecnicos') cargarTecnicos();
+  if (tab === 'usuarios') cargarUsuarios();
+  if (tab === 'cuentas') cargarCuentas();
+}
+
+function fmtMonto(n) { return '$' + Math.round(n || 0).toLocaleString('es-CL'); }
+function fmtFecha(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+const ESTADO_PILL = {
+  PENDIENTE: 'pill-muted', CON_POSTULANTES: 'pill-blue', CONFIRMADO: 'pill-blue',
+  EN_CAMINO: 'pill-yellow', EN_TRABAJO: 'pill-yellow', ESPERANDO_CONF: 'pill-yellow',
+  COMPLETADO: 'pill-green', CANCELADO: 'pill-red', DISPUTADO: 'pill-red',
+};
+
+// ── Dashboard ────────────────────────────────────
+async function cargarDashboard() {
+  const el = document.getElementById('dash-cards');
+  try {
+    const d = await apiFetch('/soporte/dashboard');
+    el.innerHTML = `
+      <div class="stat-card"><div class="n">${d.solicitudesActivas}</div><div class="l">Solicitudes activas</div></div>
+      <div class="stat-card"><div class="n">${d.tecnicosActivos}</div><div class="l">Técnicos activos</div></div>
+      <div class="stat-card"><div class="n">${d.usuariosTotal}</div><div class="l">Usuarios registrados</div></div>
+      <div class="stat-card"><div class="n">${d.tarifasPendientes}</div><div class="l">Ajustes de tarifa pendientes</div></div>
+      <div class="stat-card"><div class="n">${d.pagosEnEscrow}</div><div class="l">Pagos en escrow</div></div>
+    `;
+    actualizarBadgeTarifas(d.tarifasPendientes);
+  } catch (e) {
+    el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
+  }
+}
+
+function actualizarBadgeTarifas(n) {
+  const badge = document.getElementById('badge-tarifas');
+  if (n > 0) { badge.textContent = n; badge.classList.remove('hidden'); }
+  else { badge.classList.add('hidden'); }
+}
+
+// ── Tarifas ──────────────────────────────────────
+let tarifasSub = 'pendiente_revision';
+function switchTarifasSub(sub) {
+  tarifasSub = sub;
+  document.querySelectorAll('.subtab').forEach(el => el.classList.toggle('active', el.dataset.sub === sub));
+  cargarTarifas();
+}
+
+async function cargarTarifas() {
+  const el = document.getElementById('tarifas-list');
+  el.innerHTML = '<div class="loading-msg">Cargando…</div>';
+  try {
+    const { solicitudes } = await apiFetch('/soporte/tarifas?estado=' + tarifasSub);
+    if (!solicitudes.length) { el.innerHTML = '<div class="empty-msg">No hay casos en esta vista.</div>'; return; }
+    el.innerHTML = solicitudes.map(s => renderTarifaCard(s)).join('');
+    if (tarifasSub === 'pendiente_revision') actualizarBadgeTarifas(solicitudes.length);
+  } catch (e) {
+    el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
+  }
+}
+
+function renderTarifaCard(s) {
+  const pendiente = s.modTarifaEstado === 'pendiente_revision';
+  const resultado = s.modTarifaEstado === 'pendiente' ? '<span class="pill pill-green">Aprobada</span>'
+    : s.modTarifaEstado === 'rechazada' ? '<span class="pill pill-red">Rechazada</span>' : '';
+  return `
+    <div class="card-item">
+      <div class="top">
+        <div class="title">${s.rubro?.emoji || ''} ${s.trabajo} — ${s.codigo}</div>
+        ${pendiente ? '<span class="pill pill-yellow">Pendiente</span>' : resultado}
+      </div>
+      <div class="meta">
+        Cliente: ${s.usuario?.nombre || '—'} · Técnico: ${s.tecnico?.nombre || '—'}<br>
+        Motivo: ${s.motivoModTarifa || '—'}<br>
+        Total original: ${fmtMonto(s.totalEstimado)} → Nuevo total: ${fmtMonto(s.totalFinal)}
+        ${!pendiente ? `<br>Decidido por: ${s.tarifaDecididoPorNombre || '—'} el ${fmtFecha(s.tarifaDecididoAt)}` : ''}
+      </div>
+      ${pendiente ? `
+        <div class="actions">
+          <button class="btn-accent-sm" onclick="decidirTarifa('${s.id}','aprobar')">Aprobar</button>
+          <button class="btn-danger" onclick="decidirTarifa('${s.id}','rechazar')">Rechazar</button>
+        </div>` : ''}
+    </div>
+  `;
+}
+
+async function decidirTarifa(id, decision) {
+  if (!confirm(decision === 'aprobar' ? '¿Aprobar este ajuste de tarifa?' : '¿Rechazar este ajuste de tarifa?')) return;
+  try {
+    await apiFetch(`/soporte/tarifas/${id}/decidir`, { method: 'PATCH', body: JSON.stringify({ decision }) });
+    cargarTarifas();
+    cargarDashboard();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ── Solicitudes ──────────────────────────────────
+async function cargarSolicitudes() {
+  const el = document.getElementById('solicitudes-list');
+  el.innerHTML = '<div class="loading-msg">Cargando…</div>';
+  const estado = document.getElementById('sol-filtro-estado').value;
+  try {
+    const qs = estado ? `?estado=${estado}` : '';
+    const { solicitudes } = await apiFetch('/soporte/solicitudes' + qs);
+    if (!solicitudes.length) { el.innerHTML = '<div class="empty-msg">Sin resultados.</div>'; return; }
+    el.innerHTML = `
+      <table><thead><tr>
+        <th>Código</th><th>Rubro</th><th>Cliente</th><th>Técnico</th><th>Estado</th><th>Total</th><th>Fecha</th>
+      </tr></thead><tbody>
+        ${solicitudes.map(s => `
+          <tr class="clickable" onclick="verSolicitud('${s.id}')">
+            <td>${s.codigo}</td>
+            <td>${s.rubro?.emoji || ''} ${s.rubro?.nombre || '—'}</td>
+            <td>${s.usuario?.nombre || '—'}</td>
+            <td>${s.tecnico?.nombre || '—'}</td>
+            <td><span class="pill ${ESTADO_PILL[s.estado] || 'pill-muted'}">${s.estado}</span></td>
+            <td>${fmtMonto(s.totalFinal || s.totalEstimado)}</td>
+            <td>${fmtFecha(s.createdAt)}</td>
+          </tr>
+        `).join('')}
+      </tbody></table>
+    `;
+  } catch (e) {
+    el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
+  }
+}
+
+async function verSolicitud(id) {
+  try {
+    const { solicitud: s } = await apiFetch('/soporte/solicitudes/' + id);
+    abrirModal(`
+      <h3>${s.codigo} — ${s.trabajo} <button class="modal-close" onclick="cerrarModal()">✕</button></h3>
+      <div class="kv-row"><span class="k">Estado</span><span>${s.estado}</span></div>
+      <div class="kv-row"><span class="k">Rubro</span><span>${s.rubro?.emoji || ''} ${s.rubro?.nombre || '—'}</span></div>
+      <div class="kv-row"><span class="k">Cliente</span><span>${s.usuario?.nombre || '—'} (${s.usuario?.email || '—'})</span></div>
+      <div class="kv-row"><span class="k">Técnico</span><span>${s.tecnico?.nombre || '—'} (${s.tecnico?.email || '—'})</span></div>
+      <div class="kv-row"><span class="k">Dirección</span><span>${s.direccion || '—'}, ${s.comuna || ''}</span></div>
+      <div class="kv-row"><span class="k">Urgencia</span><span>${s.urgencia}</span></div>
+      <div class="kv-row"><span class="k">M.O. base</span><span>${fmtMonto(s.moBase)}</span></div>
+      <div class="kv-row"><span class="k">Materiales est.</span><span>${fmtMonto(s.matEstimado)}</span></div>
+      <div class="kv-row"><span class="k">Total estimado</span><span>${fmtMonto(s.totalEstimado)}</span></div>
+      <div class="kv-row"><span class="k">Total final</span><span>${fmtMonto(s.totalFinal)}</span></div>
+      <div class="kv-row"><span class="k">Postulantes</span><span>${(s.postulaciones || []).length}</span></div>
+      <div class="kv-row"><span class="k">Pagos</span><span>${(s.pagos || []).map(p => `${p.tipo}: ${fmtMonto(p.monto)} (${p.estado})`).join(', ') || '—'}</span></div>
+      <div class="kv-row"><span class="k">Rating cliente→técnico</span><span>${s.rating?.estrellasCliente ?? '—'}</span></div>
+      <div class="kv-row"><span class="k">Rating técnico→cliente</span><span>${s.rating?.estrellasTecnico ?? '—'}</span></div>
+      <div class="kv-row"><span class="k">Creada</span><span>${fmtFecha(s.createdAt)}</span></div>
+    `);
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ── Técnicos ─────────────────────────────────────
+async function cargarTecnicos() {
+  const el = document.getElementById('tecnicos-list');
+  el.innerHTML = '<div class="loading-msg">Cargando…</div>';
+  try {
+    const { tecnicos } = await apiFetch('/soporte/tecnicos');
+    if (!tecnicos.length) { el.innerHTML = '<div class="empty-msg">Sin técnicos registrados.</div>'; return; }
+    el.innerHTML = `
+      <table><thead><tr>
+        <th>Nombre</th><th>Rubros</th><th>Activo</th><th>Disponible</th><th>Comisión</th><th>Rating</th><th>Trabajos</th><th>SEC</th>
+      </tr></thead><tbody>
+        ${tecnicos.map(t => `
+          <tr>
+            <td>${t.nombre}<br><span style="color:var(--muted);font-size:11px;">${t.email}</span></td>
+            <td>${(t.rubros || []).map(r => r.rubro.emoji + ' ' + r.rubro.nombre).join(', ') || '—'}</td>
+            <td>${t.activo ? '<span class="pill pill-green">Sí</span>' : '<span class="pill pill-red">No</span>'}</td>
+            <td>${t.disponible ? '<span class="pill pill-green">Sí</span>' : '<span class="pill pill-muted">No</span>'}</td>
+            <td>${t.comisionPct}%</td>
+            <td>${t.ratingPromedio?.toFixed(1) ?? '—'} (${t.totalRatings})</td>
+            <td>${t.trabajosCompletados}</td>
+            <td>${t.secVerificado ? '<span class="pill pill-green">Verificado</span>' : '<span class="pill pill-muted">No</span>'}</td>
+          </tr>
+        `).join('')}
+      </tbody></table>
+    `;
+  } catch (e) {
+    el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
+  }
+}
+
+// ── Usuarios ─────────────────────────────────────
+async function cargarUsuarios() {
+  const el = document.getElementById('usuarios-list');
+  el.innerHTML = '<div class="loading-msg">Cargando…</div>';
+  try {
+    const { usuarios } = await apiFetch('/soporte/usuarios');
+    if (!usuarios.length) { el.innerHTML = '<div class="empty-msg">Sin usuarios registrados.</div>'; return; }
+    el.innerHTML = `
+      <table><thead><tr>
+        <th>Nombre</th><th>Email</th><th>Teléfono</th><th>Verificado</th><th>Solicitudes</th><th>Desde</th>
+      </tr></thead><tbody>
+        ${usuarios.map(u => `
+          <tr>
+            <td>${u.nombre}</td>
+            <td>${u.email}</td>
+            <td>${u.telefono || '—'}</td>
+            <td>${u.emailVerificado ? '<span class="pill pill-green">Sí</span>' : '<span class="pill pill-muted">No</span>'}</td>
+            <td>${u._count?.solicitudes ?? 0}</td>
+            <td>${fmtFecha(u.createdAt)}</td>
+          </tr>
+        `).join('')}
+      </tbody></table>
+    `;
+  } catch (e) {
+    el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
+  }
+}
+
+// ── Cuentas de soporte (admin) ───────────────────
+async function cargarCuentas() {
+  const el = document.getElementById('cuentas-list');
+  el.innerHTML = '<div class="loading-msg">Cargando…</div>';
+  try {
+    const { cuentas } = await apiFetch('/soporte/cuentas');
+    const propiaId = Session.perfil().id;
+    el.innerHTML = cuentas.map(c => `
+      <div class="card-item">
+        <div class="top">
+          <div class="title">${c.nombre} ${c.esAdmin ? '<span class="pill pill-blue">Admin</span>' : '<span class="pill pill-muted">Agente</span>'}</div>
+          ${c.activo ? '<span class="pill pill-green">Activa</span>' : '<span class="pill pill-red">Inactiva</span>'}
+        </div>
+        <div class="meta">${c.email} · desde ${fmtFecha(c.createdAt)}</div>
+        ${c.id !== propiaId ? `
+          <div class="actions">
+            <button class="btn-ghost" onclick="toggleCuenta('${c.id}','activo',${!c.activo})">${c.activo ? 'Desactivar' : 'Activar'}</button>
+            <button class="btn-ghost" onclick="toggleCuenta('${c.id}','esAdmin',${!c.esAdmin})">${c.esAdmin ? 'Quitar admin' : 'Hacer admin'}</button>
+          </div>` : '<div class="meta" style="margin-top:8px;font-style:italic;">Esta es tu cuenta</div>'}
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
+  }
+}
+
+async function toggleCuenta(id, campo, valor) {
+  try {
+    await apiFetch(`/soporte/cuentas/${id}`, { method: 'PATCH', body: JSON.stringify({ [campo]: valor }) });
+    cargarCuentas();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+async function crearCuenta() {
+  const nombre = document.getElementById('nc-nombre').value.trim();
+  const email = document.getElementById('nc-email').value.trim();
+  const password = document.getElementById('nc-pass').value;
+  const esAdmin = document.getElementById('nc-admin').checked;
+  const errEl = document.getElementById('nc-err');
+  errEl.textContent = '';
+  try {
+    await apiFetch('/soporte/cuentas', { method: 'POST', body: JSON.stringify({ nombre, email, password, esAdmin }) });
+    document.getElementById('nc-nombre').value = '';
+    document.getElementById('nc-email').value = '';
+    document.getElementById('nc-pass').value = '';
+    document.getElementById('nc-admin').checked = false;
+    cargarCuentas();
+  } catch (e) {
+    errEl.textContent = e.message;
+  }
+}
+
+// ── Modal genérico ───────────────────────────────
+function abrirModal(html) {
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this) cerrarModal()">
+      <div class="modal-box">${html}</div>
+    </div>
+  `;
+}
+function cerrarModal() { document.getElementById('modal-root').innerHTML = ''; }
+
+// ── Enter para loguear ───────────────────────────
+document.getElementById('li-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('li-email').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ── Init ──────────────────────────────────────────
+if (Session.token()) { mostrarApp(); } else { mostrarLogin(); }
+</script>
+</body>
+</html>

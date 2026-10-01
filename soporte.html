@@ -57,7 +57,8 @@
   .filters-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
   .filters-row select,.filters-row input{padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);font-size:12px;}
 
-  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;}
+  .table-wrap{overflow-x:auto;border-radius:12px;}
+  table{width:100%;min-width:620px;border-collapse:collapse;background:var(--card);}
   th,td{text-align:left;padding:10px 12px;font-size:12.5px;border-bottom:1px solid var(--border);}
   th{color:var(--muted);font-weight:600;text-transform:uppercase;font-size:10.5px;letter-spacing:.3px;}
   tr:last-child td{border-bottom:none;}
@@ -441,7 +442,7 @@ async function cargarSolicitudes() {
     const { solicitudes } = await apiFetch('/soporte/solicitudes' + qs);
     if (!solicitudes.length) { el.innerHTML = '<div class="empty-msg">Sin resultados.</div>'; return; }
     el.innerHTML = `
-      <table><thead><tr>
+      <div class="table-wrap"><table><thead><tr>
         <th>Código</th><th>Rubro</th><th>Cliente</th><th>Técnico</th><th>Estado</th><th>Total</th><th>Fecha</th>
       </tr></thead><tbody>
         ${solicitudes.map(s => `
@@ -455,7 +456,7 @@ async function cargarSolicitudes() {
             <td>${fmtFecha(s.createdAt)}</td>
           </tr>
         `).join('')}
-      </tbody></table>
+      </tbody></table></div>
     `;
   } catch (e) {
     el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
@@ -476,7 +477,7 @@ async function verSolicitud(id) {
       <div class="kv-row"><span class="k">M.O. base</span><span>${fmtMonto(s.moBase)}</span></div>
       <div class="kv-row"><span class="k">Materiales est.</span><span>${fmtMonto(s.matEstimado)}</span></div>
       <div class="kv-row"><span class="k">Total estimado</span><span>${fmtMonto(s.totalEstimado)}</span></div>
-      <div class="kv-row"><span class="k">Total final</span><span>${fmtMonto(s.totalFinal)}</span></div>
+      <div class="kv-row"><span class="k">Total final</span><span>${s.totalFinal != null ? fmtMonto(s.totalFinal) : '—'}</span></div>
       <div class="kv-row"><span class="k">Postulantes</span><span>${(s.postulaciones || []).length}</span></div>
       <div class="kv-row"><span class="k">Pagos</span><span>${(s.pagos || []).map(p => `${p.tipo}: ${fmtMonto(p.monto)} (${p.estado})`).join(', ') || '—'}</span></div>
       <div class="kv-row"><span class="k">Rating cliente→técnico</span><span>${s.rating?.estrellasCliente ?? '—'}</span></div>
@@ -496,7 +497,7 @@ async function cargarTecnicos() {
     const { tecnicos } = await apiFetch('/soporte/tecnicos');
     if (!tecnicos.length) { el.innerHTML = '<div class="empty-msg">Sin técnicos registrados.</div>'; return; }
     el.innerHTML = `
-      <table><thead><tr>
+      <div class="table-wrap"><table><thead><tr>
         <th>Nombre</th><th>Rubros</th><th>Activo</th><th>Disponible</th><th>Comisión</th><th>Rating</th><th>Trabajos</th><th>SEC</th>
       </tr></thead><tbody>
         ${tecnicos.map(t => `
@@ -511,7 +512,7 @@ async function cargarTecnicos() {
             <td>${t.secVerificado ? '<span class="pill pill-green">Verificado</span>' : '<span class="pill pill-muted">No</span>'}</td>
           </tr>
         `).join('')}
-      </tbody></table>
+      </tbody></table></div>
     `;
   } catch (e) {
     el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
@@ -526,7 +527,7 @@ async function cargarUsuarios() {
     const { usuarios } = await apiFetch('/soporte/usuarios');
     if (!usuarios.length) { el.innerHTML = '<div class="empty-msg">Sin usuarios registrados.</div>'; return; }
     el.innerHTML = `
-      <table><thead><tr>
+      <div class="table-wrap"><table><thead><tr>
         <th>Nombre</th><th>Email</th><th>Teléfono</th><th>Verificado</th><th>Solicitudes</th><th>Desde</th>
       </tr></thead><tbody>
         ${usuarios.map(u => `
@@ -539,7 +540,7 @@ async function cargarUsuarios() {
             <td>${fmtFecha(u.createdAt)}</td>
           </tr>
         `).join('')}
-      </tbody></table>
+      </tbody></table></div>
     `;
   } catch (e) {
     el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;

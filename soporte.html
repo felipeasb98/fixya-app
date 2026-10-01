@@ -447,7 +447,7 @@ function renderTarifaCard(s) {
         Cliente: ${s.usuario?.nombre || '—'} · Técnico: ${s.tecnico?.nombre || '—'}<br>
         Motivo: ${s.motivoModTarifa || '—'}<br>
         Total original: ${fmtMonto(s.totalEstimado)} → Nuevo total: ${s.totalFinal != null ? fmtMonto(s.totalFinal) : '—'}
-        ${pendiente ? `<br>Asignado a: ${s.tarifaAsignadoANombre || '—'}` : ''}
+        ${pendiente ? `<br>Asignado a: ${s.asignadoANombre || '—'}` : ''}
         ${!pendiente ? `<br>Decidido por: ${s.tarifaDecididoPorNombre || '—'} el ${fmtFecha(s.tarifaDecididoAt)}` : ''}
       </div>
       ${pendiente ? `

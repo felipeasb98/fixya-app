@@ -1871,6 +1871,41 @@ textarea.inp{resize:none;}
 </div>
 </div>
 
+<!-- TÉCNICO — Responder a una disputa -->
+<div class="screen" id="s-tec-disputa-responder">
+<div class="status"><span>10:10</span><span>⚠️ Disputa</span><span>📶</span></div>
+<div class="topbar"><div class="back-btn" onclick="back()">←</div><div class="topbar-title" style="color:var(--red);">El cliente reportó un problema</div></div>
+<div class="wrap">
+  <div style="padding:11px 13px;background:rgba(255,77,109,.08);border:.5px solid rgba(255,77,109,.3);border-radius:12px;font-size:13px;color:var(--red);font-weight:600;margin-bottom:14px;">
+    FixYa está revisando el caso. Tu pago queda congelado hasta que se resuelva.
+  </div>
+
+  <div class="lbl">Motivo del cliente</div>
+  <div class="card" style="margin-bottom:12px;font-size:13px;" id="disputa-tec-motivo">—</div>
+
+  <div class="lbl">Fotos del cliente</div>
+  <div id="disputa-tec-fotos-cliente" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
+
+  <div id="disputa-tec-ya-respondido" style="display:none;margin-bottom:14px;">
+    <div class="lbl">Tu respuesta</div>
+    <div class="card" style="font-size:13px;color:var(--muted);" id="disputa-tec-mi-respuesta">—</div>
+  </div>
+
+  <div id="disputa-tec-form">
+    <div class="lbl">Tu versión de los hechos</div>
+    <textarea class="inp" id="disputa-tec-respuesta" style="height:100px;resize:none;margin-bottom:12px;" placeholder="Explica qué pasó..."></textarea>
+
+    <div class="lbl">Foto de respaldo (opcional)</div>
+    <div id="disputa-tec-foto-preview" onclick="abrirFotoDisputaTec()" style="width:100%;height:120px;background:var(--card2);border:1.5px dashed rgba(244,164,41,.3);border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;margin-bottom:14px;">
+      <div style="font-size:24px;">📷</div>
+      <div style="font-size:12px;font-weight:700;color:var(--accent2);">Agregar foto</div>
+    </div>
+
+    <button class="btn btn-a" id="btn-enviar-respuesta-disputa" onclick="enviarRespuestaDisputa()">Enviar mi versión →</button>
+  </div>
+</div>
+</div>
+
 <!-- CLIENTE — RESPUESTA NUEVA TARIFA -->
 <div class="screen" id="s-cli-resp-tarifa">
 <div class="status"><span>10:08</span><span>⚠️ Revisión</span><span>📶</span></div>
@@ -4523,8 +4558,11 @@ async function cargarStatsTecnico() {
           const nombre = p.solicitud?.trabajo || 'Trabajo';
           const comuna = p.solicitud?.comuna ? ' · ' + p.solicitud.comuna : '';
           const check = p.estado === 'LIBERADO' ? ' ✓' : '';
-          return '<div class="row" style="padding:10px 13px;"><span class="rl">' + nombre + comuna + '</span>' +
-            '<span class="rv rg">' + _fmtMonto(p.montoTecnico) + check + '</span></div>';
+          const disputaAbierta = p.solicitud?.disputaEstado === 'abierta';
+          return '<div><div class="row" style="padding:10px 13px;"><span class="rl">' + nombre + comuna + '</span>' +
+            '<span class="rv rg">' + _fmtMonto(p.montoTecnico) + check + '</span></div>' +
+            (disputaAbierta ? '<div style="padding:0 13px 10px;"><button onclick="irAResponderDisputa(\'' + p.solicitud.id + '\')" style="width:100%;padding:7px;background:rgba(255,77,109,.07);border:.5px solid rgba(255,77,109,.2);border-radius:8px;color:var(--red);font-size:11px;font-weight:600;cursor:pointer;">⚠️ Disputa abierta — responde aquí</button></div>' : '') +
+            '</div>';
         }).join('');
       }
     }
@@ -4559,9 +4597,12 @@ async function cargarMisPagos() {
       const pagado = p.estado === 'LIBERADO';
       const tag = pagado ? '<span class="tag tg" style="font-size:9px;">Pagado</span>' : '<span class="tag ta" style="font-size:9px;">Pendiente</span>';
       const valClass = pagado ? 'rv rg' : 'rv ra';
-      return '<div class="row" style="padding:11px 13px;"><div><div style="font-size:13px;font-weight:600;">' + nombre + ' · #' + codigo + '</div>' +
+      const disputaAbierta = p.solicitud?.disputaEstado === 'abierta';
+      return '<div style="border-bottom:.5px solid var(--border);"><div class="row" style="padding:11px 13px;"><div><div style="font-size:13px;font-weight:600;">' + nombre + ' · #' + codigo + '</div>' +
         '<div style="font-size:11px;color:var(--muted);">' + fecha + tipo + '</div></div>' +
-        '<div style="text-align:right;"><div class="' + valClass + '">' + _fmtMonto(p.montoTecnico) + '</div>' + tag + '</div></div>';
+        '<div style="text-align:right;"><div class="' + valClass + '">' + _fmtMonto(p.montoTecnico) + '</div>' + tag + '</div></div>' +
+        (disputaAbierta ? '<div style="padding:0 13px 10px;"><button onclick="irAResponderDisputa(\'' + p.solicitud.id + '\')" style="width:100%;padding:7px;background:rgba(255,77,109,.07);border:.5px solid rgba(255,77,109,.2);border-radius:8px;color:var(--red);font-size:11px;font-weight:600;cursor:pointer;">⚠️ Disputa abierta — responde aquí</button></div>' : '') +
+        '</div>';
     }).join('');
   } catch {
     cont.innerHTML = '<div style="padding:14px 13px;font-size:12px;color:var(--muted);text-align:center;">No se pudo cargar.</div>';
@@ -5124,6 +5165,18 @@ function conectarSocket() {
       console.log('[FixYa] tarifa_rechazada', data);
       agregarNotif('tec', { icono: '❌', color: 'var(--red)', titulo: 'Tarifa rechazada', desc: 'El cliente rechazó el ajuste' });
       showError('❌ El cliente rechazó la nueva tarifa.');
+    });
+
+    socket.on('notif:disputa_abierta', (data) => {
+      console.log('[FixYa] disputa_abierta', data);
+      agregarNotif('tec', { icono: '⚠️', color: 'var(--red)', titulo: 'El cliente reportó un problema', desc: 'Puedes dar tu versión antes de que FixYa decida' });
+      showError('⚠️ El cliente reportó un problema. Revisa el caso en tu lista de trabajos.');
+    });
+
+    socket.on('notif:disputa_resuelta', (data) => {
+      console.log('[FixYa] disputa_resuelta', data);
+      agregarNotif('tec', { icono: '⚖️', color: 'var(--accent)', titulo: 'Disputa resuelta', desc: 'FixYa ya tomó una decisión' });
+      showSuccess('⚖️ FixYa resolvió la disputa. Revisa el estado en tu lista de trabajos.');
     });
 
     socket.on('notif:pago_liberado', (data) => {
@@ -6361,6 +6414,85 @@ async function enviarDisputa() {
     showSuccess('Reporte enviado. FixYa revisará tu caso.');
     localStorage.removeItem('fx_solicitud_activa');
     go('cli-home');
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// TÉCNICO — Responder a una disputa
+// ════════════════════════════════════════════════════════════
+let _disputaTecFotoUrl = null;
+
+async function irAResponderDisputa(id) {
+  const sol = getSolicitudActiva();
+  localStorage.setItem('fx_solicitud_activa', JSON.stringify({ ...sol, id }));
+  go('tec-disputa-responder');
+  await cargarDisputaTec(id);
+}
+
+async function cargarDisputaTec(id) {
+  try {
+    const data = await apiFetch('/solicitudes/' + id);
+    const sol = data.solicitud || data;
+
+    const motivoEl = document.getElementById('disputa-tec-motivo');
+    if (motivoEl) motivoEl.textContent = sol.disputaMotivo || '—';
+
+    const fotosEl = document.getElementById('disputa-tec-fotos-cliente');
+    if (fotosEl) {
+      const imgs = (sol.disputaFotos || []).map(url =>
+        '<img src="' + url + '" style="width:72px;height:72px;object-fit:cover;border-radius:10px;">'
+      ).join('');
+      fotosEl.innerHTML = imgs || '<div style="font-size:12px;color:var(--muted);">Sin fotos</div>';
+    }
+
+    const formEl = document.getElementById('disputa-tec-form');
+    const yaEl = document.getElementById('disputa-tec-ya-respondido');
+    if (sol.disputaRespuestaTecnico) {
+      if (formEl) formEl.style.display = 'none';
+      if (yaEl) {
+        yaEl.style.display = 'block';
+        const r = document.getElementById('disputa-tec-mi-respuesta');
+        if (r) r.textContent = sol.disputaRespuestaTecnico;
+      }
+    } else {
+      if (formEl) formEl.style.display = 'block';
+      if (yaEl) yaEl.style.display = 'none';
+    }
+  } catch (e) {
+    showError(e.message || 'No se pudo cargar la disputa');
+  }
+}
+
+function abrirFotoDisputaTec() {
+  _crearInputFoto(function(inp) {
+    if (!inp || !inp._dataUrl) return;
+    const preview = document.getElementById('disputa-tec-foto-preview');
+    if (preview) preview.innerHTML = '<img src="' + inp._dataUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:13px;">';
+
+    _disputaTecFotoUrl = inp._dataUrl;
+    const file = inp.files[0];
+    subirFoto(file, 'disputa_tecnico').then(url => { _disputaTecFotoUrl = url; }).catch(() => {});
+  });
+}
+
+async function enviarRespuestaDisputa() {
+  const respuesta = document.getElementById('disputa-tec-respuesta')?.value?.trim() || '';
+  if (!respuesta) { showError('Escribe tu versión de los hechos'); return; }
+
+  const btn = document.getElementById('btn-enviar-respuesta-disputa');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+
+  const res = await cambiarEstado('disputar/responder', 'POST', {
+    respuesta,
+    fotos: _disputaTecFotoUrl ? [_disputaTecFotoUrl] : [],
+  });
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Enviar mi versión →'; }
+
+  if (res) {
+    _disputaTecFotoUrl = null;
+    showSuccess('Tu versión fue enviada a FixYa.');
+    go('tec-home');
   }
 }
 

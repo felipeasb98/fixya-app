@@ -130,6 +130,8 @@
     <!-- Dashboard -->
     <div id="tab-dashboard" class="tab-panel">
       <h1>Dashboard</h1>
+      <div id="dash-queue-title" style="font-size:14px;font-weight:700;margin-bottom:10px;">Casos pendientes</div>
+      <div id="dash-queue"><div class="loading-msg">Cargando…</div></div>
       <div class="cards-row" id="dash-cards">
         <div class="loading-msg">Cargando…</div>
       </div>
@@ -357,13 +359,31 @@ async function cargarDashboard() {
   try {
     const d = await apiFetch('/soporte/dashboard');
     el.innerHTML = `
-      <div class="stat-card"><div class="n">${d.solicitudesActivas}</div><div class="l">Solicitudes activas</div></div>
-      <div class="stat-card"><div class="n">${d.tecnicosActivos}</div><div class="l">Técnicos activos</div></div>
-      <div class="stat-card"><div class="n">${d.usuariosTotal}</div><div class="l">Usuarios registrados</div></div>
-      <div class="stat-card"><div class="n">${d.tarifasPendientes}</div><div class="l">Ajustes de tarifa pendientes</div></div>
+      <div class="stat-card" style="cursor:pointer;" onclick="switchTab('solicitudes')"><div class="n">${d.solicitudesActivas}</div><div class="l">Solicitudes activas</div></div>
+      <div class="stat-card" style="cursor:pointer;" onclick="switchTab('tecnicos')"><div class="n">${d.tecnicosActivos}</div><div class="l">Técnicos activos</div></div>
+      <div class="stat-card" style="cursor:pointer;" onclick="switchTab('usuarios')"><div class="n">${d.usuariosTotal}</div><div class="l">Usuarios registrados</div></div>
+      <div class="stat-card" style="cursor:pointer;" onclick="switchTab('tarifas')"><div class="n">${d.tarifasPendientes}</div><div class="l">Ajustes de tarifa pendientes</div></div>
       <div class="stat-card"><div class="n">${d.pagosEnEscrow}</div><div class="l">Pagos en escrow</div></div>
     `;
     actualizarBadgeTarifas(d.tarifasPendientes);
+  } catch (e) {
+    el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
+  }
+  cargarColaDashboard();
+}
+
+async function cargarColaDashboard() {
+  const titleEl = document.getElementById('dash-queue-title');
+  const el = document.getElementById('dash-queue');
+  const esAdmin = Session.perfil().esAdmin;
+  titleEl.textContent = esAdmin ? 'Casos pendientes (todos los agentes)' : 'Mis casos pendientes';
+  try {
+    const { solicitudes } = await apiFetch('/soporte/tarifas?estado=pendiente_revision');
+    if (!solicitudes.length) {
+      el.innerHTML = '<div class="empty-msg">No hay casos pendientes asignados.</div>';
+      return;
+    }
+    el.innerHTML = solicitudes.map(s => renderTarifaCard(s)).join('');
   } catch (e) {
     el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
   }
@@ -410,6 +430,7 @@ function renderTarifaCard(s) {
         Cliente: ${s.usuario?.nombre || '—'} · Técnico: ${s.tecnico?.nombre || '—'}<br>
         Motivo: ${s.motivoModTarifa || '—'}<br>
         Total original: ${fmtMonto(s.totalEstimado)} → Nuevo total: ${s.totalFinal != null ? fmtMonto(s.totalFinal) : '—'}
+        ${pendiente ? `<br>Asignado a: ${s.asignadoANombre || '—'}` : ''}
         ${!pendiente ? `<br>Decidido por: ${s.tarifaDecididoPorNombre || '—'} el ${fmtFecha(s.tarifaDecididoAt)}` : ''}
       </div>
       ${pendiente ? `

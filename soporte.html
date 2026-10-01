@@ -119,6 +119,7 @@
     <div class="who" id="who-label">—</div>
     <div class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</div>
     <div class="nav-item" data-tab="tarifas" onclick="switchTab('tarifas')">Ajustes de tarifa <span class="nav-badge hidden" id="badge-tarifas"></span></div>
+    <div class="nav-item" data-tab="disputas" onclick="switchTab('disputas')">Disputas <span class="nav-badge hidden" id="badge-disputas"></span></div>
     <div class="nav-item" data-tab="solicitudes" onclick="switchTab('solicitudes')">Solicitudes</div>
     <div class="nav-item" data-tab="tecnicos" onclick="switchTab('tecnicos')">Técnicos</div>
     <div class="nav-item" data-tab="usuarios" onclick="switchTab('usuarios')">Usuarios</div>
@@ -145,6 +146,16 @@
         <div class="subtab" data-sub="resueltos" onclick="switchTarifasSub('resueltos')">Resueltas</div>
       </div>
       <div id="tarifas-list"><div class="loading-msg">Cargando…</div></div>
+    </div>
+
+    <!-- Disputas -->
+    <div id="tab-disputas" class="tab-panel hidden">
+      <h1>Disputas</h1>
+      <div class="subtabs">
+        <div class="subtab active" data-sub="abierta" onclick="switchDisputasSub('abierta')">Abiertas</div>
+        <div class="subtab" data-sub="resueltas" onclick="switchDisputasSub('resueltas')">Resueltas</div>
+      </div>
+      <div id="disputas-list"><div class="loading-msg">Cargando…</div></div>
     </div>
 
     <!-- Solicitudes -->
@@ -335,6 +346,7 @@ function switchTab(tab) {
 
   if (tab === 'dashboard') cargarDashboard();
   if (tab === 'tarifas') cargarTarifas();
+  if (tab === 'disputas') cargarDisputas();
   if (tab === 'solicitudes') cargarSolicitudes();
   if (tab === 'tecnicos') cargarTecnicos();
   if (tab === 'usuarios') cargarUsuarios();
@@ -363,9 +375,11 @@ async function cargarDashboard() {
       <div class="stat-card" style="cursor:pointer;" onclick="switchTab('tecnicos')"><div class="n">${d.tecnicosActivos}</div><div class="l">Técnicos activos</div></div>
       <div class="stat-card" style="cursor:pointer;" onclick="switchTab('usuarios')"><div class="n">${d.usuariosTotal}</div><div class="l">Usuarios registrados</div></div>
       <div class="stat-card" style="cursor:pointer;" onclick="switchTab('tarifas')"><div class="n">${d.tarifasPendientes}</div><div class="l">Ajustes de tarifa pendientes</div></div>
+      <div class="stat-card" style="cursor:pointer;" onclick="switchTab('disputas')"><div class="n">${d.disputasPendientes}</div><div class="l">Disputas abiertas</div></div>
       <div class="stat-card"><div class="n">${d.pagosEnEscrow}</div><div class="l">Pagos en escrow</div></div>
     `;
     actualizarBadgeTarifas(d.tarifasPendientes);
+    actualizarBadgeDisputas(d.disputasPendientes);
   } catch (e) {
     el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
   }
@@ -378,12 +392,15 @@ async function cargarColaDashboard() {
   const esAdmin = Session.perfil().esAdmin;
   titleEl.textContent = esAdmin ? 'Casos pendientes (todos los agentes)' : 'Mis casos pendientes';
   try {
-    const { solicitudes } = await apiFetch('/soporte/tarifas?estado=pendiente_revision');
-    if (!solicitudes.length) {
+    const [{ solicitudes: tarifas }, { solicitudes: disputas }] = await Promise.all([
+      apiFetch('/soporte/tarifas?estado=pendiente_revision'),
+      apiFetch('/soporte/disputas?estado=abierta'),
+    ]);
+    if (!tarifas.length && !disputas.length) {
       el.innerHTML = '<div class="empty-msg">No hay casos pendientes asignados.</div>';
       return;
     }
-    el.innerHTML = solicitudes.map(s => renderTarifaCard(s)).join('');
+    el.innerHTML = tarifas.map(s => renderTarifaCard(s)).join('') + disputas.map(s => renderDisputaCard(s)).join('');
   } catch (e) {
     el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
   }
@@ -399,7 +416,7 @@ function actualizarBadgeTarifas(n) {
 let tarifasSub = 'pendiente_revision';
 function switchTarifasSub(sub) {
   tarifasSub = sub;
-  document.querySelectorAll('.subtab').forEach(el => el.classList.toggle('active', el.dataset.sub === sub));
+  document.querySelectorAll('#tab-tarifas .subtab').forEach(el => el.classList.toggle('active', el.dataset.sub === sub));
   cargarTarifas();
 }
 
@@ -430,7 +447,7 @@ function renderTarifaCard(s) {
         Cliente: ${s.usuario?.nombre || '—'} · Técnico: ${s.tecnico?.nombre || '—'}<br>
         Motivo: ${s.motivoModTarifa || '—'}<br>
         Total original: ${fmtMonto(s.totalEstimado)} → Nuevo total: ${s.totalFinal != null ? fmtMonto(s.totalFinal) : '—'}
-        ${pendiente ? `<br>Asignado a: ${s.asignadoANombre || '—'}` : ''}
+        ${pendiente ? `<br>Asignado a: ${s.tarifaAsignadoANombre || '—'}` : ''}
         ${!pendiente ? `<br>Decidido por: ${s.tarifaDecididoPorNombre || '—'} el ${fmtFecha(s.tarifaDecididoAt)}` : ''}
       </div>
       ${pendiente ? `
@@ -447,6 +464,100 @@ async function decidirTarifa(id, decision) {
   try {
     await apiFetch(`/soporte/tarifas/${id}/decidir`, { method: 'PATCH', body: JSON.stringify({ decision }) });
     cargarTarifas();
+    cargarDashboard();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+function actualizarBadgeDisputas(n) {
+  const badge = document.getElementById('badge-disputas');
+  if (n > 0) { badge.textContent = n; badge.classList.remove('hidden'); }
+  else { badge.classList.add('hidden'); }
+}
+
+// ── Disputas ───────────────────────────────────────
+let disputasSub = 'abierta';
+function switchDisputasSub(sub) {
+  disputasSub = sub;
+  document.querySelectorAll('#tab-disputas .subtab').forEach(el => el.classList.toggle('active', el.dataset.sub === sub));
+  cargarDisputas();
+}
+
+async function cargarDisputas() {
+  const el = document.getElementById('disputas-list');
+  el.innerHTML = '<div class="loading-msg">Cargando…</div>';
+  try {
+    const { solicitudes } = await apiFetch('/soporte/disputas?estado=' + disputasSub);
+    if (!solicitudes.length) { el.innerHTML = '<div class="empty-msg">No hay casos en esta vista.</div>'; return; }
+    el.innerHTML = solicitudes.map(s => renderDisputaCard(s)).join('');
+    if (disputasSub === 'abierta') actualizarBadgeDisputas(solicitudes.length);
+  } catch (e) {
+    el.innerHTML = `<div class="empty-msg">Error al cargar: ${e.message}</div>`;
+  }
+}
+
+function renderDisputaCard(s) {
+  const abierta = s.disputaEstado === 'abierta';
+  const resultadoPill = {
+    liberar: '<span class="pill pill-green">Liberado al técnico</span>',
+    reembolso_total: '<span class="pill pill-red">Reembolso total</span>',
+    reembolso_parcial: '<span class="pill pill-yellow">Reembolso parcial</span>',
+  }[s.disputaResolucion] || '';
+  const pago = (s.pagos || []).find(p => p.tipo === 'inicial');
+  const fotosCliente = (s.disputaFotos || []).map(url => `<img src="${url}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;margin:4px 4px 0 0;">`).join('');
+  const fotosTecnico = (s.disputaFotosTecnico || []).map(url => `<img src="${url}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;margin:4px 4px 0 0;">`).join('');
+
+  return `
+    <div class="card-item">
+      <div class="top">
+        <div class="title">${s.rubro?.emoji || ''} ${s.trabajo} — ${s.codigo}</div>
+        ${abierta ? '<span class="pill pill-yellow">Abierta</span>' : resultadoPill}
+      </div>
+      <div class="meta">
+        Cliente: ${s.usuario?.nombre || '—'} · Técnico: ${s.tecnico?.nombre || '—'}<br>
+        Monto en escrow: ${pago ? fmtMonto(pago.monto) : '—'}<br>
+        <b>Motivo del cliente:</b> ${s.disputaMotivo || '—'}
+        ${fotosCliente ? `<br>${fotosCliente}` : ''}
+        <br><b>Respuesta del técnico:</b> ${s.disputaRespuestaTecnico || '<i>Sin respuesta aún</i>'}
+        ${fotosTecnico ? `<br>${fotosTecnico}` : ''}
+        ${abierta ? `<br>Asignado a: ${s.disputaAsignadoANombre || '—'}` : ''}
+        ${!abierta ? `<br>Decidido por: ${s.disputaDecididoPorNombre || '—'} el ${fmtFecha(s.disputaDecididoAt)}` : ''}
+        ${!abierta && s.disputaReembolsoMonto != null ? `<br>Monto reembolsado: ${fmtMonto(s.disputaReembolsoMonto)}` : ''}
+      </div>
+      ${abierta ? `
+        <div class="actions">
+          <button class="btn-accent-sm" onclick="resolverDisputa('${s.id}','liberar')">Liberar al técnico</button>
+          <button class="btn-danger" onclick="resolverDisputa('${s.id}','reembolso_total',${pago ? pago.monto : 0})">Reembolso total</button>
+          <button class="btn-ghost" onclick="resolverDisputa('${s.id}','reembolso_parcial',${pago ? pago.monto : 0})">Reembolso parcial</button>
+        </div>` : ''}
+    </div>
+  `;
+}
+
+async function resolverDisputa(id, resolucion, montoMaximo) {
+  let montoReembolso = null;
+  if (resolucion === 'reembolso_parcial') {
+    const input = prompt(`Monto a reembolsar al cliente (máximo ${fmtMonto(montoMaximo)}):`);
+    if (!input) return;
+    montoReembolso = parseFloat(input);
+    if (!montoReembolso || montoReembolso <= 0 || montoReembolso > montoMaximo) {
+      alert('Monto inválido');
+      return;
+    }
+  }
+  const mensajes = {
+    liberar: '¿Liberar el pago al técnico? Esto rechaza el reclamo del cliente.',
+    reembolso_total: `¿Reembolsar el 100% (${fmtMonto(montoMaximo)}) al cliente? El técnico no recibirá este pago.`,
+    reembolso_parcial: `¿Reembolsar ${fmtMonto(montoReembolso)} al cliente? El técnico no recibirá este pago.`,
+  };
+  if (!confirm(mensajes[resolucion])) return;
+  try {
+    await apiFetch(`/soporte/disputas/${id}/resolver`, {
+      method: 'PATCH',
+      body: JSON.stringify({ resolucion, ...(montoReembolso ? { montoReembolso } : {}) }),
+    });
+    cargarDisputas();
     cargarDashboard();
   } catch (e) {
     alert('Error: ' + e.message);
